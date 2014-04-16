@@ -1,0 +1,68 @@
+[
+  {
+    name: String,
+    type: String,
+    path: String,
+    story: {
+      who: String,
+      when: String,
+      where: String,
+      what: String,
+      why: String
+    },
+    nodes: [
+      { name: String, type: String, pins: [] },
+      ...
+    ],
+    links: [],
+    pins: [
+      { node: String, type: String },
+      ...
+    ],
+    rules: []
+  },
+  {
+    name: String,
+    type: String,
+    story: {
+      who: String,
+      what: String,
+      when: String,
+      where: String,
+      why: String
+    },
+    nodes: [
+      {
+        name: String,
+        type: String,
+        pins: [
+          { name: String, value: [String|Number] },
+          ...
+        ]
+      },
+      ...
+    ],
+    links: [
+      { 
+        source: { node: String, pin: String },
+        target: { node: String, pin: String }
+      },
+      ...
+    ],
+    pins: [
+      { name: String, type: String },
+      ...
+    ],
+    rules: [
+      {
+        source: String,
+        events: [ String, ... ],
+        conditions: [ { node: String, mode: Boolean }, ... ],
+        actions: [ String, ... ],
+        target: String
+      },
+      ...
+    ]
+  },
+  ...
+]

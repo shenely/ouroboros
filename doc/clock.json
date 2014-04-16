@@ -1,0 +1,168 @@
+[
+  {
+    name: "SocketObject",
+    type: String,
+    path: String,
+    story: {
+      who: String,
+      when: String,
+      where: String,
+      what: String,
+      why: String
+    },
+    nodes: [
+      { name: "type", type: "StringObject", pins: [ ] },
+      { name: "address", type: "StringObject", pins: [ ] }
+    ],
+    links: [ ],
+    pins: [
+      { node: "type", type: "required" },
+      { node: "address", type: "required" },
+    ],
+    rules: [ ]
+  },
+  {
+    name: "ContinuousClock",
+    type: "source",
+    path: String,
+    story: {
+      who: String,
+      when: String,
+      where: String,
+      what: String,
+      why: String
+    },
+    nodes: [
+      { name: "scale", type: "NumberObject", pins: [ ] },
+      { name: "seed", type: "DatetimeObject", pins: [ ] },
+      { name: "epoch", type: "DatetimeObject", pins: [ ] }
+    ],
+    links: [ ],
+    pins: [
+      { node: "scale", type: "required" },
+      { node: "seed", type: "required" },
+      { node: "epoch", type: "provided" }
+    ],
+    rules: [ ]
+  },
+  {
+    name: "FormatEpoch",
+    type: "action",
+    path: String,
+    story: {
+      who: String,
+      when: String,
+      where: String,
+      what: String,
+      why: String
+    },
+    nodes: [
+      { name: "epoch", type: "DatetimeObject", pins: [ ] },
+      { name: "message", type: "StringObject", pins: [ ] }
+    ],
+    links: [ ],
+    pins: [
+      { node: "epoch", type: "required" },
+      { node: "message", type: "provided" },
+    ],
+    rules: [ ]
+  },
+  {
+    name: "PublishSocket",
+    type: "target",
+    path: String,
+    story: {
+      who: String,
+      when: String,
+      where: String,
+      what: String,
+      why: String
+    },
+    nodes: [
+      { name: "message", type: "StringObject", pins: [ ] }
+    ],
+    links: [ ],
+    pins: [
+      { node: "message", type: "required" },
+    ],
+    rules: [ ]
+  },
+  {
+    name: "ClockSegment",
+    type: String,
+    path: null,
+    story: {
+      who: String,
+      when: String,
+      where: String,
+      what: String,
+      why: String
+    },
+    nodes: [
+      {
+        name: "seed",
+        type: "DatetimeObject",
+        pins: [
+          { name: "string", value: "2000-01-01T12:00:00Z" }
+        ]
+      },
+      {
+        name: "socket",
+        type: "SocketObject",
+        pins: [
+          { name: "type", value: "publish" },
+          { name: "address", value: "tcp://localhost:5555" },
+        ]
+      },
+      {
+        name: "clock",
+        type: "ContinuousClock",
+        pins: [
+          { name: "scale", value: 60 }
+        ]
+      },
+      { 
+        name: "format",
+        type: "FormatEpoch",
+        pins: [ ]
+      },
+      { 
+        name: "publish",
+        type: "PublishSocket",
+        pins: [ 
+          { name: "address", value: "System.Clock.Epoch" }
+        ]
+      }
+    ],
+    links: [
+      { 
+        source: { node: "seed", pin: null },
+        target: { node: "clock", pin: "seed" }
+      },
+      { 
+        source: { node: "socket", pin: null },
+        target: { node: "publish", pin: "socket" }
+      },
+      { 
+        source: { node: "clock", pin: "epoch" },
+        target: { node: "format", pin: "epoch" }
+      },
+      { 
+        source: { node: "format", pin: "message" },
+        target: { node: "publish", pin: "message" }
+      }
+    ],
+    pins: [
+      { node: "socket", type: "required" }
+    ],
+    rules: [
+      {
+        source: "clock",
+        events: [ ],
+        conditions: [ ],
+        actions: [ "format" ],
+        target: "publish"
+      }
+    ]
+  }
+]
