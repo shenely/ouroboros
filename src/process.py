@@ -34,6 +34,8 @@ from zmq.eventloop import ioloop
 from network import DiGraph
 
 #Internal libraries
+from factory import *
+from behavior import *
 #
 ##################=
 
@@ -140,10 +142,10 @@ class Processor(object):
         
         obj = graph.node[node]["obj"]
         
-        assert isinstance(obj,)
+        assert isinstance(obj,BehaviorObject)
         
-        mode = obj._routine.send() \
-               if isinstance(obj,PrimeObject) else \
+        mode = obj() \
+               if isinstance(obj,PrimitiveBehavior) else \
                mode
         
         for source,target,data in graph.out_edges_iter(node,data=True):
@@ -156,7 +158,7 @@ class Processor(object):
             if data.get("mode") is mode:
                 sub = graph.node[target].get("obj")
                 
-                assert isinstance(sub,)
+                assert isinstance(sub,BehaviorFactory)
                 
                 if issubclass(sub,BehaviorObject):
                     graph,target = sub.super.graph,sub.name \
