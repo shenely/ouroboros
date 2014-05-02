@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   23 Apr 2014
+Modified:   01 May 2014
 
 TBD.
 
@@ -16,6 +16,8 @@ Classes:
 Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-04-23    shenely         1.0         Initial revision
+2014-05-01    shenely         1.1         Modified the way control is
+                                            passed to the parent
 
 """
 
@@ -45,7 +47,7 @@ __all__ = ["BehaviorFactory"]
 ####################
 # Constant section #
 #
-__version__ = "1.0"#current version [major.minor]
+__version__ = "1.1"#current version [major.minor]
 #
 ####################
 
@@ -73,18 +75,18 @@ class BehaviorFactory(type):
         for node in cls.doc.nodes:
             obj = BehaviorFactory\
                   (cls.app,node.type) \
-                  (name=node.name,pins=node.pins,parent=cls)
+                  (name=node.name,pins=node.pins,parent=control)
                   
-            data.add_node((node,None),obj=obj,type=None)
-            control.add_node(node,obj=obj)
+            data.add_node((node,None),node=obj,type=None)
+            control.add_node(node,node=obj)
             
             for n,d in obj.data.nodes_iter(data=True):
                 if d.get("type") is not None and n[1] is None:
                     data.add_node((obj.name,n[0]),
-                                  obj=d.get("obj"),
+                                  node=d.get("node"),
                                   type=None)
         else:
-            control.add_node(cls.__name__,obj=cls)
+            control.add_node(cls.__name__,node=None)
             
         for link in cls.doc.links:
             data.add_edge((link.source.node,link.source.pin),
@@ -94,30 +96,35 @@ class BehaviorFactory(type):
             data.node[(pin.name,None)]["type"] = pin.type
         
         for rule in cls.doc.rules:
-            context = rule.source
+            context = rule.target
             
-            for event in rule.events:
+            for action in rule.actions[::-1]:
                 if context is not None:
-                    control.add_edge(context,event,mode=Ellipsis)
+                    control.add_edge(action,context,mode=Ellipsis)
                 
-                context = event
+                context = action
             
-            for condition in rule.conditions:
+            for condition in rule.conditions[::-1]:
                 if context is not None:
-                    control.add_edge(context,condition.node,
+                    control.add_edge(condition.node,context,
                                      mode=condition.mode)
                 
                 context = condition.node
             
-            for action in rule.actions:
+            for event in rule.events[::-1]:
                 if context is not None:
-                    control.add_edge(context,action,mode=Ellipsis)
+                    control.add_edge(event,context,mode=Ellipsis)
                 
-                context = action
+                context = event
                 
             if context is not None:
-                control.add_edge(context,rule.target,mode=None)
+                if rule.source is not None:
+                    control.add_edge(rule.source,context,mode=Ellipsis)
                   
-        return super(BehaviorFactory,cls).__call__(data=data,
+        self = super(BehaviorFactory,cls).__call__(data=data,
                                                    control=control,
                                                    *args,**kwargs)
+        
+        setattr(control.node[cls.__name__],"node",self)
+        
+        return self

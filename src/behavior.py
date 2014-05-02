@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   23 Apr 2014
+Modified:   01 May 2014
 
 TBD.
 
@@ -18,6 +18,9 @@ Date          Author          Version     Description
 2014-03-13    shenely         1.0         Initial revision
 2014-04-23    shenely         1.1         Finally figured out what to
                                             call this
+2014-05-01    shenely         1.2         Removed ability to call
+                                            execute composites, cleaned
+                                            data update
 
 """
 
@@ -26,6 +29,7 @@ Date          Author          Version     Description
 # Import section #
 #
 #Built-in libraries
+import logging
 
 #External libraries
 from network import DiGraph
@@ -48,7 +52,7 @@ __all__ = ["BehaviorObject",
 ####################
 # Constant section #
 #
-__version__ = "1.0"#current version [major.minor]
+__version__ = "1.2"#current version [major.minor]
 #
 ####################
 
@@ -56,15 +60,14 @@ __version__ = "1.0"#current version [major.minor]
 class BaseObject(object):pass
 
 class BehaviorObject(BaseObject):
-    def __init__(self,name,pins,parent=None,data=DiGraph(),control=DiGraph()):
+    def __init__(self,name,pins,data=DiGraph(),control=DiGraph(),parent=None):
         super(BehaviorObject,self).__init__()
         
         self.name = name
         
-        self.super = parent
-        
         self.data = data
         self.control = control
+        self.parent = parent
         
         for pin in pins:
             setattr(self,pin.name,pin.value)
@@ -77,7 +80,7 @@ class BehaviorObject(BaseObject):
         elif data.get("type") != "provided":
             raise Exception#is not provided
         else:
-            value = data.get("obj")
+            value = data.get("node")
             
             return value
             
@@ -90,16 +93,15 @@ class BehaviorObject(BaseObject):
         elif data.get("type") != "required":
             raise Exception#is not required
         else:
-            data["obj"] = value
-            control["obj"] = value
+            data["node"] = value
+            control["node"] = value
 
-class PrimitiveBehavior(BehaviorObject):pass
+class PrimitiveBehavior(BehaviorObject):
+    
+    def __call__(self,graph):
+        raise NotImplemented
 
 class CompositeBehavior(BehaviorObject):
-    
-    def __call__(self):
-        for name,data in self.control.successors_iter(self.__class__.__name__,data=True):
-            self.__class__.app.
                 
     def __getattr__(self,name):
         value = super(CompositeBehavior,self).__getattr__(name)
@@ -115,13 +117,16 @@ class CompositeBehavior(BehaviorObject):
         
     def _update(self,value):
         for source in value.data.node_iter(data=False):
-            for target,data in self.data.successors_iter((self.name,source[0]),data=True):
-                obj = data["obj"]
+            for target,data in self.data.successors_iter((self.name,
+                                                          source[0]),
+                                                         data=True):
+                node = data["node"]
                 
-                try:
-                    setattr(obj,target[1],getattr(value,source[0]))
-                except:
-                    try:
-                        setattr(value,source[0],getattr(obj,target[1]))
-                    except:
-                        pass
+                setattr(node,target[1],getattr(value,source[0]))
+                
+            for target,data in self.data.predecessors_iter((self.name,
+                                                            source[0]),
+                                                           data=True):
+                node = data["node"]
+                
+                setattr(value,source[0],getattr(node,target[1]))
