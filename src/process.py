@@ -9,7 +9,7 @@ Modified:   01 May 2014
 TBD.
 
 Classes:
-Processor -- TBD
+ProcessorService -- TBD
 """
 
 """Change log:
@@ -19,6 +19,9 @@ Date          Author          Version     Description
 2014-03-13    shenely         1.0         Initial revision
 2014-05-01    shenely         1.1         Integrated with new factory
                                             and behavior classes
+2014-05-04    shenely         1.2         Renamed the main class
+2014-05-06    shenely         1.3         Moved generic methods to a
+                                            service object
 
 """
 
@@ -36,7 +39,8 @@ from zmq.eventloop import ioloop
 from network import DiGraph
 
 #Internal libraries
-from factory import *
+from common import singleton
+from service import ServiceObject
 from behavior import *
 #
 ##################=
@@ -45,7 +49,7 @@ from behavior import *
 ##################
 # Export section #
 #
-__all__ = ["Processor"]
+__all__ = ["ProcessorService"]
 #
 ##################
 
@@ -53,7 +57,7 @@ __all__ = ["Processor"]
 ####################
 # Constant section #
 #
-__version__ = "1.1"#current version [major.minor]
+__version__ = "1.2"#current version [major.minor]
 
 TIMEOUT = timedelta(0,0,0,100)#time between running
 
@@ -65,61 +69,49 @@ TRIVIAL =  10000
 #
 ####################
 
-
-class Processor(object):
-    '''
-    classdocs
-    '''
-    
-    _self = None
-    
+@singleton
+class ProcessorService(ServiceObject):    
     _queue = PriorityQueue()
-    
-    _started = False
-    _running = False
     
     _main = None
     _loop = ioloop.IOLoop.instance()
-    
-    def __new__(cls):
-        if cls._self is None:
-            cls._self = object.__new__(cls)
-            
-        return cls._self
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
                 
     def start(self):
-        if not self._started:
-            self._started = True
-            
+        if super(ProcessorService,self).start():
             self._loop.start()
+            
+            return True
+        else:
+            return False
         
     def stop(self):
-        if self._started:
-            self._started = False
-            
+        if super(ProcessorService,self).stop():
             self._loop.stop()
             
-    def pause(self):
-        if self._started and self._running:
-            self._running = False
+            return True
+        else:
+            return False
             
+    def pause(self):
+        if super(ProcessorService,self).pause():
             self._main = self._loop.remove_timeout(self._main) \
                          if self._main is not None else \
                          None
+            
+            return True
+        else:
+            return False
                         
     def resume(self):
-        if self._started and not self._running:
-            self._running = True
+        if super(ProcessorService,self).pause():
+            self._main = self._loop.add_timeout(TIMEOUT,self.run)
             
-            self._main = self._loop.add_timeout(TIMEOUT,self._run)
+            return True
+        else:
+            return False
         
     def run(self):
-        if self._r0unning:
+        if self._running:
             while not self._queue.empty():
                 self._dispatch()
             else:
@@ -127,15 +119,15 @@ class Processor(object):
         else:
             self.resume()
         
-    def _schedule(self,graph,node,mode,priority=MEDIUM):
+    def schedule(self,graph,node,mode,priority=MEDIUM):
         assert isinstance(graph,DiGraph)
         assert isinstance(node,types.StringTypes)
         assert graph.has_node(node)
         
-        self.queue.put((priority,graph,node,mode))
+        self._queue.put((priority,graph,node,mode))
         
     def _dispatch(self):
-        priority,graph,node,mode = self.queue.get()
+        priority,graph,node,mode = self._queue.get()
         
         assert isinstance(graph,DiGraph)
         assert isinstance(node,types.StringTypes)
@@ -176,5 +168,5 @@ class Processor(object):
                 #   previously executed behavior in a rule.  Typically,
                 #   priority is determined when the rule is injected
                 #   into the processor (but not exclusively so).  
-                self._schedule(graph,node,mode,priority=priority)
+                self.schedule(graph,node,mode,priority=priority)
         

@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   01 May 2014
+Modified:   06 May 2014
 
 TBD.
 
@@ -21,7 +21,8 @@ Date          Author          Version     Description
 2014-05-01    shenely         1.2         Removed ability to call
                                             execute composites, cleaned
                                             data update
-
+2014-05-06    shenely         1.3         Moving away from getattr and
+                                            setattr
 """
 
 
@@ -35,6 +36,7 @@ import logging
 from network import DiGraph
 
 #Internal libraries
+from common import coroutine,BaseObject
 #
 ##################=
 
@@ -52,12 +54,10 @@ __all__ = ["BehaviorObject",
 ####################
 # Constant section #
 #
-__version__ = "1.2"#current version [major.minor]
+__version__ = "1.3"#current version [major.minor]
 #
 ####################
 
-
-class BaseObject(object):pass
 
 class BehaviorObject(BaseObject):
     def __init__(self,name,pins,data=DiGraph(),control=DiGraph(),parent=None):
@@ -70,9 +70,12 @@ class BehaviorObject(BaseObject):
         self.parent = parent
         
         for pin in pins:
-            setattr(self,pin.name,pin.value)
+            self.set(pin.name,pin.value)
+    
+    def __call__(self,graph):
+        raise NotImplemented
             
-    def __getattr__(self,name):
+    def get(self,name):
         data = self.data.node[(name,None)]
         
         if data is None:
@@ -84,7 +87,7 @@ class BehaviorObject(BaseObject):
             
             return value
             
-    def __setattr__(self,name,value):
+    def set(self,name,value):
         data = self.data.node.get((name,None))
         control = self.control.node.get(name)
         
@@ -97,20 +100,52 @@ class BehaviorObject(BaseObject):
             control["node"] = value
 
 class PrimitiveBehavior(BehaviorObject):
+    def __init__(self,*args,**kwargs):
+        super(PrimitiveBehavior,self).__init__(*args,**kwargs)
+            
+        self.routine = self._routine()
     
-    def __call__(self,graph):
+    def __call__(self):
+        mode = self.routine.send()
+        
+        return mode
+    
+    @coroutine
+    def _routine(self):
+        mode = None
+                       
+        logging.debug("{0}:  Starting".\
+                      format(self.name))
+        while True:
+            try:
+                yield mode
+            except GeneratorExit:
+                logging.warn("{0}:  Stopping".\
+                             format(self.name))
+                
+                return
+            else:
+                logging.debug("{0}:  Processing".\
+                             format(self.name))
+                
+                mode = self._process()
+        
+                logging.debug("{0}:  Processed".\
+                             format(self.name))
+    
+    def _process(self):
         raise NotImplemented
 
 class CompositeBehavior(BehaviorObject):
                 
-    def __getattr__(self,name):
+    def get(self,name):
         value = super(CompositeBehavior,self).__getattr__(name)
         
         self._update(value)
         
         return value
             
-    def __setattr__(self,name,value):
+    def set(self,name,value):
         super(CompositeBehavior,self).__setattr__(name,value)
         
         self._update(value)
@@ -120,13 +155,13 @@ class CompositeBehavior(BehaviorObject):
             for target,data in self.data.successors_iter((self.name,
                                                           source[0]),
                                                          data=True):
-                node = data["node"]
+                node = getattr(data,"node")
                 
-                setattr(node,target[1],getattr(value,source[0]))
+                node.set(target[1],value.get(source[0]))
                 
             for target,data in self.data.predecessors_iter((self.name,
                                                             source[0]),
                                                            data=True):
-                node = data["node"]
+                node = getattr(data,"node")
                 
-                setattr(value,source[0],getattr(node,target[1]))
+                value.set(source[0],node.get(target[1]))
