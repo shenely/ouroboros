@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   05 May 2014
+Modified:   07 June 2014
 
 TBD.
 
@@ -17,6 +17,7 @@ ServiceObject -- TBD
 Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-05-05    shenely         1.0         Initial revision
+2014-06-07    shenely                     Added documentation
 
 """
 
@@ -37,7 +38,7 @@ from common import BaseObject
 ##################
 # Export section #
 #
-__all__ = []
+__all__ = ["ServiceObject"]
 #
 ##################
 
@@ -51,11 +52,13 @@ __version__ = "1.0"#current version [major.minor]
 
 
 class ServiceObject(BaseObject):
+    """Base service object"""
     
-    _started = False
-    _running = False
+    _started = False#is the service started?
+    _running = False#is the service running?
                 
     def start(self):
+        """Start the service."""
         if not self._started:
             self._started = True
             
@@ -64,6 +67,7 @@ class ServiceObject(BaseObject):
             return False
         
     def stop(self):
+        """Stop the service."""
         if self._started:
             self._started = False
             
@@ -72,6 +76,7 @@ class ServiceObject(BaseObject):
             return False
             
     def pause(self):
+        """Pause the service."""
         if self._started and self._running:
             self._running = False
             
@@ -80,6 +85,7 @@ class ServiceObject(BaseObject):
             return False
                         
     def resume(self):
+        """Resume the service."""
         if self._started and not self._running:
             self._running = True
             
@@ -88,4 +94,4 @@ class ServiceObject(BaseObject):
             return False
         
     def run(self):
-        raise NotImplemented
+        raise NotImplemented# must override

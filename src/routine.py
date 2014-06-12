@@ -4,12 +4,16 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   06 May 2014
+Modified:   11 June 2014
 
 TBD.
 
 Classes:
-TBD
+SourceBehavior    -- TBD
+TargetBehavior    -- TBD
+EventBehavior     -- TBD
+ActionBehavior    -- TBD
+ConditionBehavior -- TBD
 """
 
 """Change log:
@@ -17,6 +21,7 @@ TBD
 Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-05-06    shenely         1.0         Initial revision
+2014-06-11    shenely                     Added documentation
 
 """
 
@@ -38,7 +43,11 @@ from behavior import PrimitiveBehavior
 ##################
 # Export section #
 #
-__all__ = []
+__all__ = ["SourceBehavior",
+           "TargetBehavior",
+           "EventBehavior",
+           "ActionBehavior",
+           "ConditionBehavior"]
 #
 ##################
 
@@ -52,6 +61,7 @@ __version__ = "1.0"#current version [major.minor]
 
 
 class SourceBehavior(PrimitiveBehavior):
+    """Source primitive (for use with 'to' clause)'"""
     
     def _process(self):
         logging.debug("{0}:  Receiving".\
@@ -70,6 +80,7 @@ class SourceBehavior(PrimitiveBehavior):
         raise NotImplemented
 
 class TargetBehavior(PrimitiveBehavior):
+    """Target primitive (for use with 'to' clause)'"""
     
     def _process(self):
         logging.debug("{0}:  Sending".\
@@ -88,6 +99,7 @@ class TargetBehavior(PrimitiveBehavior):
         raise NotImplemented
     
 class EventBehavior(PrimitiveBehavior):
+    """Event primitive (for use with 'when' clause)'"""
     
     def _process(self):
         logging.debug("{0}:  Occurring".\
@@ -108,6 +120,7 @@ class EventBehavior(PrimitiveBehavior):
         raise NotImplemented
     
 class ActionBehavior(PrimitiveBehavior):
+    """Action primitive (for use with 'then' clause)'"""
     
     def _process(self):
         logging.debug("{0}:  Executing".\
@@ -124,6 +137,7 @@ class ActionBehavior(PrimitiveBehavior):
         raise NotImplemented
     
 class ConditionBehavior(PrimitiveBehavior):
+    """Condition primitive (for use with 'given' clause)'"""
     
     def _process(self):
         logging.debug("{0}:  Satisfying".\

@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   05 May 2014
+Modified:   11 June 2014
 
 TBD.
 
@@ -16,6 +16,7 @@ Classes:
 Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-05-05    shenely         1.0         Initial revision
+2014-06-11    shenely                     Added documentation
 
 """
 
@@ -24,7 +25,6 @@ Date          Author          Version     Description
 # Import section #
 #
 #Built-in libraries
-import types
 
 #External libraries
 
@@ -37,7 +37,6 @@ import types
 # Export section #
 #
 __all__ = ["coroutine",
-           "singleton",
            "ObjectDict",
            "BaseObject"]
 #
@@ -71,6 +70,8 @@ def singleton(cls):
     return getinstance
 
 class ObjectDict(dict):
+    """JSON-compatible object/dictionary"""
+    
     def __getattr__(self,name):
         try:
             return self[name]
@@ -83,4 +84,5 @@ class ObjectDict(dict):
     def __delattr__(self,name):
         del self[name]
 
-class BaseObject(ObjectDict):pass
+class BaseObject(ObjectDict):
+    """Ouroboros base object"""

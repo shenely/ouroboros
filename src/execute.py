@@ -1,15 +1,15 @@
 #!/usr/bin/env python2.7
 
-"""Application service
+"""Execution service
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   06 May 2014
+Modified:   11 June 2014
 
 TBD.
 
 Classes:
-ApplicationService -- TBD
+ExecutionService -- TBD
 """
 
 """Change log:
@@ -17,6 +17,7 @@ ApplicationService -- TBD
 Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-05-06    shenely         1.0         Initial revision
+2014-06-11    shenely                     Added documentation
 
 """
 
@@ -41,7 +42,7 @@ from process import ProcessorService
 ##################
 # Export section #
 #
-__all__ = []
+__all__ = ["ExecutionService"]
 #
 ##################
 
@@ -51,8 +52,9 @@ __all__ = []
 #
 __version__ = "1.0"#current version [major.minor]
 
-HOST_NAME = "localhost"
-PORT_NUMBER = 27017
+#Default MongoDB settings
+MONGO_HOST = "localhost"
+MONGO_PORT = 27017
 
 DATABASE_INSTANCE = "ouroboros"
 BEHAVIOR_COLLECTION = "behaviors"
@@ -62,17 +64,22 @@ MAIN_NAME = "main"
 ####################
 
 
-class ApplicationService(ServiceObject):
+class ExecutionService(ServiceObject):
+    """Behavior execution service"""
+    
+    classes = dict()
+    
     def __init__(self,name):
         self.name = name
         
         self._process = ProcessorService()
     
     def start(self):
-        if super(ApplicationService,self).start():
+        """Connect to behavior database."""
+        if super(ExecutionService,self).start():
             self._process.start()
             
-            self._client = MongoClient(HOST_NAME,PORT_NUMBER,document_class=ObjectDict)
+            self._client = MongoClient(MONGO_HOST,MONGO_PORT,document_class=ObjectDict)
             self._database = self._client[DATABASE_INSTANCE]
             self.behaviors = self._database[BEHAVIOR_COLLECTION]
             
@@ -81,10 +88,10 @@ class ApplicationService(ServiceObject):
             return False
             
     def stop(self):
-        if super(ApplicationService,self).stop():
-            self._process.start()
+        """Disconnect from behavior database."""
+        if super(ExecutionService,self).stop():
+            self._process.stop()
             
-            #self.behavior
             self._database.logout()
             self._client.disconnect()
             
@@ -93,7 +100,8 @@ class ApplicationService(ServiceObject):
             return False
             
     def pause(self):
-        if super(ApplicationService,self).pause():
+        """Pause the processing service."""
+        if super(ExecutionService,self).pause():
             self._process.pause()
             
             return True
@@ -101,7 +109,8 @@ class ApplicationService(ServiceObject):
             return False
             
     def resume(self):
-        if super(ApplicationService,self).resume():
+        """Resume the processing service."""
+        if super(ExecutionService,self).resume():
             self.run()
             
             self._process.resume()
@@ -111,6 +120,7 @@ class ApplicationService(ServiceObject):
             return False
             
     def run(self):
+        """Initialize main behavior."""
         if self._running:
             self._main = BehaviorFactory(self,self.name)(name=MAIN_NAME)
             self._process.schedule(self._main.control,self._main.name,Ellipsis)

@@ -4,11 +4,12 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   01 May 2014
+Modified:   11 June 2014
 
 TBD.
 
 Classes:
+BehaviorFactory -- TBD
 """
 
 """Change log:
@@ -18,6 +19,7 @@ Date          Author          Version     Description
 2014-04-23    shenely         1.0         Initial revision
 2014-05-01    shenely         1.1         Modified the way control is
                                             passed to the parent
+2014-06-11    shenely                     Added documentation
 
 """
 
@@ -29,7 +31,7 @@ Date          Author          Version     Description
 import pickle
 
 #External libraries
-from network import DiGraph
+from networkx import DiGraph
 
 #Internal libraries
 #
@@ -53,12 +55,18 @@ __version__ = "1.1"#current version [major.minor]
 
 class BehaviorFactory(type):
     def __new__(meta,app,name):
+        #NOTE:  Behavior initialization (shenely, 2014-06-11)
+        # Behaviors for an application are created as subclasses of
+        #   predefined behaviors at runtime.  This creates a common
+        #   interface for injecting both primitive and composite
+        #   behaviors into an application.  Behavior names are unique
+        #   to an application.
         if name in app.classes:
             cls = app.classes.get(name)
         else:
-            doc = app.behaviors.find_one({ name: name })
+            doc = app.behaviors.find_one({ name: name })# from database
             
-            base = pickle.loads(doc.path)
+            base = pickle.loads(doc.path)# import path for behavior
             
             cls = super(BehaviorFactory,meta).__new__(name,
                                                       (base,),
@@ -69,17 +77,19 @@ class BehaviorFactory(type):
         return cls
               
     def __call__(cls,*args,**kwargs):
-        data = DiGraph()
-        control = DiGraph()
+        data = DiGraph()# data flow
+        control = DiGraph()# control flow
         
+        #Create behavior instances as graph nodes
         for node in cls.doc.nodes:
             obj = BehaviorFactory\
                   (cls.app,node.type) \
-                  (name=node.name,pins=node.pins,parent=control)
+                  (name=node.name,pins=node.pins,graph=control)
                   
             data.add_node((node,None),node=obj,type=None)
             control.add_node(node,node=obj)
             
+            #Expose provided and required nodes from child to parent
             for n,d in obj.data.nodes_iter(data=True):
                 if d.get("type") is not None and n[1] is None:
                     data.add_node((obj.name,n[0]),
@@ -88,39 +98,50 @@ class BehaviorFactory(type):
         else:
             control.add_node(cls.__name__,node=None)
             
+        #Connect data interfaces with graph edges
         for link in cls.doc.links:
             data.add_edge((link.source.node,link.source.pin),
                           (link.target.node,link.target.pin))
         
+        #Configure behavior data with predefined values
         for pin in cls.doc.pins:
             data.node[(pin.name,None)]["type"] = pin.type
         
+        #Connect control logic with graph edges
         for rule in cls.doc.rules:
-            context = rule.target
-            
-            for action in rule.actions[::-1]:
+            context = rule.target# to clause
+           
+            for action in rule.actions[::-1]:# then clauses
                 if context is not None:
                     control.add_edge(action,context,mode=Ellipsis)
                 
                 context = action
             
-            for condition in rule.conditions[::-1]:
+            for condition in rule.conditions[::-1]:# given clauses
+                #NOTE:  Condition modes (shenely, 2014-06-10)
+                # Unlike other behavior types, the mode of conditions
+                #   is dependent upon the execution of the underlying
+                #   logic.  It is  the one type that allows for
+                #   branching.  Currently conditions only implement
+                #   boolean (i.e. True or False) values.  All other
+                #   types implement an Ellipsis as the singular mode.
                 if context is not None:
                     control.add_edge(condition.node,context,
                                      mode=condition.mode)
                 
                 context = condition.node
             
-            for event in rule.events[::-1]:
+            for event in rule.events[::-1]:# when clauses
                 if context is not None:
                     control.add_edge(event,context,mode=Ellipsis)
                 
                 context = event
                 
-            if context is not None:
+            if context is not None:# from clause
                 if rule.source is not None:
                     control.add_edge(rule.source,context,mode=Ellipsis)
                   
+        #Initialize the behavior with data and control graphs
         self = super(BehaviorFactory,cls).__call__(data=data,
                                                    control=control,
                                                    *args,**kwargs)
