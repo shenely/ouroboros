@@ -40,11 +40,10 @@ from zmq.eventloop import ioloop
 from networkx import DiGraph
 
 #Internal libraries
-from common import singleton
-from service import ServiceObject
 from behavior import *
+from . import ServiceObject
 #
-##################=
+##################
 
 
 ##################
@@ -71,7 +70,7 @@ TRIVIAL =  10000
 #
 ####################
 
-@singleton
+
 class ProcessorService(ServiceObject):
     _loop = ioloop.IOLoop.instance()#event loop
     _main = None                    #main function
@@ -108,7 +107,7 @@ class ProcessorService(ServiceObject):
                         
     def resume(self):
         """Inject main function into event loop."""
-        if super(ProcessorService,self).pause():
+        if super(ProcessorService,self).resume():
             self._main = self._loop.add_timeout(TIMEOUT,self.run)
             
             return True

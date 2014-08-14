@@ -32,8 +32,8 @@ from pymongo import MongoClient
 
 #Internal libraries
 from common import ObjectDict
-from service import ServiceObject
 from factory import BehaviorFactory
+from . import ServiceObject
 from process import ProcessorService
 #
 ##################=

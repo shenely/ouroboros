@@ -18,6 +18,7 @@ Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-05-05    shenely         1.0         Initial revision
 2014-06-07    shenely                     Added documentation
+2014-06-20    shenely                     Moved to package
 
 """
 
