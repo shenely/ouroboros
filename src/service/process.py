@@ -23,6 +23,8 @@ Date          Author          Version     Description
 2014-05-06    shenely         1.3         Moved generic methods to a
                                             service object
 2014-06-07    shenely                     Added documentation
+2014-08-16    shenely         1.4         Made service 'friendly' to
+                                            behaviors
 
 """
 
@@ -152,7 +154,7 @@ class ProcessorService(ServiceObject):
         mode = behavior() \
                if isinstance(behavior,PrimitiveBehavior) else \
                Ellipsis \
-               if graph is not behavior.control else \
+               if graph is not behavior._control else \
                mode# bubbles up through composite behaviors
         
         if isinstance(behavior,CompositeBehavior):
@@ -162,8 +164,8 @@ class ProcessorService(ServiceObject):
             #   of the behavior owning it:
             #    1. Source node as start point; control to children
             #    2. Target node as end point; control to parent
-            graph,node = behavior.super,behavior.name \
-                         if graph is behavior.control else \
+            graph,node = behavior._super,behavior._name \
+                         if graph is behavior._control else \
                          behavior.control,behavior.__class__.__name__
         
         for source,target,data in graph.out_edges_iter(node,data=True):

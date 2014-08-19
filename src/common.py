@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   11 June 2014
+Modified:   18 August 2014
 
 TBD.
 
@@ -17,6 +17,7 @@ Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-05-05    shenely         1.0         Initial revision
 2014-06-11    shenely                     Added documentation
+2014-08-18    shenely         1.1         Removed coroutine
 
 """
 
@@ -36,8 +37,7 @@ Date          Author          Version     Description
 ##################
 # Export section #
 #
-__all__ = ["coroutine",
-           "ObjectDict",
+__all__ = ["ObjectDict",
            "BaseObject"]
 #
 ##################
@@ -46,20 +46,9 @@ __all__ = ["coroutine",
 ####################
 # Constant section #
 #
-__version__ = "1.0"#current version [major.minor]
+__version__ = "1.1"#current version [major.minor]
 #
 ####################
-
-
-def coroutine(func):
-    def wrapper(*args,**kw):
-        gen = func(*args, **kw)
-        gen.next()
-        return gen
-    wrapper.__name__ = func.__name__
-    wrapper.__dict__ = func.__dict__
-    wrapper.__doc__  = func.__doc__
-    return wrapper
 
 
 class ObjectDict(dict):

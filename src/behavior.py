@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   11 June 2014
+Modified:   18 August 2014
 
 TBD.
 
@@ -27,8 +27,11 @@ Date          Author          Version     Description
 2014-05-06    shenely         1.3         Moving away from getattr and
                                             setattr
 2014-06-10    shenely         1.4         In composites, getattr and
-                                            setattr were still being called
+                                            setattr were still being
+                                            called
 2014-06-11    shenely                     Added documentation
+2014-08-18    shenely         1.5         Making all attributes private
+                                            (ish)
 """
 
 
@@ -42,7 +45,7 @@ import logging
 from networkx import DiGraph
 
 #Internal libraries
-from common import coroutine,BaseObject
+from common import BaseObject
 #
 ##################=
 
@@ -60,7 +63,7 @@ __all__ = ["BehaviorObject",
 ####################
 # Constant section #
 #
-__version__ = "1.4"#current version [major.minor]
+__version__ = "1.5"#current version [major.minor]
 #
 ####################
 
@@ -71,47 +74,53 @@ class BehaviorObject(BaseObject):
     def __init__(self,name,pins,data=DiGraph(),control=DiGraph(),graph=None):
         super(BehaviorObject,self).__init__()
         
-        self.name = name
+        self._name = name
         
-        self.data = data# data flow
-        self.control = control# control flow
-        self.super = graph# control flow (of parent)
+        self._data = data# data flow
+        self._control = control# control flow
+        self._super = graph# control flow (of parent)
         
         #Initialize data values
         for pin in pins:
-            self.set(pin.name,pin.value)
+            setattr(self,pin.name,pin.value)
     
     def __call__(self,graph):
         """Execute behavior in a context."""
         raise NotImplemented
             
-    def get(self,name):
+    def __getattr__(self,name):
         """"Get value of a provided interface."""
-        data = self.data.node[(name,None)]
+        data = self._data.node[(name,None)]
         
         #Can only get provided interfaces
         if data is None:
-            #TODO:  Provided interface exception (shenely, 2014-06-10)
-            raise Exception# does not exist
-        elif data.get("type") != "provided":
-            raise Exception# is not provided
+            #TODO:  Provided interface warning (shenely, 2014-06-10)
+            raise Warning# does not exist
+        
+            value = super(BehaviorObject,self).__getattr__(name)
         else:
+            if data.get("type") != "provided":
+                raise Warning# is not provided
+            
             value = data.get("node")
             
-            return value
+        return value
             
-    def set(self,name,value):
+    def __setattr__(self,name,value):
         """Set value of required interface."""
-        data = self.data.node.get((name,None))
-        control = self.control.node.get(name)
+        data = self._data.node.get((name,None))
+        control = self._control.node.get(name)
         
         #Can only set required interfaces
         if data is None or control is None:
-            #TODO:  Required interface exception (shenely, 2014-06-10)
-            raise Exception# does not exist
-        elif data.get("type") != "required":
-            raise Exception# is not required
+            #TODO:  Required interface warning (shenely, 2014-06-10)
+            raise Warning# does not exist
+        
+            super(BehaviorObject,self).__setattr__(name,value)
         else:
+            if data.get("type") != "required":
+                raise Warning# is not required
+
             data["node"] = value
             control["node"] = value
 
@@ -120,36 +129,24 @@ class PrimitiveBehavior(BehaviorObject):
     
     def __init__(self,*args,**kwargs):
         super(PrimitiveBehavior,self).__init__(*args,**kwargs)
-            
-        self.routine = self._routine()
-    
-    def __call__(self):
-        mode = self.routine.send()
-        
-        return mode
-    
-    @coroutine
-    def _routine(self):
-        mode = None
                        
         logging.debug("{0}:  Starting".\
                       format(self.name))
-        while True:
-            try:
-                yield mode
-            except GeneratorExit:
-                logging.warn("{0}:  Stopping".\
-                             format(self.name))
-                
-                return
-            else:
-                logging.debug("{0}:  Processing".\
-                             format(self.name))
-                
-                mode = self._process()
         
-                logging.debug("{0}:  Processed".\
-                             format(self.name))
+    def __del__(self):
+        logging.warn("{0}:  Stopping".\
+                     format(self.name))
+    
+    def __call__(self):        
+        logging.debug("{0}:  Processing".\
+                     format(self.name))
+        
+        mode = self._process()
+
+        logging.debug("{0}:  Processed".\
+                     format(self.name))
+        
+        return mode
     
     def _process(self):
         raise NotImplemented
@@ -157,15 +154,15 @@ class PrimitiveBehavior(BehaviorObject):
 class CompositeBehavior(BehaviorObject):
     """Composite (complex) behavior"""
     
-    def get(self,name):
-        value = super(CompositeBehavior,self).get(name)
+    def __getattr__(self,name):
+        value = super(CompositeBehavior,self).__getattr__(name)
         
         self._update(value)
         
         return value
             
-    def set(self,name,value):
-        super(CompositeBehavior,self).set(name,value)
+    def __setattr__(self,name,value):
+        super(CompositeBehavior,self).__setattr__(name,value)
         
         self._update(value)
         
@@ -176,17 +173,17 @@ class CompositeBehavior(BehaviorObject):
         #   successor, transfer the value from the behavior to the
         #   successor.  For each predecessor, transfer the value from
         #   the predecessor to the behavior.
-        for source in value.data.node_iter(data=False):
-            for target,data in self.data.successors_iter((self.name,
-                                                          source[0]),
-                                                         data=True):
+        for source in value._data.node_iter(data=False):
+            for target,data in self._data.successors_iter((self._name,
+                                                           source[0]),
+                                                          data=True):
                 node = getattr(data,"node")
                 
-                node.set(target[1],value.get(source[0]))
+                setattr(node,target[1],getattr(value,source[0]))
                 
-            for target,data in self.data.predecessors_iter((self.name,
-                                                            source[0]),
-                                                           data=True):
+            for target,data in self._data.predecessors_iter((self._name,
+                                                             source[0]),
+                                                            data=True):
                 node = getattr(data,"node")
                 
-                value.set(source[0],node.get(target[1]))
+                setattr(value,source[0],getattr(node,target[1]))

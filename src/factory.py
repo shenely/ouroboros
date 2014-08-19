@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   11 June 2014
+Modified:   18 August 2014
 
 TBD.
 
@@ -20,6 +20,9 @@ Date          Author          Version     Description
 2014-05-01    shenely         1.1         Modified the way control is
                                             passed to the parent
 2014-06-11    shenely                     Added documentation
+2014-08-18    shenely         1.2         Made 'friendly' with behavior
+                                            objects
+
 
 """
 
@@ -49,7 +52,7 @@ __all__ = ["BehaviorFactory"]
 ####################
 # Constant section #
 #
-__version__ = "1.1"#current version [major.minor]
+__version__ = "1.2"#current version [major.minor]
 #
 ####################
 
@@ -70,7 +73,7 @@ class BehaviorFactory(type):
             
             cls = super(BehaviorFactory,meta).__new__(name,
                                                       (base,),
-                                                      {app: app, doc: doc})
+                                                      {_app: app, _doc: doc})
             
             app.classes[name] = cls
         
@@ -81,34 +84,34 @@ class BehaviorFactory(type):
         control = DiGraph()# control flow
         
         #Create behavior instances as graph nodes
-        for node in cls.doc.nodes:
+        for node in cls._doc.nodes:
             obj = BehaviorFactory\
-                  (cls.app,node.type) \
+                  (cls._app,node.type) \
                   (name=node.name,pins=node.pins,graph=control)
                   
             data.add_node((node,None),node=obj,type=None)
             control.add_node(node,node=obj)
             
             #Expose provided and required nodes from child to parent
-            for n,d in obj.data.nodes_iter(data=True):
+            for n,d in obj._data.nodes_iter(data=True):
                 if d.get("type") is not None and n[1] is None:
-                    data.add_node((obj.name,n[0]),
+                    data.add_node((obj._name,n[0]),
                                   node=d.get("node"),
                                   type=None)
         else:
             control.add_node(cls.__name__,node=None)
             
         #Connect data interfaces with graph edges
-        for link in cls.doc.links:
+        for link in cls._doc.links:
             data.add_edge((link.source.node,link.source.pin),
                           (link.target.node,link.target.pin))
         
         #Configure behavior data with predefined values
-        for pin in cls.doc.pins:
+        for pin in cls._doc.pins:
             data.node[(pin.name,None)]["type"] = pin.type
         
         #Connect control logic with graph edges
-        for rule in cls.doc.rules:
+        for rule in cls._doc.rules:
             context = rule.target# to clause
            
             for action in rule.actions[::-1]:# then clauses
