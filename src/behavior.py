@@ -82,7 +82,7 @@ class BehaviorObject(BaseObject):
         
         #Initialize data values
         for pin in pins:
-            setattr(self,pin.name,pin.value)
+            self.__setattr__(pin.name,pin.value)
     
     def __call__(self,graph):
         """Execute behavior in a context."""

@@ -73,7 +73,7 @@ class BehaviorFactory(type):
             
             cls = super(BehaviorFactory,meta).__new__(name,
                                                       (base,),
-                                                      {_app: app, _doc: doc})
+                                                      dict(_app=app, _doc=doc))
             
             app.classes[name] = cls
         

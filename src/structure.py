@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   18 August 2014
+Modified:   22 August 2014
 
 TBD.
 
@@ -15,7 +15,7 @@ Classes:
                                         
 Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
-2014-08-18    shenely         1.0         Initial revision
+2014-08-22    shenely         1.0         Initial revision
 
 """
 
@@ -81,15 +81,28 @@ def required(type):
         assert isinstance(meth,types.UnboundMethodType)
         assert issubclass(meth.im_class,BehaviorObject)
         
-        meth.im_class._doc.nodes.append(ObjectDict(name=meth.im_func.__name__,
-                                                   type=type,pins=[]))
-        meth.im_class._doc.pins.append(ObjectDict(name=meth.im_func.__name__,
-                                                  type="required"))
+        for node in meth.im_class._doc.nodes:
+            if node.name == meth.__name__:
+                node.type = type
+                
+                break
+        else:
+            meth.im_class._doc.nodes.append(ObjectDict(name=meth.__name__,
+                                                       type=type,pins=[]))
+                
+        for pin in meth.im_class._doc.pins:
+            if pin.name == meth.__name__:
+                pin.type = type
+                
+                break
+        else:
+            meth.im_class._doc.pins.append(ObjectDict(node=meth.__name__,
+                                                      type="required"))
         
         def func(self,value):
             assert isinstance(value,type)
             
-            self.__setattr__(meth.im_func.__name__,value)
+            self.__setattr__(meth.__name__,value)
             
             meth(self,value)
         
@@ -104,17 +117,30 @@ def provided(type):
         assert isinstance(meth,types.UnboundMethodType)
         assert issubclass(meth.im_class,BehaviorObject)
         
-        meth.im_class._doc.nodes.append(ObjectDict(name=meth.im_func.__name__,
-                                                   type=type,pins=[]))
-        meth.im_class._doc.pins.append(ObjectDict(name=meth.im_func.__name__,
-                                                  type="provided"))
+        for node in meth.im_class._doc.nodes:
+            if node.name == meth.__name__:
+                node.type = type
+                
+                break
+        else:
+            meth.im_class._doc.nodes.append(ObjectDict(name=meth.__name__,
+                                                       type=type,pins=[]))
+                
+        for pin in meth.im_class._doc.pins:
+            if pin.name == meth.__name__:
+                pin.type = type
+                
+                break
+        else:
+            meth.im_class._doc.pins.append(ObjectDict(node=meth.__name__,
+                                                      type="required"))
         
         def func(self):
-            value = self.__getattr__(meth.im_func.__name__)
+            value = self.__getattr__(meth.__name__)
             
             assert isinstance(value,type)
             
-            meth(self)
+            meth(self,value)
             
             return value
         
