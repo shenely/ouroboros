@@ -15,7 +15,8 @@ Classes:
                                         
 Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
-2014-08-22    shenely         1.0         Initial revision
+2014-08-21    shenely         1.0         Initial revision
+2014-08-22    shenely         1.1         Combined behavior and structure
 
 """
 
@@ -31,8 +32,7 @@ import logging
 
 #Internal libraries
 from common import ObjectDict
-from behavior import PrimitiveBehavior
-from structure import *
+from behavior import *
 #
 ##################=
 
@@ -54,16 +54,11 @@ __all__ = ["NumberPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.0"#current version [major.minor]
+__version__ = "1.1"#current version [major.minor]
 # 
 ####################
 
-
-@behavior(who="me",
-          when="now",
-          where="here",
-          what="that",
-          why="because")
+@behavior()
 class NumberPrimitive(PrimitiveBehavior):
     
     def __init__(self,name,pins,*args,**kwargs):
@@ -79,11 +74,7 @@ class NumberPrimitive(PrimitiveBehavior):
         
         super(NumberPrimitive,self).__init__(name,pins,*args,**kwargs)
 
-@behavior(who="me",
-          when="now",
-          where="here",
-          what="that",
-          why="because")
+@behavior()
 class StringPrimitive(PrimitiveBehavior):
     
     def __init__(self,name,pins,*args,**kwargs):
@@ -96,15 +87,11 @@ class StringPrimitive(PrimitiveBehavior):
             pins.append(ObjectDict(name="value",value=""))
         
         super(StringPrimitive,self).__init__(name,pins,*args,**kwargs)
-        
-@behavior(who="me",
-          when="now",
-          where="here",
-          what="that",
-          why="because")
+
+@provided("message",PrimitiveBehavior)
+@behavior()
 class SourcePrimitive(PrimitiveBehavior):
     
-    @provided(PrimitiveBehavior)
     def message(self):pass
     
     def _process(self):
@@ -121,14 +108,10 @@ class SourcePrimitive(PrimitiveBehavior):
     def _receive(self):
         raise NotImplemented
     
-@behavior(who="me",
-          when="now",
-          where="here",
-          what="that",
-          why="because")
+@provided("message",PrimitiveBehavior)
+@behavior()
 class TargetPrimitive(PrimitiveBehavior):
     
-    @required(PrimitiveBehavior)
     def message(self):pass
     
     def _process(self):
@@ -145,11 +128,7 @@ class TargetPrimitive(PrimitiveBehavior):
     def _send(self,message):
         raise NotImplemented
 
-@behavior(who="me",
-          when="now",
-          where="here",
-          what="that",
-          why="because")
+@behavior()
 class ConditionPrimitive(PrimitiveBehavior):
     
     def _process(self):
@@ -170,11 +149,7 @@ class ConditionPrimitive(PrimitiveBehavior):
     def _satisfy(self,message):
         raise NotImplemented
 
-@behavior(who="me",
-          when="now",
-          where="here",
-          what="that",
-          why="because")
+@behavior()
 class EventPrimitive(PrimitiveBehavior):
     
     def _process(self):
@@ -195,11 +170,7 @@ class EventPrimitive(PrimitiveBehavior):
     def _occur(self):
         raise NotImplemented
 
-@behavior(who="me",
-          when="now",
-          where="here",
-          what="that",
-          why="because")
+@behavior()
 class ActionPrimitive(PrimitiveBehavior):
     
     def _process(self):

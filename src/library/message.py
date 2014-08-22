@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   21 August 2014
+Modified:   22 August 2014
 
 TBD.
 
@@ -15,7 +15,8 @@ Classes:
                                         
 Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
-2014-08-22    shenely         1.0         Initial revision
+2014-08-21    shenely         1.0         Initial revision
+2014-08-22    shenely         1.1         Combined behavior and structure
 
 """
 
@@ -31,9 +32,7 @@ import logging
 import zmq
 
 #Internal libraries
-from structure import *
-from common import ObjectDict
-from behavior import PrimitiveBehavior
+from behavior import *
 from . import StringPrimitive,EventPrimitive,ActionPrimitive
 #
 ##################=
@@ -51,25 +50,21 @@ __all__ = ["MessageParse",
 ####################
 # Constant section #
 #
-__version__ = "1.0"#current version [major.minor]
+__version__ = "1.1"#current version [major.minor]
 # 
 ####################
 
 
-@behavior(who="me",
-          when="now",
-          where="here",
-          what="that",
-          why="because")
+@required("template",PrimitiveBehavior)
+@required("message",StringPrimitive)
+@provided("object",PrimitiveBehavior)
+@behavior()
 class MessageParse(EventPrimitive):
     
-    @required(PrimitiveBehavior)
     def template(self,value):pass
     
-    @required(StringPrimitive)
     def message(self,value):pass
     
-    @provided(PrimitiveBehavior)
     def object(self,value):pass
     
     def _occur(self):
@@ -81,20 +76,16 @@ class MessageParse(EventPrimitive):
         logging.info("{0}:  Parsed".\
                      format(self._name))
 
-@behavior(who="me",
-          when="now",
-          where="here",
-          what="that",
-          why="because")
+@required("template",PrimitiveBehavior)
+@required("object",PrimitiveBehavior)
+@provided("message",StringPrimitive)
+@behavior()
 class MessageFormat(ActionPrimitive):
     
-    @required(PrimitiveBehavior)
     def template(self,value):pass
     
-    @required(PrimitiveBehavior)
     def object(self,value):pass
     
-    @provided(StringPrimitive)
     def message(self,value):pass
     
     def _execute(self):

@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   18 August 2014
+Modified:   22 August 2014
 
 TBD.
 
@@ -32,6 +32,7 @@ Date          Author          Version     Description
 2014-06-11    shenely                     Added documentation
 2014-08-18    shenely         1.5         Making all attributes private
                                             (ish)
+2014-08-22    shenely         1.6         Combined behavior and structure
 """
 
 
@@ -39,13 +40,14 @@ Date          Author          Version     Description
 # Import section #
 #
 #Built-in libraries
+import types
 import logging
 
 #External libraries
 from networkx import DiGraph
 
 #Internal libraries
-from common import BaseObject
+from common import *
 #
 ##################=
 
@@ -53,7 +55,10 @@ from common import BaseObject
 ##################
 # Export section #
 #
-__all__ = ["BehaviorObject",
+__all__ = ["behavior",
+           "required",
+           "provided",
+           "BehaviorObject",
            "PrimitiveBehavior",
            "CompositeBehavior"]
 #
@@ -63,11 +68,134 @@ __all__ = ["BehaviorObject",
 ####################
 # Constant section #
 #
-__version__ = "1.5"#current version [major.minor]
+__version__ = "1.6"#current version [major.minor]
 #
 ####################
 
 
+def behavior(**kwargs):
+    def decorator(cls):
+        cls._doc = ObjectDict(**cls._doc) \
+                   if hasattr(cls,"_doc") \
+                   else ObjectDict()
+        
+        cls._doc.name = cls.__name__
+        #cls._doc.path = pickle.dumps(cls)
+        
+        cls._doc.story = cls._doc.story \
+                         if hasattr(cls._doc,"story") else \
+                         ObjectDict()
+        cls._doc.story.update(kwargs)
+        
+        cls._doc.nodes = [ObjectDict(**node) for node in cls._doc.nodes] \
+                         if hasattr(cls._doc,"nodes") else \
+                         list()
+                         
+        cls._doc.links = []
+        
+        cls._doc.pins = [ObjectDict(**pin) for pin in cls._doc.pins] \
+                         if hasattr(cls._doc,"pins") else \
+                         list()
+                         
+        cls._doc.rules = []
+        
+        return cls
+    
+    return decorator
+
+def required(name,type):
+    assert isinstance(name,types.StringTypes)
+    assert issubclass(type,BehaviorObject)
+    
+    def decorator(cls):
+        assert issubclass(cls,BehaviorObject)
+        
+        meth = getattr(cls,name)
+        
+        assert isinstance(meth,types.UnboundMethodType)
+        
+        for node in cls._doc.nodes:
+            if node.name == name:
+                node.type = type.__name__
+                
+                break
+        else:
+            cls._doc.nodes.append(ObjectDict(name=name,
+                                             type=type.__name__,
+                                             pins=[]))
+                
+        for pin in cls._doc.pins:
+            if pin.node == name:
+                pin.type = "required"
+                
+                break
+        else:
+            cls._doc.pins.append(ObjectDict(node=name,
+                                            type="required"))
+        
+        def func(self,value):
+            assert isinstance(value,type)
+            
+            self.__setattr__(name,value)
+            
+            meth(self,value)
+        
+        setattr(cls,name,property(func,None))
+        
+        return cls
+    
+    return decorator
+
+def provided(name,type):
+    assert isinstance(name,types.StringTypes)
+    assert issubclass(type,BehaviorObject)
+    
+    def decorator(cls):
+        assert issubclass(cls,BehaviorObject)
+        
+        meth = getattr(cls,name)
+        
+        assert isinstance(meth,types.UnboundMethodType)
+        
+        for node in cls._doc.nodes:
+            if node.name == name:
+                node.type = type.__name__
+                
+                break
+        else:
+            cls._doc.nodes.append(ObjectDict(name=name,
+                                             type=type.__name__,
+                                             pins=[]))
+                
+        for pin in cls._doc.pins:
+            if pin.node == name:
+                pin.type = "provided"
+                
+                break
+        else:
+            cls._doc.pins.append(ObjectDict(node=name,
+                                            type="provided"))
+        
+        def func(self):
+            value = self.__getattr__(name)
+            
+            assert isinstance(value,type)
+            
+            meth(self,value)
+            
+            return value
+        
+        setattr(cls,name,property(func,None))
+        
+        return cls
+    
+    return decorator
+
+@behavior(who="me",
+          when="now",
+          where="here",
+          what="that",
+          why="because")
 class BehaviorObject(BaseObject):
     """Generic behavior object"""
     

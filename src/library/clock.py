@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   21 August 2014
+Modified:   22 August 2014
 
 TBD.
 
@@ -16,6 +16,7 @@ Classes:
 Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-08-21    shenely         1.0         Initial revision
+2014-08-22    shenely         1.1         Combined behavior and structure
 
 """
 
@@ -33,9 +34,8 @@ from bson import json_util
 from bson.tz_util import utc
 
 #Internal libraries
-from structure import *
 from common import ObjectDict
-from behavior import PrimitiveBehavior
+from behavior import *
 from . import NumberPrimitive,SourcePrimitive
 #
 ##################=
@@ -55,7 +55,7 @@ __all__ = ["DatetimePrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.0"#current version [major.minor]
+__version__ = "1.1"#current version [major.minor]
 
 J2000 = datetime(2000,1,1,12,tzinfo=utc)#Julian epoch (2000-01-01T12:00:00Z)
 
@@ -65,11 +65,7 @@ CLOCK_STEP = timedelta(seconds=60)#Clock step (default to 60 seconds)
 ####################
 
 
-@behavior(who="me",
-          when="now",
-          where="here",
-          what="that",
-          why="because")
+@behavior()
 class DatetimePrimitive(PrimitiveBehavior):
     
     def __init__(self,name,pins,*args,**kwargs):
@@ -84,11 +80,7 @@ class DatetimePrimitive(PrimitiveBehavior):
         
         super(DatetimePrimitive,self).__init__(name,pins,*args,**kwargs)
 
-@behavior(who="me",
-          when="now",
-          where="here",
-          what="that",
-          why="because")
+@behavior()
 class ElapsedPrimitive(PrimitiveBehavior):
     
     def __init__(self,name,pins,*args,**kwargs):
@@ -131,18 +123,14 @@ class ElapsedPrimitive(PrimitiveBehavior):
     
         return dct
   
-@behavior(who="me",
-          when="now",
-          where="here",
-          what="that",
-          why="because")      
+@required("epoch",DatetimePrimitive)
+@provided("message",DatetimePrimitive)
+@behavior()
 class ClockSource(SourcePrimitive):
     
-    @required(DatetimePrimitive)
     def epoch(self,value):
         self.message.value = value.value
     
-    @provided(DatetimePrimitive)
     def message(self,value):pass
     
     def _receive(self):
@@ -154,11 +142,8 @@ class ClockSource(SourcePrimitive):
         logging.info("{0}:  Ticked to {1}".\
                      format(self._name,self.message.value))
 
-@behavior(who="me",
-          when="now",
-          where="here",
-          what="that",
-          why="because")
+@required("scale",NumberPrimitive)
+@behavior()
 class ContinuousClock(ClockSource):
     
     def __init__(self,name,pins,*args,**kwargs):
@@ -172,7 +157,6 @@ class ContinuousClock(ClockSource):
         
         self._then = datetime.utcnow()
     
-    @required(NumberPrimitive)
     def scale(self,value):pass
     
     def _tick(self):        
@@ -182,14 +166,10 @@ class ContinuousClock(ClockSource):
         self.message.value = self.message.value +\
                              self.scale.value * (self._now - self._then)
         
-@behavior(who="me",
-          when="now",
-          where="here",
-          what="that",
-          why="because")
+@required("step",ElapsedPrimitive)
+@behavior()
 class DiscreteClock(ClockSource):
     
-    @required(ElapsedPrimitive)
     def step(self,value):pass
     
     def _tick(self):

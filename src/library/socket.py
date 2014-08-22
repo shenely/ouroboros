@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   21 August 2014
+Modified:   22 August 2014
 
 TBD.
 
@@ -16,6 +16,7 @@ Classes:
 Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-08-21    shenely         1.0         Initial revision
+2014-08-22    shenely         1.1         Combined behavior and structure
 
 """
 
@@ -31,9 +32,8 @@ import logging
 import zmq
 
 #Internal libraries
-from structure import *
 from common import ObjectDict
-from behavior import PrimitiveBehavior
+from behavior import *
 from . import StringPrimitive,SourcePrimitive,TargetPrimitive
 #
 ##################=
@@ -52,16 +52,14 @@ __all__ = ["SocketPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.0"#current version [major.minor]
+__version__ = "1.1"#current version [major.minor]
 # 
 ####################
 
 
-@behavior(who="me",
-          when="now",
-          where="here",
-          what="that",
-          why="because")
+@required("type",StringPrimitive)
+@required("identity",StringPrimitive)
+@behavior()
 class SocketPrimitive(PrimitiveBehavior):
     
     def __init__(self,name,pins,*args,**kwargs):
@@ -69,30 +67,24 @@ class SocketPrimitive(PrimitiveBehavior):
         
         super(SocketPrimitive,self).__init__(name,pins,*args,**kwargs)
     
-    @required(StringPrimitive)
     def type(self,value):
         self.value = self._context.socket(getattr(zmq,value.value))
     
-    @required(StringPrimitive)
     def identity(self,value):
         self.value.setsockopt(zmq.IDENTITY,value.value)
     
-@behavior(who="me",
-          when="now",
-          where="here",
-          what="that",
-          why="because")
+@required("socket",SocketPrimitive)
+@required("address",StringPrimitive)
+@provided("message",StringPrimitive)
+@behavior()
 class SocketSubscribe(SourcePrimitive):
     
-    @required(SocketPrimitive)
     def socket(self,value):
         assert value.value.socket_type is zmq.SUB
     
-    @required(StringPrimitive)
     def address(self,value):
         self.socket.value.setsockopt(zmq.SUBSCRIBE,value.value)
     
-    @provided(StringPrimitive)
     def message(self,value):pass
     
     def _receive(self):
@@ -107,21 +99,17 @@ class SocketSubscribe(SourcePrimitive):
         logging.info("{0}:  From address {1}".\
                      format(self._name,self.address.value))
 
-@behavior(who="me",
-          when="now",
-          where="here",
-          what="that",
-          why="because")
+@required("socket",SocketPrimitive)
+@required("address",StringPrimitive)
+@required("message",StringPrimitive)
+@behavior()
 class SocketPublish(TargetPrimitive):
     
-    @required(SocketPrimitive)
     def socket(self,value):
         assert value.value.socket_type is zmq.PUB
     
-    @required(StringPrimitive)
     def address(self,value):pass
     
-    @required(StringPrimitive)
     def message(self,value):pass
            
     def _send(self):
