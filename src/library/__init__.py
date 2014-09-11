@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   22 August 2014
+Modified:   10 September 2014
 
 TBD.
 
@@ -17,6 +17,7 @@ Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-08-21    shenely         1.0         Initial revision
 2014-08-22    shenely         1.1         Combined behavior and structure
+2014-09-10    shenely         1.2         Forcing everything to strings
 
 """
 
@@ -54,7 +55,7 @@ __all__ = ["NumberPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.1"#current version [major.minor]
+__version__ = "1.2"#current version [major.minor]
 # 
 ####################
 
@@ -81,6 +82,8 @@ class StringPrimitive(PrimitiveBehavior):
         for pin in pins:
             if pin.name == "value":
                 assert isinstance(pin.value,types.StringTypes)
+                
+                pin.value = str(pin.value)
             
                 break
         else:
@@ -91,8 +94,6 @@ class StringPrimitive(PrimitiveBehavior):
 @provided("message",PrimitiveBehavior)
 @behavior()
 class SourcePrimitive(PrimitiveBehavior):
-    
-    def message(self):pass
     
     def _process(self):
         logging.debug("{0}:  Receiving".\
@@ -111,8 +112,6 @@ class SourcePrimitive(PrimitiveBehavior):
 @provided("message",PrimitiveBehavior)
 @behavior()
 class TargetPrimitive(PrimitiveBehavior):
-    
-    def message(self):pass
     
     def _process(self):
         logging.debug("{0}:  Sending".\

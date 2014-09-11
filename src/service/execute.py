@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   11 June 2014
+Modified:   10 September 2014
 
 TBD.
 
@@ -18,6 +18,7 @@ Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-05-06    shenely         1.0         Initial revision
 2014-06-11    shenely                     Added documentation
+2014-09-10    shenely         1.1         Reorganized processor
 
 """
 
@@ -28,13 +29,12 @@ Date          Author          Version     Description
 #Built-in libraries
 
 #External libraries
-from pymongo import MongoClient
 
 #Internal libraries
-from common import ObjectDict
-from factory import BehaviorFactory
+from factory import behavior_factory
 from . import ServiceObject
-from process import ProcessorService
+from .process import ProcessorService
+from .persist import PersistenceService
 #
 ##################=
 
@@ -50,7 +50,7 @@ __all__ = ["ExecutionService"]
 ####################
 # Constant section #
 #
-__version__ = "1.0"#current version [major.minor]
+__version__ = "1.1"#current version [major.minor]
 
 #Default MongoDB settings
 MONGO_HOST = "localhost"
@@ -70,18 +70,17 @@ class ExecutionService(ServiceObject):
     classes = dict()
     
     def __init__(self,name):
+        super(ExecutionService,self).__init__()
+        
         self.name = name
         
         self._process = ProcessorService()
+        self._database = PersistenceService()
     
     def start(self):
         """Connect to behavior database."""
         if super(ExecutionService,self).start():
-            self._process.start()
-            
-            self._client = MongoClient(MONGO_HOST,MONGO_PORT,document_class=ObjectDict)
-            self._database = self._client[DATABASE_INSTANCE]
-            self.behaviors = self._database[BEHAVIOR_COLLECTION]
+            self._database.start()
             
             return True
         else:
@@ -90,10 +89,7 @@ class ExecutionService(ServiceObject):
     def stop(self):
         """Disconnect from behavior database."""
         if super(ExecutionService,self).stop():
-            self._process.stop()
-            
-            self._database.logout()
-            self._client.disconnect()
+            self._database.stop()
             
             return True
         else:
@@ -102,7 +98,9 @@ class ExecutionService(ServiceObject):
     def pause(self):
         """Pause the processing service."""
         if super(ExecutionService,self).pause():
-            self._process.pause()
+            self._database.pause()
+            
+            self._process.stop()
             
             return True
         else:
@@ -111,9 +109,13 @@ class ExecutionService(ServiceObject):
     def resume(self):
         """Resume the processing service."""
         if super(ExecutionService,self).resume():
+            self._database.resume()
+            
             self.run()
             
-            self._process.resume()
+            self._process.start()
+            
+            self._process.run()
             
             return True
         else:
@@ -122,7 +124,7 @@ class ExecutionService(ServiceObject):
     def run(self):
         """Initialize main behavior."""
         if self._running:
-            self._main = BehaviorFactory(self,self.name)(name=MAIN_NAME)
-            self._process.schedule(self._main.control,self._main.name,Ellipsis)
+            self._main = behavior_factory(self,self.name)(name=MAIN_NAME,pins=[])
+            self._process.schedule(self._main._control,"clock",Ellipsis)
         else:
             self.resume()

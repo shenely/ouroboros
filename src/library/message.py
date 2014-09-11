@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   22 August 2014
+Modified:   10 September 2014
 
 TBD.
 
@@ -17,6 +17,7 @@ Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-08-21    shenely         1.0         Initial revision
 2014-08-22    shenely         1.1         Combined behavior and structure
+2014-09-10    shenely         1.2         Using JSON the right way
 
 """
 
@@ -25,8 +26,8 @@ Date          Author          Version     Description
 # Import section #
 #
 #Built-in libraries
-import types
 import logging
+import json
 
 #External libraries
 import zmq
@@ -50,7 +51,7 @@ __all__ = ["MessageParse",
 ####################
 # Constant section #
 #
-__version__ = "1.1"#current version [major.minor]
+__version__ = "1.2"#current version [major.minor]
 # 
 ####################
 
@@ -61,17 +62,12 @@ __version__ = "1.1"#current version [major.minor]
 @behavior()
 class MessageParse(EventPrimitive):
     
-    def template(self,value):pass
-    
-    def message(self,value):pass
-    
-    def object(self,value):pass
-    
     def _occur(self):
         logging.info("{0}:  Parsing from {1}".\
                      format(self._name,self.message.value))
         
-        self.object.value = self.template.object_hook(self.message.value)
+        self.object.value = json.loads(self.message.value,
+                                       object_hook=self.template.object_hook)
         
         logging.info("{0}:  Parsed".\
                      format(self._name))
@@ -82,17 +78,12 @@ class MessageParse(EventPrimitive):
 @behavior()
 class MessageFormat(ActionPrimitive):
     
-    def template(self,value):pass
-    
-    def object(self,value):pass
-    
-    def message(self,value):pass
-    
     def _execute(self):
         logging.info("{0}:  Formatting".\
-                     format(self.name))
+                     format(self._name))
         
-        self.message.value = self.template.default(self.object.value)
+        self.message.value = json.dumps(self.object.value,
+                                        default=self.template.default)
         
         logging.info("{0}:  Formatted to {1}".\
                      format(self._name,self.message.value))

@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   07 June 2014
+Modified:   10 September 2014
 
 TBD.
 
@@ -19,6 +19,7 @@ Date          Author          Version     Description
 2014-05-05    shenely         1.0         Initial revision
 2014-06-07    shenely                     Added documentation
 2014-06-20    shenely                     Moved to package
+2014-09-10    shenely         1.1         Making this more class-like
 
 """
 
@@ -47,7 +48,7 @@ __all__ = ["ServiceObject"]
 ####################
 # Constant section #
 #
-__version__ = "1.0"#current version [major.minor]
+__version__ = "1.1"#current version [major.minor]
 #
 ####################
 
@@ -55,8 +56,9 @@ __version__ = "1.0"#current version [major.minor]
 class ServiceObject(BaseObject):
     """Base service object"""
     
-    _started = False#is the service started?
-    _running = False#is the service running?
+    def __init__(self):
+        self._started = False#is the service started?
+        self._running = False#is the service running?
                 
     def start(self):
         """Start the service."""

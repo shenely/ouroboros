@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   22 August 2014
+Modified:   10 September 2014
 
 TBD.
 
@@ -17,6 +17,7 @@ Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-08-21    shenely         1.0         Initial revision
 2014-08-22    shenely         1.1         Combined behavior and structure
+2014-09-10    shenely         1.2         Got sockets to work
 
 """
 
@@ -52,40 +53,38 @@ __all__ = ["SocketPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.1"#current version [major.minor]
+__version__ = "1.2"#current version [major.minor]
 # 
 ####################
 
 
-@required("type",StringPrimitive)
-@required("identity",StringPrimitive)
+@required("type",StringPrimitive,
+          lambda self,value:\
+          setattr(self,"value",self._context.socket(getattr(zmq,value.value))))
+@required("identity",StringPrimitive,
+          lambda self,value:\
+          self.value.setsockopt(zmq.IDENTITY,value.value))
 @behavior()
 class SocketPrimitive(PrimitiveBehavior):
     
     def __init__(self,name,pins,*args,**kwargs):
-        pins.append(ObjectDict(name="value",value=None))
+        if len(pins) == 0:
+            pins.append(ObjectDict(name="value",value=None))
+        
+        self._context = zmq.Context(1)
         
         super(SocketPrimitive,self).__init__(name,pins,*args,**kwargs)
     
-    def type(self,value):
-        self.value = self._context.socket(getattr(zmq,value.value))
-    
-    def identity(self,value):
-        self.value.setsockopt(zmq.IDENTITY,value.value)
-    
 @required("socket",SocketPrimitive)
-@required("address",StringPrimitive)
+@required("address",StringPrimitive,
+          lambda self,value:\
+          self.socket.value.setsockopt(zmq.SUBSCRIBE,value.value))
 @provided("message",StringPrimitive)
 @behavior()
 class SocketSubscribe(SourcePrimitive):
     
-    def socket(self,value):
-        assert value.value.socket_type is zmq.SUB
-    
-    def address(self,value):
-        self.socket.value.setsockopt(zmq.SUBSCRIBE,value.value)
-    
-    def message(self,value):pass
+    #def socket(self,value):
+        #assert value.value.socket_type is zmq.SUB
     
     def _receive(self):
         address,message = self.socket.value.recv_multipart()
@@ -105,12 +104,8 @@ class SocketSubscribe(SourcePrimitive):
 @behavior()
 class SocketPublish(TargetPrimitive):
     
-    def socket(self,value):
-        assert value.value.socket_type is zmq.PUB
-    
-    def address(self,value):pass
-    
-    def message(self,value):pass
+    #def socket(self,value):
+        #assert value.value.socket_type is zmq.PUB
            
     def _send(self):
         self.socket.value.send_multipart((self.address.value,

@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   07 June 2014
+Modified:   10 September 2014
 
 TBD.
 
@@ -25,6 +25,7 @@ Date          Author          Version     Description
 2014-06-07    shenely                     Added documentation
 2014-08-16    shenely         1.4         Made service 'friendly' to
                                             behaviors
+2014-09-10    shenely         1.5         Properly create main loop
 
 """
 
@@ -59,7 +60,7 @@ __all__ = ["ProcessorService"]
 ####################
 # Constant section #
 #
-__version__ = "1.2"#current version [major.minor]
+__version__ = "1.5"#current version [major.minor]
 
 TIMEOUT = timedelta(0,0,0,100)#time between running
 
@@ -81,7 +82,7 @@ class ProcessorService(ServiceObject):
     def start(self):
         """Start the event loop."""
         if super(ProcessorService,self).start():
-            self._loop.start()
+            self._main = self._loop.add_timeout(TIMEOUT,self.run)
             
             return True
         else:
@@ -90,7 +91,9 @@ class ProcessorService(ServiceObject):
     def stop(self):
         """Stop the event loop."""
         if super(ProcessorService,self).stop():
-            self._loop.stop()
+            self._main = self._loop.remove_timeout(self._main) \
+                         if self._main is not None else \
+                         None
             
             return True
         else:
@@ -99,9 +102,7 @@ class ProcessorService(ServiceObject):
     def pause(self):
         """Remove main function from event loop."""
         if super(ProcessorService,self).pause():
-            self._main = self._loop.remove_timeout(self._main) \
-                         if self._main is not None else \
-                         None
+            self._loop.stop()
             
             return True
         else:
@@ -110,7 +111,7 @@ class ProcessorService(ServiceObject):
     def resume(self):
         """Inject main function into event loop."""
         if super(ProcessorService,self).resume():
-            self._main = self._loop.add_timeout(TIMEOUT,self.run)
+            self._loop.start()
             
             return True
         else:
@@ -164,9 +165,9 @@ class ProcessorService(ServiceObject):
             #   of the behavior owning it:
             #    1. Source node as start point; control to children
             #    2. Target node as end point; control to parent
-            graph,node = behavior._super,behavior._name \
+            graph,node = (behavior._super,behavior._name) \
                          if graph is behavior._control else \
-                         behavior.control,behavior.__class__.__name__
+                         (behavior._control,behavior.__class__.__name__)
         
         for source,target,data in graph.out_edges_iter(node,data=True):
             assert isinstance(source,types.StringTypes)

@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   22 August 2014
+Modified:   10 September 2014
 
 TBD.
 
@@ -33,6 +33,7 @@ Date          Author          Version     Description
 2014-08-18    shenely         1.5         Making all attributes private
                                             (ish)
 2014-08-22    shenely         1.6         Combined behavior and structure
+2014-09-10    shenely         1.7         Simpled data synchronization
 """
 
 
@@ -42,8 +43,11 @@ Date          Author          Version     Description
 #Built-in libraries
 import types
 import logging
+import pickle
+import copy
 
 #External libraries
+from bson import json_util
 from networkx import DiGraph
 
 #Internal libraries
@@ -68,14 +72,14 @@ __all__ = ["behavior",
 ####################
 # Constant section #
 #
-__version__ = "1.6"#current version [major.minor]
+__version__ = "1.7"#current version [major.minor]
 #
 ####################
 
 
 def behavior(**kwargs):
     def decorator(cls):
-        cls._doc = ObjectDict(**cls._doc) \
+        cls._doc = ObjectDict(**copy.deepcopy(cls._doc)) \
                    if hasattr(cls,"_doc") \
                    else ObjectDict()
         
@@ -99,20 +103,20 @@ def behavior(**kwargs):
                          
         cls._doc.rules = []
         
+        cls._checks = copy.deepcopy(cls._checks) \
+                     if hasattr(cls,"_checks") \
+                     else dict()
+        
         return cls
     
     return decorator
 
-def required(name,type):
+def required(name,type,*checks):
     assert isinstance(name,types.StringTypes)
     assert issubclass(type,BehaviorObject)
     
     def decorator(cls):
         assert issubclass(cls,BehaviorObject)
-        
-        meth = getattr(cls,name)
-        
-        assert isinstance(meth,types.UnboundMethodType)
         
         for node in cls._doc.nodes:
             if node.name == name:
@@ -132,30 +136,19 @@ def required(name,type):
         else:
             cls._doc.pins.append(ObjectDict(node=name,
                                             type="required"))
-        
-        def func(self,value):
-            assert isinstance(value,type)
             
-            self.__setattr__(name,value)
-            
-            meth(self,value)
-        
-        setattr(cls,name,property(func,None))
+        cls._checks[name] = checks
         
         return cls
     
     return decorator
 
-def provided(name,type):
+def provided(name,type,*checks):
     assert isinstance(name,types.StringTypes)
     assert issubclass(type,BehaviorObject)
     
     def decorator(cls):
         assert issubclass(cls,BehaviorObject)
-        
-        meth = getattr(cls,name)
-        
-        assert isinstance(meth,types.UnboundMethodType)
         
         for node in cls._doc.nodes:
             if node.name == name:
@@ -175,17 +168,8 @@ def provided(name,type):
         else:
             cls._doc.pins.append(ObjectDict(node=name,
                                             type="provided"))
-        
-        def func(self):
-            value = self.__getattr__(name)
             
-            assert isinstance(value,type)
-            
-            meth(self,value)
-            
-            return value
-        
-        setattr(cls,name,property(func,None))
+        cls._checks[name] = checks
         
         return cls
     
@@ -199,6 +183,12 @@ def provided(name,type):
 class BehaviorObject(BaseObject):
     """Generic behavior object"""
     
+    @classmethod
+    def install(cls,service):
+        cls._doc.path = pickle.dumps(cls)
+        
+        service.set(cls._doc)
+    
     def __init__(self,name,pins,data=DiGraph(),control=DiGraph(),graph=None):
         super(BehaviorObject,self).__init__()
         
@@ -210,7 +200,7 @@ class BehaviorObject(BaseObject):
         
         #Initialize data values
         for pin in pins:
-            self.__setattr__(pin.name,pin.value)
+            setattr(self,pin.name,pin.value)
     
     def __call__(self,graph):
         """Execute behavior in a context."""
@@ -218,40 +208,64 @@ class BehaviorObject(BaseObject):
             
     def __getattr__(self,name):
         """"Get value of a provided interface."""
-        data = self._data.node[(name,None)]
-        
-        #Can only get provided interfaces
-        if data is None:
-            #TODO:  Provided interface warning (shenely, 2014-06-10)
-            raise Warning# does not exist
-        
-            value = super(BehaviorObject,self).__getattr__(name)
-        else:
-            if data.get("type") != "provided":
-                raise Warning# is not provided
+        try:
+            data = super(BehaviorObject,self).__getattr__("_data")\
+                   .node.get((name,None))
             
-            value = data.get("node")
+            #Can only get provided interfaces
+            if data is None:
+                #TODO:  Provided interface warning (shenely, 2014-06-10)
+                #raise Warning# does not exist
+            
+                value = super(BehaviorObject,self).__getattr__(name)
+            else:
+                if data.get("type") != "provided":
+                    pass#raise Warning# is not provided
+                
+                value = data.get("node")
+                
+                if isinstance(value,BehaviorObject):pass
+                    #assert isinstance(value,data.get("cls")) or issubclass(value.__class__,data.get("cls"))
+                else:
+                    value = data.get("cls")(name,[ObjectDict(value=value)])
+                    
+                [check(self,value) for check in self._checks[name]]
+        except AttributeError:
+            value = super(BehaviorObject,self).__getattr__(name)
             
         return value
             
     def __setattr__(self,name,value):
         """Set value of required interface."""
-        data = self._data.node.get((name,None))
-        control = self._control.node.get(name)
-        
-        #Can only set required interfaces
-        if data is None or control is None:
-            #TODO:  Required interface warning (shenely, 2014-06-10)
-            raise Warning# does not exist
-        
+        try:
+            data = super(BehaviorObject,self).__getattr__("_data")\
+                   .node.get((name,None))
+            control = super(BehaviorObject,self).__getattr__("_control")\
+                      .node.get(name)
+            
+            #Can only set required interfaces
+            if data is None or control is None:
+                #TODO:  Required interface warning (shenely, 2014-06-10)
+                #raise Warning# does not exist
+            
+                super(BehaviorObject,self).__setattr__(name,value)
+            else:
+                if data.get("type") != "required":
+                    pass#raise Warning# is not required
+                
+                if isinstance(value,BehaviorObject):
+                    assert isinstance(value,data.get("cls"))
+                else:
+                    value = data.get("cls")(name,[ObjectDict(name="value",value=value)])
+                    
+                [check(self,value) for check in self._checks[name]]
+    
+                data["node"] = value
+                control["node"] = value
+        except AttributeError:
             super(BehaviorObject,self).__setattr__(name,value)
-        else:
-            if data.get("type") != "required":
-                raise Warning# is not required
 
-            data["node"] = value
-            control["node"] = value
-
+@behavior()
 class PrimitiveBehavior(BehaviorObject):
     """Primitive (simple) behavior"""
     
@@ -259,59 +273,36 @@ class PrimitiveBehavior(BehaviorObject):
         super(PrimitiveBehavior,self).__init__(*args,**kwargs)
                        
         logging.debug("{0}:  Starting".\
-                      format(self.name))
+                      format(self._name))
         
     def __del__(self):
         logging.warn("{0}:  Stopping".\
-                     format(self.name))
+                     format(self._name))
     
-    def __call__(self):        
+    def __call__(self):
         logging.debug("{0}:  Processing".\
-                     format(self.name))
+                     format(self._name))
         
         mode = self._process()
 
         logging.debug("{0}:  Processed".\
-                     format(self.name))
+                     format(self._name))
         
         return mode
+        
+    def default(self,obj):
+        obj = json_util.default(obj)
+            
+        return obj
+        
+    def object_hook(self,dct):
+        dct = json_util.object_hook(dct)
+    
+        return dct
     
     def _process(self):
         raise NotImplemented
 
+@behavior()
 class CompositeBehavior(BehaviorObject):
     """Composite (complex) behavior"""
-    
-    def __getattr__(self,name):
-        value = super(CompositeBehavior,self).__getattr__(name)
-        
-        self._update(value)
-        
-        return value
-            
-    def __setattr__(self,name,value):
-        super(CompositeBehavior,self).__setattr__(name,value)
-        
-        self._update(value)
-        
-    def _update(self,value):
-        """Update data in connected behaviors."""
-        #NOTE:  Data flow update (shenely, 2014-06-11)
-        # Iterates over each data node in the behavior.  For each
-        #   successor, transfer the value from the behavior to the
-        #   successor.  For each predecessor, transfer the value from
-        #   the predecessor to the behavior.
-        for source in value._data.node_iter(data=False):
-            for target,data in self._data.successors_iter((self._name,
-                                                           source[0]),
-                                                          data=True):
-                node = getattr(data,"node")
-                
-                setattr(node,target[1],getattr(value,source[0]))
-                
-            for target,data in self._data.predecessors_iter((self._name,
-                                                             source[0]),
-                                                            data=True):
-                node = getattr(data,"node")
-                
-                setattr(value,source[0],getattr(node,target[1]))

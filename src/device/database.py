@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   26 June 2014
+Modified:   10 September 2014
 
 TBD.
 
@@ -17,6 +17,7 @@ DatabaseDevice  -- TBD
 Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-06-26    shenely         1.0         Initial revision
+2014-09-10    shenely         1.1         Saves don't modified document
 
 """
 
@@ -46,7 +47,7 @@ __all__ = ["DatabaseDevice"]
 ####################
 # Constant section #
 #
-__version__ = "1.0"#current version [major.minor]
+__version__ = "1.1"#current version [major.minor]
 
 #Default MongoDB settings
 DEFAULT_HOST = "localhost"
@@ -77,6 +78,6 @@ class DatabaseDevice:
         return document
     
     def save(self,name,document):
-        _id = self._database[name].save(document)
+        _id = self._database[name].save(document,manipulate=False)
         
         return _id

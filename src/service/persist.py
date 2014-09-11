@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   26 June 2014
+Modified:   10 September 2014
 
 TBD.
 
@@ -18,6 +18,7 @@ Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-06-12    shenely         1.0         Initial revision
 2014-06-26    shenely         1.1         Moved database to device
+2014-09-10    shenely         1.2         Added a run method
 
 """
 
@@ -48,7 +49,7 @@ __all__ = ["PersistenceService"]
 ####################
 # Constant section #
 #
-__version__ = "1.1"#current version [major.minor]
+__version__ = "1.2"#current version [major.minor]
 
 BEHAVIOR_COLLECTION = "behaviors"
 #
@@ -90,6 +91,9 @@ class PersistenceService(ServiceObject):
             return True
         else:
             return False
+            
+    def run(self):
+        self.resume() if not self._running else None
             
     def get(self,query):
         if self._running:

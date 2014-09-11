@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   22 August 2014
+Modified:   10 September 2014
 
 TBD.
 
@@ -17,7 +17,7 @@ Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-08-21    shenely         1.0         Initial revision
 2014-08-22    shenely         1.1         Combined behavior and structure
-
+2014-09-10    shenely         1.2         Clocks work now
 """
 
 
@@ -30,7 +30,6 @@ import types
 import logging
 
 #External libraries
-from bson import json_util
 from bson.tz_util import utc
 
 #Internal libraries
@@ -55,12 +54,14 @@ __all__ = ["DatetimePrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.1"#current version [major.minor]
+__version__ = "1.2"#current version [major.minor]
 
 J2000 = datetime(2000,1,1,12,tzinfo=utc)#Julian epoch (2000-01-01T12:00:00Z)
 
-CLOCK_SCALE = 1.0#Clock rate scale (default 1:1, i.e. real-time)
+CLOCK_PERIOD = timedelta(milliseconds=100)
+CLOCK_SCALE = 1#Clock rate scale (default 1:1, i.e. real-time)
 CLOCK_STEP = timedelta(seconds=60)#Clock step (default to 60 seconds)
+
 # 
 ####################
 
@@ -86,12 +87,7 @@ class ElapsedPrimitive(PrimitiveBehavior):
     def __init__(self,name,pins,*args,**kwargs):
         for pin in pins:
             if pin.name == "value":
-                try:
-                    assert isinstance(pin.value,timedelta)
-                except AssertionError:
-                    assert isinstance(pin.value,types.IntType)
-                    
-                    pin.value = timedelta(seconds=pin.value)
+                assert isinstance(pin.value,timedelta)
                 
                 break
         else:
@@ -100,18 +96,16 @@ class ElapsedPrimitive(PrimitiveBehavior):
         
         super(ElapsedPrimitive,self).__init__(name,pins,*args,**kwargs)
         
-    @staticmethod
-    def default(obj):
+    def default(self,obj):
         if isinstance(obj,timedelta):
             obj = { "$elapse": obj.total_seconds() }
         else:
-            obj = json_util.default(obj)
+            obj = super(ElapsedPrimitive,self).default(obj)
             
         return obj
         
-    @staticmethod
-    def object_hook(dct):
-        dct = json_util.object_hook(dct)
+    def object_hook(self,dct):
+        dct = super(ElapsedPrimitive,self).object_hook(dct)
         
         if isinstance(dct,types.DictType):
             if "$elapse" in dct:
@@ -123,15 +117,24 @@ class ElapsedPrimitive(PrimitiveBehavior):
     
         return dct
   
-@required("epoch",DatetimePrimitive)
+@required("epoch",DatetimePrimitive,
+          lambda self,value:\
+          setattr(self.message,"value",value.value))
 @provided("message",DatetimePrimitive)
+@required("period",ElapsedPrimitive)
 @behavior()
 class ClockSource(SourcePrimitive):
     
-    def epoch(self,value):
-        self.message.value = value.value
-    
-    def message(self,value):pass
+    def __init__(self,name,pins,*args,**kwargs):
+        for pin in pins:
+            if pin.name == "period":break
+        else:
+            pins.append(ObjectDict(name="period",
+                                   value=CLOCK_PERIOD))
+            
+        super(ClockSource,self).__init__(name,pins,*args,**kwargs)
+        
+        self._then = datetime.utcnow()
     
     def _receive(self):
         logging.info("{0}:  Ticking from {1}".\
@@ -150,27 +153,23 @@ class ContinuousClock(ClockSource):
         for pin in pins:
             if pin.name == "scale":break
         else:
-            pin.append(ObjectDict(name="scale",
-                                  value=CLOCK_SCALE))
+            pins.append(ObjectDict(name="scale",
+                                   value=CLOCK_SCALE))
             
-        super(ContinuousClock,self).__init__(*args,**kwargs)
+        super(ContinuousClock,self).__init__(name,pins,*args,**kwargs)
         
         self._then = datetime.utcnow()
-    
-    def scale(self,value):pass
     
     def _tick(self):        
         self._now = datetime.utcnow()
             
         #Increase simulation time
         self.message.value = self.message.value +\
-                             self.scale.value * (self._now - self._then)
+                             int(self.scale.value) * (self._now - self._then)
         
 @required("step",ElapsedPrimitive)
 @behavior()
 class DiscreteClock(ClockSource):
-    
-    def step(self,value):pass
     
     def _tick(self):
         #Increase simulation time
