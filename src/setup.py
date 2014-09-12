@@ -46,6 +46,31 @@ _.MessageFormat.install(service)
 
 del _
 
+import library.queue as _
+
+_.QueuePrimitive.install(service)
+_.QueueGet.install(service)
+_.QueuePut.install(service)
+
+del _
+
+import library.order as _
+
+_.BeforeOrder.install(service)
+_.AfterOrder.install(service)
+
+del _
+
+import library.control as _
+
+_.ControlPrimitive.install(service)
+_.AcceptedControl.install(service)
+_.RejectedControl.install(service)
+_.PositiveControl.install(service)
+_.NegativeControl.install(service)
+
+del _
+
 import main as _
     
 _.main.install(service)

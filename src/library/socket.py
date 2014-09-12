@@ -34,7 +34,6 @@ import logging
 import zmq
 
 #Internal libraries
-from common import ObjectDict
 from behavior import *
 from . import StringPrimitive,SourcePrimitive,TargetPrimitive
 #
@@ -67,7 +66,7 @@ __version__ = "1.3"#current version [major.minor]
           self.value.setsockopt(zmq.IDENTITY,value.value))
 class SocketPrimitive(PrimitiveBehavior):
     
-    def __init__(self,name,pins,*args,**kwargs):        
+    def __init__(self,name,pins,*args,**kwargs):
         self._context = zmq.Context(1)
         
         super(SocketPrimitive,self).__init__(name,pins,*args,**kwargs)
@@ -78,9 +77,6 @@ class SocketPrimitive(PrimitiveBehavior):
           self.socket.value.setsockopt(zmq.SUBSCRIBE,value.value))
 @provided("message",StringPrimitive)
 class SocketSubscribe(SourcePrimitive):
-    
-    #def socket(self,value):
-        #assert value.value.socket_type is zmq.SUB
     
     def _receive(self):
         address,message = self.socket.value.recv_multipart()
@@ -98,9 +94,6 @@ class SocketSubscribe(SourcePrimitive):
 @required("address",StringPrimitive)
 @required("message",StringPrimitive)
 class SocketPublish(TargetPrimitive):
-    
-    #def socket(self,value):
-        #assert value.value.socket_type is zmq.PUB
            
     def _send(self):
         self.socket.value.send_multipart((self.address.value,
