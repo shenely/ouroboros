@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   10 September 2014
+Modified:   11 September 2014
 
 TBD.
 
@@ -18,6 +18,7 @@ Date          Author          Version     Description
 2014-08-21    shenely         1.0         Initial revision
 2014-08-22    shenely         1.1         Combined behavior and structure
 2014-09-10    shenely         1.2         Forcing everything to strings
+2014-09-11    shenely         1.3         Organized behavior decorators
 
 """
 
@@ -55,7 +56,7 @@ __all__ = ["NumberPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.2"#current version [major.minor]
+__version__ = "1.3"#current version [major.minor]
 # 
 ####################
 
@@ -110,7 +111,6 @@ class SourcePrimitive(PrimitiveBehavior):
         raise NotImplemented
     
 @provided("message",PrimitiveBehavior)
-@behavior()
 class TargetPrimitive(PrimitiveBehavior):
     
     def _process(self):
@@ -127,7 +127,6 @@ class TargetPrimitive(PrimitiveBehavior):
     def _send(self,message):
         raise NotImplemented
 
-@behavior()
 class ConditionPrimitive(PrimitiveBehavior):
     
     def _process(self):
@@ -148,7 +147,6 @@ class ConditionPrimitive(PrimitiveBehavior):
     def _satisfy(self,message):
         raise NotImplemented
 
-@behavior()
 class EventPrimitive(PrimitiveBehavior):
     
     def _process(self):
@@ -169,7 +167,6 @@ class EventPrimitive(PrimitiveBehavior):
     def _occur(self):
         raise NotImplemented
 
-@behavior()
 class ActionPrimitive(PrimitiveBehavior):
     
     def _process(self):

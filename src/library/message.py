@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   10 September 2014
+Modified:   11 September 2014
 
 TBD.
 
@@ -18,6 +18,7 @@ Date          Author          Version     Description
 2014-08-21    shenely         1.0         Initial revision
 2014-08-22    shenely         1.1         Combined behavior and structure
 2014-09-10    shenely         1.2         Using JSON the right way
+2014-09-11    shenely         1.3         Organized behavior decorators
 
 """
 
@@ -51,7 +52,7 @@ __all__ = ["MessageParse",
 ####################
 # Constant section #
 #
-__version__ = "1.2"#current version [major.minor]
+__version__ = "1.3"#current version [major.minor]
 # 
 ####################
 
@@ -59,7 +60,6 @@ __version__ = "1.2"#current version [major.minor]
 @required("template",PrimitiveBehavior)
 @required("message",StringPrimitive)
 @provided("object",PrimitiveBehavior)
-@behavior()
 class MessageParse(EventPrimitive):
     
     def _occur(self):
@@ -75,7 +75,6 @@ class MessageParse(EventPrimitive):
 @required("template",PrimitiveBehavior)
 @required("object",PrimitiveBehavior)
 @provided("message",StringPrimitive)
-@behavior()
 class MessageFormat(ActionPrimitive):
     
     def _execute(self):

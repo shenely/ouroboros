@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   10 September 2014
+Modified:   11 September 2014
 
 TBD.
 
@@ -18,6 +18,7 @@ Date          Author          Version     Description
 2014-08-21    shenely         1.0         Initial revision
 2014-08-22    shenely         1.1         Combined behavior and structure
 2014-09-10    shenely         1.2         Got sockets to work
+2014-09-11    shenely         1.3         Organized behavior decorators
 
 """
 
@@ -53,7 +54,7 @@ __all__ = ["SocketPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.2"#current version [major.minor]
+__version__ = "1.3"#current version [major.minor]
 # 
 ####################
 
@@ -64,13 +65,9 @@ __version__ = "1.2"#current version [major.minor]
 @required("identity",StringPrimitive,
           lambda self,value:\
           self.value.setsockopt(zmq.IDENTITY,value.value))
-@behavior()
 class SocketPrimitive(PrimitiveBehavior):
     
-    def __init__(self,name,pins,*args,**kwargs):
-        if len(pins) == 0:
-            pins.append(ObjectDict(name="value",value=None))
-        
+    def __init__(self,name,pins,*args,**kwargs):        
         self._context = zmq.Context(1)
         
         super(SocketPrimitive,self).__init__(name,pins,*args,**kwargs)
@@ -80,7 +77,6 @@ class SocketPrimitive(PrimitiveBehavior):
           lambda self,value:\
           self.socket.value.setsockopt(zmq.SUBSCRIBE,value.value))
 @provided("message",StringPrimitive)
-@behavior()
 class SocketSubscribe(SourcePrimitive):
     
     #def socket(self,value):
@@ -101,7 +97,6 @@ class SocketSubscribe(SourcePrimitive):
 @required("socket",SocketPrimitive)
 @required("address",StringPrimitive)
 @required("message",StringPrimitive)
-@behavior()
 class SocketPublish(TargetPrimitive):
     
     #def socket(self,value):

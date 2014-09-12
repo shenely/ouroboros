@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   10 September 2014
+Modified:   11 September 2014
 
 TBD.
 
@@ -18,6 +18,7 @@ Date          Author          Version     Description
 2014-08-21    shenely         1.0         Initial revision
 2014-08-22    shenely         1.1         Combined behavior and structure
 2014-09-10    shenely         1.2         Clocks work now
+2014-09-11    shenely         1.3         Organized behavior decorators
 """
 
 
@@ -54,7 +55,7 @@ __all__ = ["DatetimePrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.2"#current version [major.minor]
+__version__ = "1.3"#current version [major.minor]
 
 J2000 = datetime(2000,1,1,12,tzinfo=utc)#Julian epoch (2000-01-01T12:00:00Z)
 
@@ -66,7 +67,6 @@ CLOCK_STEP = timedelta(seconds=60)#Clock step (default to 60 seconds)
 ####################
 
 
-@behavior()
 class DatetimePrimitive(PrimitiveBehavior):
     
     def __init__(self,name,pins,*args,**kwargs):
@@ -81,7 +81,6 @@ class DatetimePrimitive(PrimitiveBehavior):
         
         super(DatetimePrimitive,self).__init__(name,pins,*args,**kwargs)
 
-@behavior()
 class ElapsedPrimitive(PrimitiveBehavior):
     
     def __init__(self,name,pins,*args,**kwargs):
@@ -122,7 +121,6 @@ class ElapsedPrimitive(PrimitiveBehavior):
           setattr(self.message,"value",value.value))
 @provided("message",DatetimePrimitive)
 @required("period",ElapsedPrimitive)
-@behavior()
 class ClockSource(SourcePrimitive):
     
     def __init__(self,name,pins,*args,**kwargs):
@@ -146,7 +144,6 @@ class ClockSource(SourcePrimitive):
                      format(self._name,self.message.value))
 
 @required("scale",NumberPrimitive)
-@behavior()
 class ContinuousClock(ClockSource):
     
     def __init__(self,name,pins,*args,**kwargs):
@@ -166,9 +163,10 @@ class ContinuousClock(ClockSource):
         #Increase simulation time
         self.message.value = self.message.value +\
                              int(self.scale.value) * (self._now - self._then)
+                             
+        self._then = self._now
         
 @required("step",ElapsedPrimitive)
-@behavior()
 class DiscreteClock(ClockSource):
     
     def _tick(self):

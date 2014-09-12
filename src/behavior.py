@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   10 September 2014
+Modified:   11 September 2014
 
 TBD.
 
@@ -33,7 +33,8 @@ Date          Author          Version     Description
 2014-08-18    shenely         1.5         Making all attributes private
                                             (ish)
 2014-08-22    shenely         1.6         Combined behavior and structure
-2014-09-10    shenely         1.7         Simpled data synchronization
+2014-09-10    shenely         1.7         Simplified data synchronization
+2014-09-11    shenely         1.8         Organized behavior decorators
 """
 
 
@@ -45,6 +46,7 @@ import types
 import logging
 import pickle
 import copy
+import warnings
 
 #External libraries
 from bson import json_util
@@ -72,119 +74,109 @@ __all__ = ["behavior",
 ####################
 # Constant section #
 #
-__version__ = "1.7"#current version [major.minor]
+__version__ = "1.8"#current version [major.minor]
+
+DEFAULT_DOCUMENT = ObjectDict(\
+    story=ObjectDict(
+        who="me",
+        when="now",
+        where="here",
+        what="that",
+        why="because"),
+    nodes=[],
+    links=[],
+    pins=[],
+    rules=[])
 #
 ####################
 
 
+def inherit(cls):
+    #NOTE:  Behavior inheritance (shenely, 2014-09-11)
+    # All behaviors inherit provided and required interfaces as well as
+    #   description stories.  The parent behavior's attributes are only
+    #   inherited by the child once.  This is an optimization to
+    #   minimize the amount of deep copies being executed.
+    if hasattr(cls,"_doc"):
+        if cls._doc.name != cls.__name__:
+            cls._doc.name = cls.__name__
+            
+            cls._doc = copy.deepcopy(cls._doc)
+        
+            cls._checks = copy.deepcopy(cls._checks)
+    else:
+        cls._doc = copy.deepcopy(DEFAULT_DOCUMENT)
+        cls._doc.name = cls.__name__
+        cls._checks = dict()
+
 def behavior(**kwargs):
     def decorator(cls):
-        cls._doc = ObjectDict(**copy.deepcopy(cls._doc)) \
-                   if hasattr(cls,"_doc") \
-                   else ObjectDict()
+        inherit(cls)
         
-        cls._doc.name = cls.__name__
-        #cls._doc.path = pickle.dumps(cls)
+        cls._doc.story.update(kwargs)# child behavior's unique story
         
-        cls._doc.story = cls._doc.story \
-                         if hasattr(cls._doc,"story") else \
-                         ObjectDict()
-        cls._doc.story.update(kwargs)
+        return cls
+    
+    return decorator
+
+def interface(mode,name,type,*checks):
+    assert isinstance(name,types.StringTypes)
+    assert issubclass(type,BehaviorObject)
+    
+    def decorator(cls):
+        assert issubclass(cls,BehaviorObject)
         
-        cls._doc.nodes = [ObjectDict(**node) for node in cls._doc.nodes] \
-                         if hasattr(cls._doc,"nodes") else \
-                         list()
-                         
-        cls._doc.links = []
+        inherit(cls)
         
-        cls._doc.pins = [ObjectDict(**pin) for pin in cls._doc.pins] \
-                         if hasattr(cls._doc,"pins") else \
-                         list()
-                         
-        cls._doc.rules = []
+        #Check if there is an existing node
+        for node in cls._doc.nodes:
+            if node.name == name:
+                node.type = type.__name__
+                
+                break
+        else:
+            #Add node if it doesn't exist
+            cls._doc.nodes.append(ObjectDict(name=name,
+                                             type=type.__name__,
+                                             pins=[]))
         
-        cls._checks = copy.deepcopy(cls._checks) \
-                     if hasattr(cls,"_checks") \
-                     else dict()
+        #Check if there is an existing pin
+        for pin in cls._doc.pins:
+            if pin.node == name:
+                pin.type = mode# expose it if so
+                
+                break
+        else:
+            #Add pin if it doesn't exist
+            cls._doc.pins.append(ObjectDict(node=name,
+                                            type=mode))
+            
+        #XXX:  Interface checks (shenely, 2014-09-11)
+        # Currently, all interface checks are done via functions
+        #   (anonymous or otherwise).  This is only a temporary
+        #   solution (that is working, by the way).  Ultimately, there
+        #   should be a mechanism to identify and validate interfaces
+        #   outside of the class definition.
+        cls._checks[name] = checks# interface checks...
         
         return cls
     
     return decorator
 
 def required(name,type,*checks):
-    assert isinstance(name,types.StringTypes)
-    assert issubclass(type,BehaviorObject)
-    
-    def decorator(cls):
-        assert issubclass(cls,BehaviorObject)
-        
-        for node in cls._doc.nodes:
-            if node.name == name:
-                node.type = type.__name__
-                
-                break
-        else:
-            cls._doc.nodes.append(ObjectDict(name=name,
-                                             type=type.__name__,
-                                             pins=[]))
-                
-        for pin in cls._doc.pins:
-            if pin.node == name:
-                pin.type = "required"
-                
-                break
-        else:
-            cls._doc.pins.append(ObjectDict(node=name,
-                                            type="required"))
-            
-        cls._checks[name] = checks
-        
-        return cls
-    
-    return decorator
+    return interface("required",name,type,*checks)
 
 def provided(name,type,*checks):
-    assert isinstance(name,types.StringTypes)
-    assert issubclass(type,BehaviorObject)
-    
-    def decorator(cls):
-        assert issubclass(cls,BehaviorObject)
-        
-        for node in cls._doc.nodes:
-            if node.name == name:
-                node.type = type.__name__
-                
-                break
-        else:
-            cls._doc.nodes.append(ObjectDict(name=name,
-                                             type=type.__name__,
-                                             pins=[]))
-                
-        for pin in cls._doc.pins:
-            if pin.node == name:
-                pin.type = "provided"
-                
-                break
-        else:
-            cls._doc.pins.append(ObjectDict(node=name,
-                                            type="provided"))
-            
-        cls._checks[name] = checks
-        
-        return cls
-    
-    return decorator
+    return interface("provided",name,type,*checks)
 
-@behavior(who="me",
-          when="now",
-          where="here",
-          what="that",
-          why="because")
+@behavior()
 class BehaviorObject(BaseObject):
     """Generic behavior object"""
     
     @classmethod
     def install(cls,service):
+        inherit(cls)
+        
         cls._doc.path = pickle.dumps(cls)
         
         service.set(cls._doc)
@@ -215,17 +207,18 @@ class BehaviorObject(BaseObject):
             #Can only get provided interfaces
             if data is None:
                 #TODO:  Provided interface warning (shenely, 2014-06-10)
-                #raise Warning# does not exist
+                warnings.warn("does not exist",Warning)
             
                 value = super(BehaviorObject,self).__getattr__(name)
             else:
                 if data.get("type") != "provided":
-                    pass#raise Warning# is not provided
+                    warnings.warn("is not provided",Warning)
                 
                 value = data.get("node")
                 
-                if isinstance(value,BehaviorObject):pass
-                    #assert isinstance(value,data.get("cls")) or issubclass(value.__class__,data.get("cls"))
+                if isinstance(value,BehaviorObject):
+                    assert isinstance(value,data.get("cls")) or \
+                           issubclass(value.__class__,data.get("cls"))
                 else:
                     value = data.get("cls")(name,[ObjectDict(value=value)])
                     
@@ -246,18 +239,20 @@ class BehaviorObject(BaseObject):
             #Can only set required interfaces
             if data is None or control is None:
                 #TODO:  Required interface warning (shenely, 2014-06-10)
-                #raise Warning# does not exist
+                warnings.warn("does not exist",Warning)
             
                 super(BehaviorObject,self).__setattr__(name,value)
             else:
                 if data.get("type") != "required":
-                    pass#raise Warning# is not required
+                    warnings.warn("is not required",Warning)
                 
                 if isinstance(value,BehaviorObject):
                     assert isinstance(value,data.get("cls"))
                 else:
-                    value = data.get("cls")(name,[ObjectDict(name="value",value=value)])
-                    
+                    value = data.get("cls")(name,[ObjectDict(name="value",
+                                                             value=value)])
+                
+                #Check value of data
                 [check(self,value) for check in self._checks[name]]
     
                 data["node"] = value
@@ -265,7 +260,6 @@ class BehaviorObject(BaseObject):
         except AttributeError:
             super(BehaviorObject,self).__setattr__(name,value)
 
-@behavior()
 class PrimitiveBehavior(BehaviorObject):
     """Primitive (simple) behavior"""
     
@@ -291,11 +285,13 @@ class PrimitiveBehavior(BehaviorObject):
         return mode
         
     def default(self,obj):
+        """For JSON encoder"""
         obj = json_util.default(obj)
             
         return obj
         
     def object_hook(self,dct):
+        """For JSON decoder"""
         dct = json_util.object_hook(dct)
     
         return dct
@@ -303,6 +299,5 @@ class PrimitiveBehavior(BehaviorObject):
     def _process(self):
         raise NotImplemented
 
-@behavior()
 class CompositeBehavior(BehaviorObject):
     """Composite (complex) behavior"""
