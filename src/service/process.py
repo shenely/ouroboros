@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   10 September 2014
+Modified:   12 September 2014
 
 TBD.
 
@@ -26,6 +26,8 @@ Date          Author          Version     Description
 2014-08-16    shenely         1.4         Made service 'friendly' to
                                             behaviors
 2014-09-10    shenely         1.5         Properly create main loop
+2014-09-12    shenely         1.6         Main loop was not being
+                                            controlled properly
 
 """
 
@@ -60,7 +62,7 @@ __all__ = ["ProcessorService"]
 ####################
 # Constant section #
 #
-__version__ = "1.5"#current version [major.minor]
+__version__ = "1.6"#current version [major.minor]
 
 TIMEOUT = timedelta(0,0,0,100)#time between running
 
@@ -82,7 +84,7 @@ class ProcessorService(ServiceObject):
     def start(self):
         """Start the event loop."""
         if super(ProcessorService,self).start():
-            self._main = self._loop.add_timeout(TIMEOUT,self.run)
+            self._loop.start()
             
             return True
         else:
@@ -91,9 +93,7 @@ class ProcessorService(ServiceObject):
     def stop(self):
         """Stop the event loop."""
         if super(ProcessorService,self).stop():
-            self._main = self._loop.remove_timeout(self._main) \
-                         if self._main is not None else \
-                         None
+            self._loop.stop()
             
             return True
         else:
@@ -102,7 +102,9 @@ class ProcessorService(ServiceObject):
     def pause(self):
         """Remove main function from event loop."""
         if super(ProcessorService,self).pause():
-            self._loop.stop()
+            self._main = self._loop.add_callback(self._main) \
+                         if self._main is not None else \
+                         None
             
             return True
         else:
@@ -111,7 +113,7 @@ class ProcessorService(ServiceObject):
     def resume(self):
         """Inject main function into event loop."""
         if super(ProcessorService,self).resume():
-            self._loop.start()
+            self._main = self._loop.add_callback(self.run)
             
             return True
         else:
@@ -127,7 +129,7 @@ class ProcessorService(ServiceObject):
         else:
             self.resume()
         
-    def schedule(self,graph,node,mode,priority=MEDIUM):
+    def schedule(self,graph,node,mode=Ellipsis,priority=MEDIUM):
         """Schedule a process for execution."""
         assert isinstance(graph,DiGraph)
         assert isinstance(node,types.StringTypes)
@@ -135,8 +137,10 @@ class ProcessorService(ServiceObject):
         
         self._queue.put((priority,graph,node,mode))
         
+        self.resume()
+        
     def _dispatch(self):
-        """Execute process and scheedule"""
+        """Execute process and schedule"""
         priority,graph,node,mode = self._queue.get()
         
         assert isinstance(graph,DiGraph)

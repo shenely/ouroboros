@@ -115,8 +115,6 @@ class ExecutionService(ServiceObject):
             
             self._process.start()
             
-            self._process.run()
-            
             return True
         else:
             return False
@@ -125,6 +123,5 @@ class ExecutionService(ServiceObject):
         """Initialize main behavior."""
         if self._running:
             self._main = behavior_factory(self,self.name)(name=MAIN_NAME,pins=[])
-            self._process.schedule(self._main._control,"clock",Ellipsis)
         else:
             self.resume()

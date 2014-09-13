@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   11 September 2014
+Modified:   12 September 2014
 
 TBD.
 
@@ -24,6 +24,7 @@ Date          Author          Version     Description
                                             objects
 2014-09-10    shenely         1.3         Moving aways from metaclass
 2014-09-11    shenely         1.4         Removed metaclass
+2014-09-12    shenely         1.5         Added event mixins
 
 
 """
@@ -39,6 +40,7 @@ import pickle
 from networkx import DiGraph
 
 #Internal libraries
+from library.event import EventPrimitive
 #
 ##################=
 
@@ -54,7 +56,7 @@ __all__ = ["behavior_factory"]
 ####################
 # Constant section #
 #
-__version__ = "1.4"#current version [major.minor]
+__version__ = "1.5"#current version [major.minor]
 #
 ####################
 
@@ -99,6 +101,9 @@ def behavior_factory(app,name):
                         data.add_node((obj._name,n[0]),
                                       node=d.get("node"),
                                       type=None)
+            
+                if isinstance(obj,EventPrimitive):
+                    obj.event(app)
             else:
                 control.add_node(cls.__name__,node=None)# placeholder
                 

@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   11 September 2014
+Modified:   12 September 2014
 
 TBD.
 
@@ -19,6 +19,7 @@ Date          Author          Version     Description
 2014-08-22    shenely         1.1         Combined behavior and structure
 2014-09-10    shenely         1.2         Clocks work now
 2014-09-11    shenely         1.3         Organized behavior decorators
+2014-09-12    shenely         1.4         Added event mixins
 """
 
 
@@ -37,6 +38,7 @@ from bson.tz_util import utc
 from common import ObjectDict
 from behavior import *
 from . import NumberPrimitive,SourcePrimitive
+from .event import PeriodicEvent
 #
 ##################=
 
@@ -55,7 +57,7 @@ __all__ = ["DatetimePrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.3"#current version [major.minor]
+__version__ = "1.4"#current version [major.minor]
 
 J2000 = datetime(2000,1,1,12,tzinfo=utc)#Julian epoch (2000-01-01T12:00:00Z)
 
@@ -121,7 +123,7 @@ class ElapsedPrimitive(PrimitiveBehavior):
           setattr(self.message,"value",value.value))
 @provided("message",DatetimePrimitive)
 @required("period",ElapsedPrimitive)
-class ClockSource(SourcePrimitive):
+class ClockSource(SourcePrimitive,PeriodicEvent):
     
     def __init__(self,name,pins,*args,**kwargs):
         for pin in pins:

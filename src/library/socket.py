@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   11 September 2014
+Modified:   12 September 2014
 
 TBD.
 
@@ -19,6 +19,7 @@ Date          Author          Version     Description
 2014-08-22    shenely         1.1         Combined behavior and structure
 2014-09-10    shenely         1.2         Got sockets to work
 2014-09-11    shenely         1.3         Organized behavior decorators
+2014-09-12    shenely         1.4         Added event mixins
 
 """
 
@@ -36,6 +37,7 @@ import zmq
 #Internal libraries
 from behavior import *
 from . import StringPrimitive,SourcePrimitive,TargetPrimitive
+from .event import HandlerEvent
 #
 ##################=
 
@@ -76,7 +78,11 @@ class SocketPrimitive(PrimitiveBehavior):
           lambda self,value:\
           self.socket.value.setsockopt(zmq.SUBSCRIBE,value.value))
 @provided("message",StringPrimitive)
-class SocketSubscribe(SourcePrimitive):
+class SocketSubscribe(SourcePrimitive,HandlerEvent):
+    
+    @property
+    def handle(self):
+        return self.socket
     
     def _receive(self):
         address,message = self.socket.value.recv_multipart()
