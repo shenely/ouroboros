@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   20 June 2014
+Modified:   15 September 2014
 
 TBD.
 
@@ -17,6 +17,7 @@ MessagingService -- TBD
 Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-06-20    shenely         1.0         Initial revision
+2014-09-15    shenely         1.1         No idea what a proxy is
 
 """
 
@@ -25,10 +26,11 @@ Date          Author          Version     Description
 # Import section #
 #
 #Built-in libraries
+import logging
 
 #External libraries
 import zmq
-from zmq.devices import ThreadProxy
+from zmq.devices import ThreadDevice
 
 #Internal libraries
 from . import ServiceObject
@@ -48,16 +50,19 @@ __all__ = ["MessagingService"]
 ####################
 # Constant section #
 #
-__version__ = "1.0"#current version [major.minor]
+__version__ = "1.1"#current version [major.minor]
 #
 ####################
 
 
 class MessagingService(ServiceObject):
+    
+    def __init__(self):
+        super(MessagingService,self).__init__()
                 
     def start(self):
         if super(MessagingService,self).start():
-            self.proxy = ThreadProxy(zmq.PUB,zmq.SUB)
+            self.proxy = ThreadDevice(zmq.FORWARDER, zmq.SUB, zmq.PUB)
             self.router = ThreadRouter()
             
             return True

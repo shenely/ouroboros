@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   11 September 2014
+Modified:   15 September 2014
 
 TBD.
 
@@ -19,6 +19,7 @@ Date          Author          Version     Description
 2014-08-22    shenely         1.1         Combined behavior and structure
 2014-09-10    shenely         1.2         Using JSON the right way
 2014-09-11    shenely         1.3         Organized behavior decorators
+2014-09-15    shenely         1.4         Parsing returns something
 
 """
 
@@ -52,7 +53,7 @@ __all__ = ["MessageParse",
 ####################
 # Constant section #
 #
-__version__ = "1.3"#current version [major.minor]
+__version__ = "1.4"#current version [major.minor]
 # 
 ####################
 
@@ -71,6 +72,8 @@ class MessageParse(EventPrimitive):
         
         logging.info("{0}:  Parsed".\
                      format(self._name))
+        
+        return True
 
 @required("template",PrimitiveBehavior)
 @required("object",PrimitiveBehavior)

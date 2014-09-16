@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   11 September 2014
+Modified:   15 September 2014
 
 TBD.
 
@@ -16,6 +16,7 @@ Classes:
 Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-09-11    shenely         1.0         Initial revision
+2014-09-15    shenely         1.1         Priority is provided on get
 
 """
 
@@ -49,7 +50,7 @@ __all__ = ["QueuePrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.0"#current version [major.minor]
+__version__ = "1.1"#current version [major.minor]
 # 
 ####################
 
@@ -79,7 +80,7 @@ class QueueGet(EventPrimitive):
                          format(self._name))
 
 @required("queue",QueuePrimitive)
-@required("priority",PrimitiveBehavior)
+@provided("priority",PrimitiveBehavior)
 @required("object",PrimitiveBehavior)
 class QueuePut(ActionPrimitive):
            

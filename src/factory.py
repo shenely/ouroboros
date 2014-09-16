@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   12 September 2014
+Modified:   15 September 2014
 
 TBD.
 
@@ -25,6 +25,7 @@ Date          Author          Version     Description
 2014-09-10    shenely         1.3         Moving aways from metaclass
 2014-09-11    shenely         1.4         Removed metaclass
 2014-09-12    shenely         1.5         Added event mixins
+2014-09-15    shenely         1.6         Events are now listeners
 
 
 """
@@ -40,7 +41,7 @@ import pickle
 from networkx import DiGraph
 
 #Internal libraries
-from library.event import EventPrimitive
+from library.listen import ListenerPrimitive
 #
 ##################=
 
@@ -56,7 +57,7 @@ __all__ = ["behavior_factory"]
 ####################
 # Constant section #
 #
-__version__ = "1.5"#current version [major.minor]
+__version__ = "1.6"#current version [major.minor]
 #
 ####################
 
@@ -101,9 +102,6 @@ def behavior_factory(app,name):
                         data.add_node((obj._name,n[0]),
                                       node=d.get("node"),
                                       type=None)
-            
-                if isinstance(obj,EventPrimitive):
-                    obj.event(app)
             else:
                 control.add_node(cls.__name__,node=None)# placeholder
                 
@@ -166,6 +164,11 @@ def behavior_factory(app,name):
                 if context is not None:# from clause
                     if rule.source is not None:
                         control.add_edge(rule.source,context,mode=Ellipsis)
+                        
+            
+            for n,d in control.nodes_iter(data=True):
+                if isinstance(d["node"],ListenerPrimitive):
+                    d["node"].listen(app)
                       
             #Initialize the behavior with data and control graphs
             self = cls(data=data,control=control,*args,**kwargs)

@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   12 September 2014
+Modified:   15 September 2014
 
 TBD.
 
@@ -20,6 +20,7 @@ Date          Author          Version     Description
 2014-09-10    shenely         1.2         Got sockets to work
 2014-09-11    shenely         1.3         Organized behavior decorators
 2014-09-12    shenely         1.4         Added event mixins
+2014-09-15    shenely         1.5         Got two sockets communicating
 
 """
 
@@ -37,7 +38,7 @@ import zmq
 #Internal libraries
 from behavior import *
 from . import StringPrimitive,SourcePrimitive,TargetPrimitive
-from .event import HandlerEvent
+from .listen import HandlerListener
 #
 ##################=
 
@@ -55,30 +56,33 @@ __all__ = ["SocketPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.3"#current version [major.minor]
+__version__ = "1.5"#current version [major.minor]
 # 
 ####################
 
+#lambda self,value:\
+#self.value.setsockopt(zmq.SUBSCRIBE,"") if getattr(zmq,value.value) == zmq.SUB else None)
 
 @required("type",StringPrimitive,
           lambda self,value:\
           setattr(self,"value",self._context.socket(getattr(zmq,value.value))))
+@required("address",StringPrimitive,
+          lambda self,value:\
+          self.value.connect(value.value))
 @required("identity",StringPrimitive,
           lambda self,value:\
           self.value.setsockopt(zmq.IDENTITY,value.value))
 class SocketPrimitive(PrimitiveBehavior):
     
     def __init__(self,name,pins,*args,**kwargs):
-        self._context = zmq.Context(1)
+        self._context = zmq.Context.instance()
         
         super(SocketPrimitive,self).__init__(name,pins,*args,**kwargs)
     
 @required("socket",SocketPrimitive)
-@required("address",StringPrimitive,
-          lambda self,value:\
-          self.socket.value.setsockopt(zmq.SUBSCRIBE,value.value))
+@required("address",StringPrimitive)
 @provided("message",StringPrimitive)
-class SocketSubscribe(SourcePrimitive,HandlerEvent):
+class SocketSubscribe(SourcePrimitive,HandlerListener):
     
     @property
     def handle(self):
@@ -94,14 +98,19 @@ class SocketSubscribe(SourcePrimitive,HandlerEvent):
         self.message.value = message
                 
         logging.info("{0}:  From address {1}".\
-                     format(self._name,self.address.value))
+                     format(self._name,address))
+        
+    def listen(self,app):
+        self.socket.value.setsockopt(zmq.SUBSCRIBE,self.address.value)
+        
+        super(SocketSubscribe,self).listen(app)
 
 @required("socket",SocketPrimitive)
 @required("address",StringPrimitive)
 @required("message",StringPrimitive)
 class SocketPublish(TargetPrimitive):
            
-    def _send(self):
+    def _send(self):        
         self.socket.value.send_multipart((self.address.value,
                                           self.message.value))
                 

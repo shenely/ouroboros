@@ -1,10 +1,10 @@
 #!/usr/bin/env python2.7
 
-"""Event behaviors
+"""Listening behaviors
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   12 September 2014
+Modified:   15 September 2014
 
 TBD
 
@@ -15,7 +15,7 @@ Classes:
                                         
 Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
-2014-09-12    shenely         1.0         Initial revision
+2014-09-15    shenely         1.0         Initial revision
 
 """
 
@@ -25,9 +25,11 @@ Date          Author          Version     Description
 #
 #Built-in libraries
 from datetime import timedelta
+import logging
 
 #External libraries
 from zmq.eventloop import ioloop
+import zmq
 
 #Internal libraries
 from behavior import PrimitiveBehavior
@@ -38,10 +40,10 @@ from behavior import PrimitiveBehavior
 ##################
 # Export section #
 #
-__all__ = ["EventPrimitive",
-           "PeriodicEvent",
-           "DelayedEvent",
-           "HandlerEvent"]
+__all__ = ["ListenerPrimitive",
+           "PeriodicListener",
+           "DelayedListener",
+           "HandlerListener"]
 #
 ##################
 
@@ -51,26 +53,26 @@ __all__ = ["EventPrimitive",
 #
 __version__ = "1.0"#current version [major.minor]
 
-TIMEOUT = timedelta(0,0,0,100)#time between running
+TIMEOUT = timedelta(0,1,0,0)#time between running
 #
 ####################
 
 
-class EventPrimitive(PrimitiveBehavior):
+class ListenerPrimitive(PrimitiveBehavior):
     
-    def _callback(self):
+    def listen(self,app):
         raise NotImplemented
 
-class PeriodicEvent(EventPrimitive):
+class PeriodicListener(ListenerPrimitive):
     
     def __init__(self,*args,**kwargs):
         self._timeout = kwargs.pop("timeout",TIMEOUT)
         
         assert isinstance(self._timeout,timedelta)
         
-        super(PeriodicEvent,self).__init__(*args,**kwargs)
+        super(PeriodicListener,self).__init__(*args,**kwargs)
     
-    def event(self,app):
+    def listen(self,app):        
         def caller():
             app._process._loop.add_timeout(self._timeout,callback)
             
@@ -81,29 +83,29 @@ class PeriodicEvent(EventPrimitive):
         
         app._process._loop.add_callback(caller)
 
-class DelayedEvent(EventPrimitive):
+class DelayedListener(ListenerPrimitive):
     
     def __init__(self,timeout=TIMEOUT,*args,**kwargs):
         self._timeout = kwargs.pop("timeout",TIMEOUT)
         
         assert isinstance(self._timeout,timedelta)
         
-        super(PeriodicEvent,self).__init__(*args,**kwargs)
+        super(DelayedListener,self).__init__(*args,**kwargs)
     
-    def event(self,app):
+    def listen(self,app):        
         def callback():
             app._process.schedule(self._super,self._name)
             
         app._process._loop.add_timeout(self._timeout,callback)
 
-class HandlerEvent(EventPrimitive):
+class HandlerListener(ListenerPrimitive):
     
     @property
     def handle(self):
         raise NotImplemented
     
-    def event(self,app):
-        def callback():
+    def listen(self,app):        
+        def callback(handle,events):
             app._process.schedule(self._super,self._name)
             
         app._process._loop.add_handler(self.handle.value,callback,ioloop.POLLIN)
