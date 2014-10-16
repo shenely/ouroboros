@@ -73,7 +73,9 @@ del _
 
 import main as _
     
-_.main.install(service)
+service.set(_.transmitter)
+service.set(_.receiver)
+service.set(_.main)
 
 del _
 

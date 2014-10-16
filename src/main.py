@@ -1,106 +1,143 @@
-from common import ObjectDict
+import pickle
+
 from behavior import CompositeBehavior
 
-class main(CompositeBehavior):
-    _doc = ObjectDict(
-      name="main",
-      type=None,
-      story={ },
-      nodes=[
+transmitter = {
+    "name": "Transmitter",
+    "type": CompositeBehavior.__name__,
+    "path": pickle.dumps(CompositeBehavior),
+    "story": { },
+    "nodes": [
         {
-          "name": "clock",
-          "type": "ContinuousClock",
-          "pins": [ ]
+            "name": "clock",
+            "type": "ContinuousClock",
+            "pins": [ ]
         },
         {
-          "name": "format",
-          "type": "MessageFormat",
-          "pins": [ ]
+            "name": "format",
+            "type": "MessageFormat",
+            "pins": [ ]
         },
         {
-          "name": "parse",
-          "type": "MessageParse",
-          "pins": [ ]
+            "name": "epoch",
+            "type": "DatetimePrimitive",
+            "pins": [ ]
         },
         {
-          "name": "publish",
-          "type": "SocketPublish",
-          "pins": [ { "name": "address", "value": "Clock.Test" } ]
-        },
-        {
-          "name": "subscribe",
-          "type": "SocketSubscribe",
-          "pins": [ { "name": "address", "value": "Clock.Test" } ]
-        },
-        {
-          "name": "epoch",
-          "type": "DatetimePrimitive",
-          "pins": [ ]
-        },
-        {
-          "name": "receive",
-          "type": "SocketPrimitive",
-          "pins": [ { "name": "type", "value": "SUB" },
-                    { "name": "address", "value": "tcp://127.0.0.1:5556" },
-                    { "name": "identity", "value": "recv" } ]
-        },
-        {
-          "name": "transmit",
-          "type": "SocketPrimitive",
-          "pins": [ { "name": "type", "value": "PUB" },
-                    { "name": "address", "value": "tcp://127.0.0.1:5555" },
-                    { "name": "identity", "value": "send" } ]
+            "name": "message",
+            "type": "StringPrimitive",
+            "pins": [ ]
         }
-      ],
-      links=[
+    ],
+    "links": [
         { 
-          "source": { "node": "epoch", "pin": None },
-          "target": { "node": "clock", "pin": "epoch" }
+            "source": { "node": "epoch", "pin": None },
+            "target": { "node": "clock", "pin": "epoch" }
         },
         { 
-          "source": { "node": "epoch", "pin": None },
-          "target": { "node": "format", "pin": "template" }
+            "source": { "node": "epoch", "pin": None },
+            "target": { "node": "format", "pin": "template" }
         },
         { 
-          "source": { "node": "epoch", "pin": None },
-          "target": { "node": "parse", "pin": "template" }
+            "source": { "node": "clock", "pin": "message" },
+            "target": { "node": "format", "pin": "object" }
         },
         { 
-          "source": { "node": "clock", "pin": "message" },
-          "target": { "node": "format", "pin": "object" }
-        },
-        { 
-          "source": { "node": "format", "pin": "message" },
-          "target": { "node": "publish", "pin": "message" }
-        },
-        { 
-          "source": { "node": "subscribe", "pin": "message" },
-          "target": { "node": "parse", "pin": "message" }
-        },
-        { 
-          "source": { "node": "transmit", "pin": None },
-          "target": { "node": "publish", "pin": "socket" }
-        },
-        { 
-          "source": { "node": "receive", "pin": None },
-          "target": { "node": "subscribe", "pin": "socket" }
+            "source": { "node": "format", "pin": "message" },
+            "target": { "node": "message", "pin": None }
         }
-      ],
-      pins=[ ],
-      rules=[
+    ],
+    "pins": [ { "node": "message", "type": "provided" } ],
+    "rules": [
         {
-          "source": "clock",
-          "events": [ ],
-          "conditions": [ ],
-          "actions": [ "format" ],
-          "target": "publish"
+            "source": "clock",
+            "events": [ ],
+            "conditions": [ ],
+            "actions": [ "format" ],
+            "target": "Transmitter"
+        }
+    ]
+}
+
+receiver = {
+    "name": "Receiver",
+    "type": CompositeBehavior.__name__,
+    "path": pickle.dumps(CompositeBehavior),
+    "story": { },
+    "nodes": [
+        {
+            "name": "parse",
+            "type": "MessageParse",
+            "pins": [ ]
         },
         {
-          "source": "subscribe",
-          "events": [ "parse" ],
-          "conditions": [ ],
-          "actions": [ ],
-          "target": None
+            "name": "epoch",
+            "type": "DatetimePrimitive",
+            "pins": [ ]
+        },
+        {
+            "name": "message",
+            "type": "StringPrimitive",
+            "pins": [ ]
         }
-      ]
-    )
+    ],
+    "links": [
+        { 
+            "source": { "node": "epoch", "pin": None },
+            "target": { "node": "parse", "pin": "template" }
+        },
+        { 
+            "source": { "node": "parse", "pin": "object" },
+            "target": { "node": "epoch", "pin": None }
+        },
+        { 
+            "source": { "node": "message", "pin": None },
+            "target": { "node": "parse", "pin": "message" }
+        }
+    ],
+    "pins": [ { "node": "message", "type": "required" } ],
+    "rules": [
+        {
+            "source": "Receiver",
+            "events": [ "parse" ],
+            "conditions": [ ],
+            "actions": [ ],
+            "target": None
+        }
+    ]
+}
+
+main = {
+    "name": "main",
+    "type": CompositeBehavior.__name__,
+    "path": pickle.dumps(CompositeBehavior),
+    "story": { },
+    "nodes": [
+        {
+            "name": "receiver",
+            "type": "Receiver",
+            "pins": [ ]
+        },
+        {
+            "name": "transmitter",
+            "type": "Transmitter",
+            "pins": [ ]
+        }
+    ],
+    "links": [
+        { 
+            "source": { "node": "transmitter", "pin": "message" },
+            "target": { "node": "receiver", "pin": "message" }
+        }
+    ],
+    "pins": [ ],
+    "rules": [
+        {
+            "source": "transmitter",
+            "events": [ ],
+            "conditions": [ ],
+            "actions": [ ],
+            "target": "receiver"
+        }
+    ]
+}

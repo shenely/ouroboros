@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   15 September 2014
+Modified:   15 October 2014
 
 TBD
 
@@ -16,6 +16,8 @@ Classes:
 Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-09-15    shenely         1.0         Initial revision
+2014-10-15    shenely         1.1         Super is now behavior, not
+                                            node
 
 """
 
@@ -51,7 +53,7 @@ __all__ = ["ListenerPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.0"#current version [major.minor]
+__version__ = "1.1"#current version [major.minor]
 
 TIMEOUT = timedelta(0,1,0,0)#time between running
 #
@@ -77,7 +79,7 @@ class PeriodicListener(ListenerPrimitive):
             app._process._loop.add_timeout(self._timeout,callback)
             
         def callback():
-            app._process.schedule(self._super,self._name)
+            app._process.schedule(self._super._control,self._name)
             
             app._process._loop.add_callback(caller)
         
@@ -94,7 +96,7 @@ class DelayedListener(ListenerPrimitive):
     
     def listen(self,app):        
         def callback():
-            app._process.schedule(self._super,self._name)
+            app._process.schedule(self._super._control,self._name)
             
         app._process._loop.add_timeout(self._timeout,callback)
 
@@ -106,6 +108,6 @@ class HandlerListener(ListenerPrimitive):
     
     def listen(self,app):        
         def callback(handle,events):
-            app._process.schedule(self._super,self._name)
+            app._process.schedule(self._super._control,self._name)
             
         app._process._loop.add_handler(self.handle.value,callback,ioloop.POLLIN)

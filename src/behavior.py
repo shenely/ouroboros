@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   11 September 2014
+Modified:   15 October 2014
 
 TBD.
 
@@ -35,6 +35,7 @@ Date          Author          Version     Description
 2014-08-22    shenely         1.6         Combined behavior and structure
 2014-09-10    shenely         1.7         Simplified data synchronization
 2014-09-11    shenely         1.8         Organized behavior decorators
+2014-10-15    shenely         1.9         Complete data synchronization
 """
 
 
@@ -74,7 +75,7 @@ __all__ = ["behavior",
 ####################
 # Constant section #
 #
-__version__ = "1.8"#current version [major.minor]
+__version__ = "1.9"#current version [major.minor]
 
 DEFAULT_DOCUMENT = ObjectDict(\
     story=ObjectDict(
@@ -181,14 +182,15 @@ class BehaviorObject(BaseObject):
         
         service.set(cls._doc)
     
-    def __init__(self,name,pins,data=DiGraph(),control=DiGraph(),graph=None):
+    def __init__(self,name,pins,data=DiGraph(),control=DiGraph(),
+                 parent=None):
         super(BehaviorObject,self).__init__()
         
         self._name = name
         
         self._data = data# data flow
         self._control = control# control flow
-        self._super = graph# control flow (of parent)
+        #self._super = parent# parent (super) behavior
         
         #Initialize data values
         for pin in pins:
@@ -214,7 +216,8 @@ class BehaviorObject(BaseObject):
                 if data.get("type") != "provided":
                     warnings.warn("is not provided",Warning)
                 
-                value = data.get("node")
+#                value = data.get("node")
+                value = self._sync(name)
                 
                 if isinstance(value,BehaviorObject):
                     assert isinstance(value,data.get("cls")) or \
@@ -255,10 +258,83 @@ class BehaviorObject(BaseObject):
                 #Check value of data
                 [check(self,value) for check in self._checks[name]]
     
-                data["node"] = value
-                control["node"] = value
+#                data["node"] = value
+#                control["node"] = value
+                self._sync(name,value)
         except AttributeError:
             super(BehaviorObject,self).__setattr__(name,value)
+    
+    def _sync(self,name,other=None):
+        node = self._data.node[(name,None)]["node"]
+        
+        if node is other:return
+            
+        if other is not None:
+            assert issubclass(type(node),type(other)) \
+                or issubclass(type(other),type(node))
+            
+            for name2,data in other._data.nodes_iter(data=True):
+                node2 = data["node"]
+                
+                node._sync(name2,node2)
+            else:
+                if hasattr(other,"value"):
+                    node.value = other.value
+                    
+        for name2 in self._data.predecessors_iter((name,None)):
+            data = self._data.node[name2[0],None]
+            
+            node2 = data["node"]
+            
+            if name2[1] is not None:
+                if node2._data.node[name2[1],None]["node"] is not other:
+                    node2._sync(name2[1],node)
+            elif data["type"] is not None:
+                if self._data.node[name2]["node"] is not other:
+                    self._sync(name2[0],node)
+            else:pass
+                
+        for name2 in self._data.successors_iter((name,None)):
+            data = self._data.node[name2[0],None]
+            
+            node2 = data["node"]
+            
+            if name2[1] is not None:
+                if node2._data.node[name2[1],None]["node"] is not other:
+                    node2._sync(name2[1],node)
+            elif data["type"] is not None:
+                if self._data.node[name2]["node"] is not other:
+                    self._sync(name2[0],node)
+            else:pass
+                    
+        if self._super is not None:
+            for name2 in self._super._data.predecessors_iter((self._name,name)):
+                data = self._super._data.node[name2[0],None]
+                
+                node2 = data["node"]
+                
+                if name2[1] is not None:
+                    if node2._data.node[name2[1],None]["node"] is not other:
+                        node2._sync(name2[1],node)
+                elif data["type"] is not None:
+                    if self._super._data.node[name2]["node"] is not other:
+                        self._super._sync(name2[0],node)
+                else:pass
+                    
+            for name2 in self._super._data.successors_iter((self._name,name)):
+                data = self._super._data.node[name2[0],None]
+                
+                node2 = data["node"]
+                
+                if name2[1] is not None:
+                    if node2._data.node[name2[1],None]["node"] is not other:
+                        node2._sync(name2[1],node)
+                elif data["type"] is not None:
+                    if self._super._data.node[name2]["node"] is not other:
+                        self._super._sync(name2[0],node)
+                else:pass
+        
+        return node
 
 class PrimitiveBehavior(BehaviorObject):
     """Primitive (simple) behavior"""

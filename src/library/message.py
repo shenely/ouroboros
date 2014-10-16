@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   15 September 2014
+Modified:   15 October 2014
 
 TBD.
 
@@ -20,6 +20,7 @@ Date          Author          Version     Description
 2014-09-10    shenely         1.2         Using JSON the right way
 2014-09-11    shenely         1.3         Organized behavior decorators
 2014-09-15    shenely         1.4         Parsing returns something
+2014-10-15    shenely         1.5         Modify behaviors, not values
 
 """
 
@@ -53,7 +54,7 @@ __all__ = ["MessageParse",
 ####################
 # Constant section #
 #
-__version__ = "1.4"#current version [major.minor]
+__version__ = "1.5"#current version [major.minor]
 # 
 ####################
 
@@ -67,8 +68,8 @@ class MessageParse(EventPrimitive):
         logging.info("{0}:  Parsing from {1}".\
                      format(self._name,self.message.value))
         
-        self.object.value = json.loads(self.message.value,
-                                       object_hook=self.template.object_hook)
+        self.object = json.loads(self.message.value,
+                                 object_hook=self.template.object_hook)
         
         logging.info("{0}:  Parsed".\
                      format(self._name))
@@ -84,8 +85,8 @@ class MessageFormat(ActionPrimitive):
         logging.info("{0}:  Formatting".\
                      format(self._name))
         
-        self.message.value = json.dumps(self.object.value,
-                                        default=self.template.default)
+        self.message = json.dumps(self.object.value,
+                                  default=self.template.default)
         
         logging.info("{0}:  Formatted to {1}".\
                      format(self._name,self.message.value))

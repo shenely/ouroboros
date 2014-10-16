@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   12 September 2014
+Modified:   15 October 2014
 
 TBD.
 
@@ -28,6 +28,8 @@ Date          Author          Version     Description
 2014-09-10    shenely         1.5         Properly create main loop
 2014-09-12    shenely         1.6         Main loop was not being
                                             controlled properly
+2014-10-15    shenely         1.7         Super is now behavior, not
+                                            node
 
 """
 
@@ -62,7 +64,7 @@ __all__ = ["ProcessorService"]
 ####################
 # Constant section #
 #
-__version__ = "1.6"#current version [major.minor]
+__version__ = "1.7"#current version [major.minor]
 
 TIMEOUT = timedelta(0,0,0,100)#time between running
 
@@ -169,7 +171,7 @@ class ProcessorService(ServiceObject):
             #   of the behavior owning it:
             #    1. Source node as start point; control to children
             #    2. Target node as end point; control to parent
-            graph,node = (behavior._super,behavior._name) \
+            graph,node = (behavior._super._control,behavior._name) \
                          if graph is behavior._control else \
                          (behavior._control,behavior.__class__.__name__)
         

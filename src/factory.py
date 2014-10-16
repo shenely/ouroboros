@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   15 September 2014
+Modified:   15 October 2014
 
 TBD.
 
@@ -26,6 +26,7 @@ Date          Author          Version     Description
 2014-09-11    shenely         1.4         Removed metaclass
 2014-09-12    shenely         1.5         Added event mixins
 2014-09-15    shenely         1.6         Events are now listeners
+2014-10-15    shenely         1.7         Creates custom composites
 
 
 """
@@ -41,6 +42,7 @@ import pickle
 from networkx import DiGraph
 
 #Internal libraries
+from behavior import CompositeBehavior
 from library.listen import ListenerPrimitive
 #
 ##################=
@@ -57,7 +59,7 @@ __all__ = ["behavior_factory"]
 ####################
 # Constant section #
 #
-__version__ = "1.6"#current version [major.minor]
+__version__ = "1.7"#current version [major.minor]
 #
 ####################
 
@@ -78,6 +80,10 @@ def behavior_factory(app,name):
         else:            
             cls = pickle.loads(doc.path)# import path for behavior
             
+            cls = type(str(doc.name),(cls,),dict()) \
+                  if cls is CompositeBehavior \
+                  else cls
+            
             app.classes[name] = cls
               
         def caller(*args,**kwargs):
@@ -88,7 +94,7 @@ def behavior_factory(app,name):
             for node in doc.nodes:
                 obj = behavior_factory\
                       (app,node.type) \
-                      (name=node.name,pins=node.pins,graph=control)
+                      (name=node.name,pins=node.pins)
                       
                 #Add node to data and control graph
                 data.add_node((node.name,None),
@@ -109,23 +115,6 @@ def behavior_factory(app,name):
             for link in doc.links:
                 data.add_edge((link.source.node,link.source.pin),
                               (link.target.node,link.target.pin))
-                
-                source = data.node[link.source.node,link.source.pin]
-                target = data.node[link.target.node,link.target.pin]
-                
-                target["node"].__del__()# delete the target (always)
-                target["node"] = source["node"]# replace with source (always)
-                
-                #Update any parent/child nodes (if applicable)
-                if link.target.pin is not None:
-                    child = data.node[link.target.node,None]
-                    
-                    target = child["node"]._data.node[link.target.pin,None]
-                    other = child["node"]._control.node[link.target.pin]
-                    
-                    #Data is synchronized by reference
-                    target["node"] = source["node"]
-                    other["node"] = source["node"]
                     
             #Configure behavior data with predefined values
             for pin in doc.pins:
@@ -164,14 +153,16 @@ def behavior_factory(app,name):
                 if context is not None:# from clause
                     if rule.source is not None:
                         control.add_edge(rule.source,context,mode=Ellipsis)
-                        
-            
-            for n,d in control.nodes_iter(data=True):
-                if isinstance(d["node"],ListenerPrimitive):
-                    d["node"].listen(app)
                       
             #Initialize the behavior with data and control graphs
             self = cls(data=data,control=control,*args,**kwargs)
+            
+            for n,d in data.nodes_iter(data=True):
+                d["node"]._super = self
+                        
+            for n,d in control.nodes_iter(data=True):
+                if isinstance(d["node"],ListenerPrimitive):
+                    d["node"].listen(app)
             
             #Behavior control contains a copy of itself
             control.node[cls.__name__]["node"] = self

@@ -2,7 +2,7 @@ import logging
 
 from service.execute import ExecutionService
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
     
 app = ExecutionService("main")
 

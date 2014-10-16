@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   11 September 2014
+Modified:   15 October 2014
 
 TBD.
 
@@ -19,6 +19,7 @@ Date          Author          Version     Description
 2014-08-22    shenely         1.1         Combined behavior and structure
 2014-09-10    shenely         1.2         Forcing everything to strings
 2014-09-11    shenely         1.3         Organized behavior decorators
+2014-10-15    shenely         1.4         Removed messaging arguments
 
 """
 
@@ -56,7 +57,7 @@ __all__ = ["NumberPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.3"#current version [major.minor]
+__version__ = "1.4"#current version [major.minor]
 # 
 ####################
 
@@ -124,7 +125,7 @@ class TargetPrimitive(PrimitiveBehavior):
         
         return Ellipsis
     
-    def _send(self,message):
+    def _send(self):
         raise NotImplemented
 
 class ConditionPrimitive(PrimitiveBehavior):
@@ -144,7 +145,7 @@ class ConditionPrimitive(PrimitiveBehavior):
             
             return False
     
-    def _satisfy(self,message):
+    def _satisfy(self):
         raise NotImplemented
 
 class EventPrimitive(PrimitiveBehavior):
