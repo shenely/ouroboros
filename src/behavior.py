@@ -36,6 +36,8 @@ Date          Author          Version     Description
 2014-09-10    shenely         1.7         Simplified data synchronization
 2014-09-11    shenely         1.8         Organized behavior decorators
 2014-10-15    shenely         1.9         Complete data synchronization
+2014-10-22    shenely         1.10        Separating synchronization and
+                                             tree traversal steps
 """
 
 
@@ -266,8 +268,6 @@ class BehaviorObject(BaseObject):
     
     def _sync(self,name,other=None):
         node = self._data.node[(name,None)]["node"]
-        
-        if node is other:return
             
         if other is not None:
             assert issubclass(type(node),type(other)) \
@@ -281,60 +281,39 @@ class BehaviorObject(BaseObject):
                 if hasattr(other,"value"):
                     node.value = other.value
                     
-        for name2 in self._data.predecessors_iter((name,None)):
-            data = self._data.node[name2[0],None]
-            
-            node2 = data["node"]
-            
-            if name2[1] is not None:
-                if node2._data.node[name2[1],None]["node"] is not other:
-                    node2._sync(name2[1],node)
-            elif data["type"] is not None:
-                if self._data.node[name2]["node"] is not other:
-                    self._sync(name2[0],node)
-            else:pass
-                
-        for name2 in self._data.successors_iter((name,None)):
-            data = self._data.node[name2[0],None]
-            
-            node2 = data["node"]
-            
-            if name2[1] is not None:
-                if node2._data.node[name2[1],None]["node"] is not other:
-                    node2._sync(name2[1],node)
-            elif data["type"] is not None:
-                if self._data.node[name2]["node"] is not other:
-                    self._sync(name2[0],node)
-            else:pass
+        self._walk(other,node,self,(name,None))
                     
         if self._super is not None:
-            for name2 in self._super._data.predecessors_iter((self._name,name)):
-                data = self._super._data.node[name2[0],None]
-                
-                node2 = data["node"]
-                
-                if name2[1] is not None:
-                    if node2._data.node[name2[1],None]["node"] is not other:
-                        node2._sync(name2[1],node)
-                elif data["type"] is not None:
-                    if self._super._data.node[name2]["node"] is not other:
-                        self._super._sync(name2[0],node)
-                else:pass
-                    
-            for name2 in self._super._data.successors_iter((self._name,name)):
-                data = self._super._data.node[name2[0],None]
-                
-                node2 = data["node"]
-                
-                if name2[1] is not None:
-                    if node2._data.node[name2[1],None]["node"] is not other:
-                        node2._sync(name2[1],node)
-                elif data["type"] is not None:
-                    if self._super._data.node[name2]["node"] is not other:
-                        self._super._sync(name2[0],node)
-                else:pass
+            self._walk(other,node,self._super,(self._name,name))
         
         return node
+    
+    def _walk(self,other,source,context,name):
+        for name2 in context._data.predecessors_iter(name):
+            data = context._data.node[name2[0],None]
+            
+            if name2[1] is not None:
+                target = data["node"]
+                
+                if target._data.node[name2[1],None]["node"] is not other:
+                    target._sync(name2[1],source)
+            elif data["type"] is not None:
+                if context._data.node[name2]["node"] is not other:
+                    context._sync(name2[0],source)
+            else:pass
+                
+        for name2 in context._data.successors_iter(name):
+            data = context._data.node[name2[0],None]
+            
+            if name2[1] is not None:
+                target = data["node"]
+            
+                if target._data.node[name2[1],None]["node"] is not other:
+                    target._sync(name2[1],source)
+            elif data["type"] is not None:
+                if context._data.node[name2]["node"] is not other:
+                    context._sync(name2[0],source)
+            else:pass
 
 class PrimitiveBehavior(BehaviorObject):
     """Primitive (simple) behavior"""

@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   15 September 2014
+Modified:   20 October 2014
 
 TBD.
 
@@ -20,7 +20,8 @@ Date          Author          Version     Description
 2014-09-10    shenely         1.2         Clocks work now
 2014-09-11    shenely         1.3         Organized behavior decorators
 2014-09-12    shenely         1.4         Added event mixins
-2014-09-15    shenely         1.6         Events are now listeners
+2014-09-15    shenely         1.5         Events are now listeners
+2014-10-20    shenely         1.6         Propagate clock period to timeout
 """
 
 
@@ -58,7 +59,7 @@ __all__ = ["DatetimePrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.5"#current version [major.minor]
+__version__ = "1.6"#current version [major.minor]
 
 J2000 = datetime(2000,1,1,12,tzinfo=utc)#Julian epoch (2000-01-01T12:00:00Z)
 
@@ -123,7 +124,9 @@ class ElapsedPrimitive(PrimitiveBehavior):
           lambda self,value:\
           setattr(self.message,"value",value.value))
 @provided("message",DatetimePrimitive)
-@required("period",ElapsedPrimitive)
+@required("period",ElapsedPrimitive,
+          lambda self,value:\
+          setattr(self,"_timeout",value.value))
 class ClockSource(SourcePrimitive,PeriodicListener):
     
     def __init__(self,name,pins,*args,**kwargs):
