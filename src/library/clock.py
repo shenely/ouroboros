@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   20 October 2014
+Modified:   20 April 2015
 
 TBD.
 
@@ -22,6 +22,8 @@ Date          Author          Version     Description
 2014-09-12    shenely         1.4         Added event mixins
 2014-09-15    shenely         1.5         Events are now listeners
 2014-10-20    shenely         1.6         Propagate clock period to timeout
+                                            node
+2015-04-21    shenely         1.7         Support for factory rewrite
 """
 
 
@@ -37,9 +39,8 @@ import logging
 from bson.tz_util import utc
 
 #Internal libraries
-from common import ObjectDict
-from behavior import *
-from . import NumberPrimitive,SourcePrimitive
+from behavior import behavior,PrimitiveBehavior
+from . import SourcePrimitive
 from .listen import PeriodicListener
 #
 ##################=
@@ -59,7 +60,7 @@ __all__ = ["DatetimePrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.6"#current version [major.minor]
+__version__ = "1.7"#current version [major.minor]
 
 J2000 = datetime(2000,1,1,12,tzinfo=utc)#Julian epoch (2000-01-01T12:00:00Z)
 
@@ -71,33 +72,27 @@ CLOCK_STEP = timedelta(seconds=60)#Clock step (default to 60 seconds)
 ####################
 
 
+@behavior(name="DatetimePrimitive",
+          type="PrimitiveBehavior")
 class DatetimePrimitive(PrimitiveBehavior):
     
-    def __init__(self,name,pins,*args,**kwargs):
-        for pin in pins:
-            if pin.name == "value":
-                assert isinstance(pin.value,datetime)
-                
-                break
-        else:
-            pins.append(ObjectDict(name="value",
-                                   value=J2000))
+    def __init__(self,name,*args,**kwargs):
+        self.value = kwargs.pop("value",J2000)
+            
+        assert isinstance(self.value,datetime)
         
-        super(DatetimePrimitive,self).__init__(name,pins,*args,**kwargs)
+        super(DatetimePrimitive,self).__init__(name,*args,**kwargs)
 
+@behavior(name="ElapsedPrimitive",
+          type="PrimitiveBehavior")
 class ElapsedPrimitive(PrimitiveBehavior):
     
-    def __init__(self,name,pins,*args,**kwargs):
-        for pin in pins:
-            if pin.name == "value":
-                assert isinstance(pin.value,timedelta)
-                
-                break
-        else:
-            pins.append(ObjectDict(name="value",
-                                   value=CLOCK_STEP))
+    def __init__(self,name,*args,**kwargs):
+        self.value = kwargs.pop("value",CLOCK_STEP)
         
-        super(ElapsedPrimitive,self).__init__(name,pins,*args,**kwargs)
+        assert isinstance(self.value,timedelta)
+        
+        super(ElapsedPrimitive,self).__init__(name,*args,**kwargs)
         
     def default(self,obj):
         if isinstance(obj,timedelta):
@@ -119,63 +114,143 @@ class ElapsedPrimitive(PrimitiveBehavior):
                 dct = timedelta(elapsed)
     
         return dct
-  
-@required("epoch",DatetimePrimitive,
-          lambda self,value:\
-          setattr(self.message,"value",value.value))
-@provided("message",DatetimePrimitive)
-@required("period",ElapsedPrimitive,
-          lambda self,value:\
-          setattr(self,"_timeout",value.value))
+
+@behavior(name="ClockSource",
+          type="SourcePrimitive",
+          faces={"data":{"require":[{"name":"epoch",
+                                     "type":"DatetimePrimitive"},
+                                    {"name":"period",
+                                     "type":"ElapsedPrimitive"}],
+                         "provide":[{"name":"message",
+                                     "type":"DatetimePrimitive"}]},
+                 "control":{"input":[],
+                            "output":["output"]}},
+          nodes=[{"name":"epoch",
+                  "type":"DatetimePrimitive","args":[]},
+                 {"name":"period",
+                  "type":"ElapsedPrimitive","args":[]},
+                 {"name":"message",
+                  "type":"DatetimePrimitive","args":[]}],
+          edges={"data":[{"source":{"node":"ClockSource","face":"epoch"},
+                          "target":{"node":"epoch","face":None}},
+                         {"source":{"node":"ClockSource","face":"period"},
+                          "target":{"node":"period","face":None}},
+                         {"source":{"node":"message","face":None},
+                          "target":{"node":"ClockSource","face":"message"}}],
+                 "control":[]})
 class ClockSource(SourcePrimitive,PeriodicListener):
     
-    def __init__(self,name,pins,*args,**kwargs):
-        for pin in pins:
-            if pin.name == "period":break
-        else:
-            pins.append(ObjectDict(name="period",
-                                   value=CLOCK_PERIOD))
+    def __init__(self,name,*args,**kwargs):
+        kwargs["epoch"] = kwargs.get("epoch",J2000)
+        kwargs["period"] = kwargs.get("period",CLOCK_PERIOD)
             
-        super(ClockSource,self).__init__(name,pins,*args,**kwargs)
-        
-        self._then = datetime.utcnow()
+        super(ClockSource,self).__init__(name,*args,**kwargs)
     
     def _receive(self):
+        message = self._data_graph.node["message"]["obj"]
+        
         logging.info("{0}:  Ticking from {1}".\
-                     format(self._name,self.message.value))
+                     format(self.name,message.value))
         
         self._tick()
-        
+                
         logging.info("{0}:  Ticked to {1}".\
-                     format(self._name,self.message.value))
+                     format(self.name,message.value))
+        
+        return ["message"]
+    
+    def _tick(self):
+        raise NotImplemented
 
-@required("scale",NumberPrimitive)
+@behavior(name="ContinuousClock",
+          type="ClockSource",
+          faces={"data":{"require":[{"name":"epoch",
+                                     "type":"DatetimePrimitive"},
+                                    {"name":"period",
+                                     "type":"ElapsedPrimitive"},
+                                    {"name":"scale",
+                                     "type":"NumberPrimitive"}],
+                         "provide":[{"name":"message",
+                                     "type":"DatetimePrimitive"}]},
+                 "control":{"input":[],
+                            "output":["output"]}},
+          nodes=[{"name":"epoch",
+                  "type":"DatetimePrimitive","args":[]},
+                 {"name":"period",
+                  "type":"ElapsedPrimitive","args":[]},
+                 {"name":"scale",
+                  "type":"NumberPrimitive","args":[]},
+                 {"name":"message",
+                  "type":"DatetimePrimitive","args":[]}],
+          edges={"data":[{"source":{"node":"ContinuousClock","face":"epoch"},
+                          "target":{"node":"epoch","face":None}},
+                         {"source":{"node":"ContinuousClock","face":"period"},
+                          "target":{"node":"period","face":None}},
+                         {"source":{"node":"ContinuousClock","face":"scale"},
+                          "target":{"node":"scale","face":None}},
+                         {"source":{"node":"message","face":None},
+                          "target":{"node":"ContinuousClock","face":"message"}}],
+                 "control":[]})
 class ContinuousClock(ClockSource):
     
-    def __init__(self,name,pins,*args,**kwargs):
-        for pin in pins:
-            if pin.name == "scale":break
-        else:
-            pins.append(ObjectDict(name="scale",
-                                   value=CLOCK_SCALE))
+    def __init__(self,name,*args,**kwargs):
+        kwargs["scale"] = kwargs.get("scale",CLOCK_SCALE)
             
-        super(ContinuousClock,self).__init__(name,pins,*args,**kwargs)
+        super(ContinuousClock,self).__init__(name,*args,**kwargs)
         
         self._then = datetime.utcnow()
     
-    def _tick(self):        
-        self._now = datetime.utcnow()
+    def _tick(self):
+        message = self._data_graph.node["message"]["obj"]
+        scale = self._data_graph.node["scale"]["obj"]
             
+        self._now = datetime.utcnow()
+        
         #Increase simulation time
-        self.message.value = self.message.value +\
-                             int(self.scale.value) * (self._now - self._then)
+        message.value = message.value +\
+                        int(scale.value) * (self._now - self._then)
                              
         self._then = self._now
         
-@required("step",ElapsedPrimitive)
+@behavior(name="DiscreteClock",
+          type="ClockSource",
+          faces={"data":{"require":[{"name":"epoch",
+                                     "type":"DatetimePrimitive"},
+                                    {"name":"period",
+                                     "type":"ElapsedPrimitive"},
+                                    {"name":"step",
+                                     "type":"ElapsedPrimitive"}],
+                         "provide":[{"name":"message",
+                                     "type":"DatetimePrimitive"}]},
+                 "control":{"input":[],
+                            "output":["output"]}},
+          nodes=[{"name":"epoch",
+                  "type":"DatetimePrimitive","args":[]},
+                 {"name":"period",
+                  "type":"ElapsedPrimitive","args":[]},
+                 {"name":"step",
+                  "type":"ElapsedPrimitive","args":[]},
+                 {"name":"message",
+                  "type":"DatetimePrimitive","args":[]}],
+          edges={"data":[{"source":{"node":"DiscreteClock","face":"epoch"},
+                          "target":{"node":"epoch","face":None}},
+                         {"source":{"node":"DiscreteClock","face":"period"},
+                          "target":{"node":"period","face":None}},
+                         {"source":{"node":"DiscreteClock","face":"step"},
+                          "target":{"node":"step","face":None}},
+                         {"source":{"node":"message","face":None},
+                          "target":{"node":"DiscreteClock","face":"message"}}],
+                 "control":[]})
 class DiscreteClock(ClockSource):
     
-    def _tick(self):
+    def __init__(self,name,*args,**kwargs):
+        kwargs["step"] = kwargs.get("step",CLOCK_STEP)
+            
+        super(DiscreteClock,self).__init__(name,*args,**kwargs)
+    
+    def _tick(self,message):
+        message = self._data_graph.node["message"]["obj"]
+        step = self._data_graph.node["step"]["obj"]
+        
         #Increase simulation time
-        self.message.value = self.message.value +\
-                             self.step.value
+        message.value = message.value + step.value

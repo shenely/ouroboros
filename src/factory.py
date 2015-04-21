@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   15 October 2014
+Modified:   20 April 2015
 
 TBD.
 
@@ -27,6 +27,7 @@ Date          Author          Version     Description
 2014-09-12    shenely         1.5         Added event mixins
 2014-09-15    shenely         1.6         Events are now listeners
 2014-10-15    shenely         1.7         Creates custom composites
+2015-04-20    shenely         2.0         Complete rewrite
 
 
 """
@@ -39,10 +40,10 @@ Date          Author          Version     Description
 import pickle
 
 #External libraries
-from networkx import DiGraph
+from networkx import union,relabel_nodes
 
 #Internal libraries
-from behavior import CompositeBehavior
+from behavior import PrimitiveBehavior,CompositeBehavior
 from library.listen import ListenerPrimitive
 #
 ##################=
@@ -51,7 +52,7 @@ from library.listen import ListenerPrimitive
 ##################
 # Export section #
 #
-__all__ = ["behavior_factory"]
+__all__ = ["BehaviorFactory"]
 #
 ##################
 
@@ -59,114 +60,242 @@ __all__ = ["behavior_factory"]
 ####################
 # Constant section #
 #
-__version__ = "1.7"#current version [major.minor]
+__version__ = "2.0"#current version [major.minor]
 #
 ####################
 
-
-def behavior_factory(app,name):
-        #NOTE:  Behavior initialization (shenely, 2014-09-11)
-        # Behaviors for an application are created as instances of
-        #   predefined behaviors at runtime.  This creates a common
-        #   interface for injecting both primitive and composite
-        #   behaviors into an application.  Behavior names are unique
-        #   to an application.
-        
+class BehaviorFactory(type):
+    """Behavior factory"""
+    
+    def __new__(cls,app,name):        
         doc = app._database.get({ "name": name })# from database
+        #doc = app._database.get(name=name)#TODO:  Do it this way
         
-        #Memoize classes if they've been loaded previously
-        if name in app.classes:
-            cls = app.classes.get(name)
+        #Check if behavior has been memoized
+        if name in app._memoized_classes:
+            obj = app._memoized_classes[name]
         else:            
-            cls = pickle.loads(doc.path)# import path for behavior
+            obj = pickle.loads(doc.path)# import path for behavior
             
-            cls = type(str(doc.name),(cls,),dict()) \
-                  if cls is CompositeBehavior \
-                  else cls
+            #All behaviors are pushed through factory
+            obj = super(BehaviorFactory,cls).__new__(cls,str(doc.name),(obj,),
+                                                     dict(app=app,doc=doc))
             
-            app.classes[name] = cls
-              
-        def caller(*args,**kwargs):
-            data = DiGraph()# data flow
-            control = DiGraph()# control flow
+            #Memoize behavior in application
+            app._memoized_classes[name] = obj
+                  
+        return obj
+    
+    def __init__(self,app,name):
+        #Data interfaces store the behavior classes only
+        self._required_data = {data.name: BehaviorFactory(app,data.type) \
+                               for data in self.doc.faces.data.require}
+        self._provided_data = {data.name: BehaviorFactory(app,data.type) \
+                               for data in self.doc.faces.data.provide}
             
-            #Create behavior instances as graph nodes
-            for node in doc.nodes:
-                obj = behavior_factory\
-                      (app,node.type) \
-                      (name=node.name,pins=node.pins)
-                      
-                #Add node to data and control graph
-                data.add_node((node.name,None),
-                              node=obj,type=None,
-                              cls=app.classes[node.type])
-                control.add_node(node.name,node=obj)
-                
-                #Expose provided and required nodes from child to parent
-                for n,d in obj._data.nodes_iter(data=True):
-                    if d.get("type") is not None and n[1] is None:
-                        data.add_node((obj._name,n[0]),
-                                      node=d.get("node"),
-                                      type=None)
-            else:
-                control.add_node(cls.__name__,node=None)# placeholder
-                
-            #Connect data interfaces with graph edges
-            for link in doc.links:
-                data.add_edge((link.source.node,link.source.pin),
-                              (link.target.node,link.target.pin))
-                    
-            #Configure behavior data with predefined values
-            for pin in doc.pins:
-                data.node[(pin.node,None)]["type"] = pin.type
-            
-            #Connect control logic with graph edges
-            for rule in doc.rules:
-                context = rule.target# to clause
-               
-                for action in rule.actions[::-1]:# then clauses
-                    if context is not None:
-                        control.add_edge(action,context,mode=Ellipsis)
-                    
-                    context = action
-                
-                for condition in rule.conditions[::-1]:# given clauses
-                    #NOTE:  Condition modes (shenely, 2014-06-10)
-                    # Unlike other behavior types, the mode of conditions
-                    #   is dependent upon the execution of the underlying
-                    #   logic.  It is  the one type that allows for
-                    #   branching.  Currently conditions only implement
-                    #   boolean (i.e. True or False) values.  All other
-                    #   types implement an Ellipsis as the singular mode.
-                    if context is not None:
-                        control.add_edge(condition.node,context,
-                                         mode=condition.mode)
-                    
-                    context = condition.node
-                
-                for event in rule.events[::-1]:# when clauses
-                    if context is not None:
-                        control.add_edge(event,context,mode=Ellipsis)
-                    
-                    context = event
-                    
-                if context is not None:# from clause
-                    if rule.source is not None:
-                        control.add_edge(rule.source,context,mode=Ellipsis)
-                      
-            #Initialize the behavior with data and control graphs
-            self = cls(data=data,control=control,*args,**kwargs)
-            
-            for n,d in data.nodes_iter(data=True):
-                d["node"]._super = self
-                        
-            for n,d in control.nodes_iter(data=True):
-                if isinstance(d["node"],ListenerPrimitive):
-                    d["node"].listen(app)
-            
-            #Behavior control contains a copy of itself
-            control.node[cls.__name__]["node"] = self
-            
-            return self
+        #Control interfaces do not have associated behaviors
+        self._input_control = self.doc.faces.control.input
+        self._output_control = self.doc.faces.control.output
         
-        return caller
+    def __call__(self,name,*args,**kwargs):
+        #Instantiate behaviors (should this really do anything?)
+        obj = super(BehaviorFactory,self).__call__(name)
+        
+        #Interfaces are defined via behavior classes, not instances
+        for face in self._required_data:# required data interfaces
+            obj._data_graph.add_node((obj.__class__.__name__,face),
+                                     obj=self._required_data[face])
+        for face in self._provided_data:# provided data interfaces
+            obj._data_graph.add_node((obj.__class__.__name__,face),
+                                     obj=self._provided_data[face])
+        for face in self._input_control:# input control interfaces
+            obj._control_graph.add_node((obj.__class__.__name__,face),
+                                        obj=None)
+        for face in self._output_control:# output control interfaces
+            obj._control_graph.add_node((obj.__class__.__name__,face),
+                                        obj=None)
+        
+        for node in self.doc.nodes:
+            #Create each contained behaviors
+            behavior = BehaviorFactory(self.app,node.type)\
+                                      (node.name,
+                                       **{arg.name: arg.value \
+                                          for arg in node.args})
+            
+            #Add contained behavior to current graphs (both data and control)
+            obj._data_graph.add_node((node.name,),obj=behavior)
+            obj._control_graph.add_node((node.name,),obj=behavior)
+            
+            #Add a depth of context to the contained behavior's graphs
+            data_subgraph = relabel_nodes(behavior._data_graph,
+                                          lambda x: (node.name,)+x)
+            control_subgraph = relabel_nodes(behavior._control_graph,
+                                             lambda x: (node.name,)+x)
+            
+            #Add the subgraphs to their respective graphs
+            obj._data_graph = union(obj._data_graph,data_subgraph)
+            obj._control_graph = union(obj._control_graph,control_subgraph)
+            
+            #Remove all interfaces inherited from the subgraphs
+            for face in behavior._required_data:# required data interfaces
+                obj._data_graph.remove_node((node.name,
+                                             behavior.__class__.__name__,
+                                             face))
+            for face in behavior._provided_data:# provided data interfaces
+                obj._data_graph.remove_node((node.name,
+                                             behavior.__class__.__name__,
+                                             face))
+            for face in behavior._input_control:# input control interfaces
+                obj._control_graph.remove_node((node.name,
+                                                behavior.__class__.__name__,
+                                                face))
+            for face in behavior._output_control:# output control interfaces
+                obj._control_graph.remove_node((node.name,
+                                                behavior.__class__.__name__,
+                                                face))
+                
+        #XXX:  Initialize variables *after* object creation
+        obj._update(*args,**kwargs)
+        
+        #Add listeners to the event loop
+        for node,data in obj._control_graph.nodes_iter(data=True):
+            if isinstance(data["obj"],ListenerPrimitive):
+                data["obj"].listen(self.app,obj._control_graph,node)
+            
+        #Create new edges in data graph
+        for edge in self.doc.edges.data:
+            
+            #Is source of the edge...
+            if edge.source.node == obj.__class__.__name__:# ...self?
+                source_iter = iter([(edge.source.face,)])
+            else:
+                #Referenced nodes must exist in data graph
+                assert obj._data_graph.has_node((edge.source.node,))
+            
+                if edge.source.face is not None:# ...deep?
+                    
+                    #Get the 'shallow' node to the deep source
+                    source_node = obj._data_graph.node[(edge.source.node,)]
+                    source = source_node["obj"]
+                    
+                    #Source must be provided
+                    assert edge.source.face in source._provided_data
+                    
+                    #Get all predecessors to provided interface in subgraph
+                    source_iter = source._data_graph\
+                                        .predecessors_iter((source.__class__.__name__,
+                                                            edge.source.face))
+                else:# ...shallow?
+                    #XXX:  Shallow edge reference hack (shenely, 2015-03-11)
+                    # This is only valid because the empty tuple created will be
+                    #   concatenated with a tuple that references the context of
+                    #   the shallow node.
+                    source_iter = iter(list(tuple()))
+            
+            #Is target of the edge...
+            if edge.target.node == obj.__class__.__name__:# ...self?
+                target_iter = iter([(edge.target.face,)])
+            else:
+                #Referenced nodes must exist in data graph
+                assert obj._data_graph.has_node((edge.target.node,))
+            
+                if edge.target.face is not None:# ...deep?
+                
+                    #Get the 'shallow' node to the deep target
+                    target_node = obj._data_graph.node[(edge.target.node,)]
+                    target = target_node["obj"]
+                    
+                    #Source must be provided
+                    assert edge.target.face in target._required_data
+                    
+                    #Get all successors to required interface in subgraph
+                    target_iter = target._data_graph\
+                                        .successors_iter((target.__class__.__name__,
+                                                          edge.target.face))
+                else:# ...shallow?
+                    #XXX:  Shallow edge reference hack (shenely, 2015-03-11)
+                    # This is only valid because the empty tuple created will be
+                    #   concatenated with a tuple that references the context of
+                    #   the shallow node.
+                    target_iter = iter(list(tuple()))
+                
+            for source_name in source_iter:
+                #Extract source for some checks
+                source = obj._data_graph.node\
+                             [(edge.source.node,)+source_name]["obj"]
+                    
+                if isinstance(source,BehaviorFactory):
+                    pass# an interface is being referenced
+                elif isinstance(source,PrimitiveBehavior):
+                    source = source.__class__# checks are made on classes
+                else:
+                    raise#cannot require/provide composite behaviors
+                
+                for target_name in target_iter:
+                    #Extract target for some checks
+                    target = obj._data_graph.node\
+                                 [(edge.target.node,)+target_name]["obj"]
+                    
+                    if isinstance(target,BehaviorFactory):
+                        pass# an interface is being referenced
+                    elif isinstance(target,PrimitiveBehavior):
+                        target = target.__class__# checks are made on classes
+                    else:
+                        raise#cannot require/provide composite behaviors
+                             
+                    #Confirm that target and source are somehow related
+                    assert issubclass(target,source) \
+                        or issubclass(source,target)
+                    
+                    #Create data edge between source and target
+                    obj._data_graph.add_edge((edge.source.node,)+source_name,
+                                             (edge.target.node,)+target_name)
+        
+        #Create new edges in control graph
+        for edge in self.doc.edges.control:
+            
+            if edge.source.node == obj.__class__.__name__:
+                source_iter = iter([(edge.source.face,)])
+            else:
+                #Referenced nodes must exist in control graph
+                assert obj._control_graph.has_node((edge.source.node,))
+                
+                #Get the 'shallow' node to the deep source
+                source_node = obj._control_graph.node[(edge.source.node,)]
+                source = source_node["obj"]
+                
+                #Source must be an output
+                assert edge.source.face in source._output_control
+                
+                #Get all predecessors to output interface in subgraph
+                source_iter = source._control_graph\
+                                    .predecessors_iter((source.__class__.__name__,
+                                                        edge.source.face))
+            
+            if edge.target.node == obj.__class__.__name__:
+                target_iter = iter([(edge.target.face,)])
+            else:
+                #Referenced nodes must exist in control graph
+                assert obj._control_graph.has_node((edge.target.node,))
+                
+                #Get the 'shallow' node to the deep target
+                target_node = obj._control_graph.node[(edge.target.node,)]
+                target = target_node["obj"]
+                
+                #Target must be an input
+                print edge.target.face, target._input_control
+                assert edge.target.face in target._input_control
+    
+                #Get all successors to input interface in subgraph
+                target_iter = target._control_graph\
+                                    .successors_iter((target.__class__.__name__,
+                                                      edge.target.face))
+                
+            for source_name in source_iter:
+                for target_name in target_iter:
+                    #Create control edge between source and target
+                    obj._control_graph.add_edge((edge.source.node,)+source_name,
+                                                (edge.target.node,)+target_name)
+        
+        return obj
+        

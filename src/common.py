@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   11 September 2014
+Modified:   08 February 2015
 
 TBD.
 
@@ -19,6 +19,7 @@ Date          Author          Version     Description
 2014-06-11    shenely                     Added documentation
 2014-08-18    shenely         1.1         Removed coroutine
 2014-09-11    shenely         1.2         Added deep copy support
+2015-02-08    shenely         1.3         Removing dict from inheritance
 
 """
 
@@ -48,7 +49,7 @@ __all__ = ["ObjectDict",
 ####################
 # Constant section #
 #
-__version__ = "1.2"#current version [major.minor]
+__version__ = "1.3"#current version [major.minor]
 #
 ####################
 
@@ -77,5 +78,5 @@ class ObjectDict(dict):
             
         return result
 
-class BaseObject(ObjectDict):
+class BaseObject(object):
     """Ouroboros base object"""

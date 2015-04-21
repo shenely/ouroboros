@@ -3,66 +3,42 @@
     name: String,
     type: String,
     path: String,
-    story: {
-      who: String,
-      when: String,
-      where: String,
-      what: String,
-      why: String
-    },
-    nodes: [
-      { name: String, type: String, pins: [] },
-      ...
-    ],
-    links: [],
-    pins: [
-      { node: String, type: String },
-      ...
-    ],
-    rules: []
-  },
-  {
-    name: String,
-    type: String,
-    story: {
-      who: String,
-      what: String,
-      when: String,
-      where: String,
-      why: String
+    story: String,
+    faces: {
+      data: {
+        require: [ { name: String, type: String }, ... ],
+        provide: [ { name: String, type: String }, ... ]
+      },
+      control: [
+        input:  [ [String|Number|Boolean], ... ],
+        output:  [ [String|Number|Boolean], ... ]
+      ]
     },
     nodes: [
       {
         name: String,
         type: String,
-        pins: [
-          { name: String, value: [String|Number] },
+        args: [
+          { name: String, value: [String|Number|Boolean|Null] },
           ...
         ]
       },
       ...
     ],
-    links: [
-      { 
-        source: { node: String, pin: String },
-        target: { node: String, pin: String }
-      },
-      ...
-    ],
-    pins: [
-      { name: String, type: String },
-      ...
-    ],
-    rules: [
-      {
-        source: String,
-        events: [ String, ... ],
-        conditions: [ { node: String, mode: Boolean }, ... ],
-        actions: [ String, ... ],
-        target: String
-      },
-      ...
-    ]
+    edges: {
+      data: [
+        { 
+          source: { node: String, face: String },
+          target: { node: String, face: String }
+        },
+      ],
+      control: [
+        { 
+          source: { node: String, face: [String|Number|Boolean|Null] },
+          target: { node: String, face: [String|Number|Boolean|Null] }
+        },
+      ]
+    }
   },
   ...
 ]

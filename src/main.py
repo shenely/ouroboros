@@ -7,56 +7,37 @@ transmitter = {
     "type": CompositeBehavior.__name__,
     "path": pickle.dumps(CompositeBehavior),
     "story": { },
-    "nodes": [
-        {
-            "name": "clock",
-            "type": "ContinuousClock",
-            "pins": [ ]
-        },
-        {
-            "name": "format",
-            "type": "MessageFormat",
-            "pins": [ ]
-        },
-        {
-            "name": "epoch",
-            "type": "DatetimePrimitive",
-            "pins": [ ]
-        },
-        {
-            "name": "message",
-            "type": "StringPrimitive",
-            "pins": [ ]
-        }
-    ],
-    "links": [
-        { 
-            "source": { "node": "epoch", "pin": None },
-            "target": { "node": "clock", "pin": "epoch" }
-        },
-        { 
-            "source": { "node": "epoch", "pin": None },
-            "target": { "node": "format", "pin": "template" }
-        },
-        { 
-            "source": { "node": "clock", "pin": "message" },
-            "target": { "node": "format", "pin": "object" }
-        },
-        { 
-            "source": { "node": "format", "pin": "message" },
-            "target": { "node": "message", "pin": None }
-        }
-    ],
-    "pins": [ { "node": "message", "type": "provided" } ],
-    "rules": [
-        {
-            "source": "clock",
-            "events": [ ],
-            "conditions": [ ],
-            "actions": [ "format" ],
-            "target": "Transmitter"
-        }
-    ]
+    "faces": {
+              "data":{
+                      "require":[],
+                      "provide":[
+                                 {"name":"message","type":"StringPrimitive"}
+                                 ]},
+              "control":{"input":[],
+                         "output":["success","failure"]}},
+   "nodes": [
+             {"name":"clock","type":"ContinuousClock","args":[]},
+             {"name":"format","type":"MessageFormat","args":[]},
+             {"name":"epoch","type":"DatetimePrimitive","args":[]},
+             {"name":"message","type":"StringPrimitive","args":[]}
+             ],
+   "edges":{
+            "data":[
+                    {"source":{"node":"message","face":None},
+                     "target":{"node":"Transmitter","face":"message"}},
+                    {"source":{"node":"epoch","face":None},
+                     "target":{"node":"clock","face":"epoch"}},
+                    {"source":{"node":"epoch","face":None},
+                     "target":{"node":"format","face":"template"}},
+                    {"source":{"node":"clock","face":"message"},
+                     "target":{"node":"format","face":"object"}},
+                    {"source":{"node":"format","face":"message"},
+                     "target":{"node":"message","face":None}}],
+            "control":[{"source":{"node":"clock","face":"output"},
+                        "target":{"node":"format","face":"input"}},
+                       {"source":{"node":"format","face":"output"},
+                        "target":{"node":"Transmitter","face":"success"}}]
+            }
 }
 
 receiver = {
@@ -64,47 +45,34 @@ receiver = {
     "type": CompositeBehavior.__name__,
     "path": pickle.dumps(CompositeBehavior),
     "story": { },
-    "nodes": [
-        {
-            "name": "parse",
-            "type": "MessageParse",
-            "pins": [ ]
-        },
-        {
-            "name": "epoch",
-            "type": "DatetimePrimitive",
-            "pins": [ ]
-        },
-        {
-            "name": "message",
-            "type": "StringPrimitive",
-            "pins": [ ]
-        }
-    ],
-    "links": [
-        { 
-            "source": { "node": "epoch", "pin": None },
-            "target": { "node": "parse", "pin": "template" }
-        },
-        { 
-            "source": { "node": "parse", "pin": "object" },
-            "target": { "node": "epoch", "pin": None }
-        },
-        { 
-            "source": { "node": "message", "pin": None },
-            "target": { "node": "parse", "pin": "message" }
-        }
-    ],
-    "pins": [ { "node": "message", "type": "required" } ],
-    "rules": [
-        {
-            "source": "Receiver",
-            "events": [ "parse" ],
-            "conditions": [ ],
-            "actions": [ ],
-            "target": None
-        }
-    ]
+    "faces": {
+              "data":{
+                      "require":[
+                                 {"name":"message","type":"StringPrimitive"}
+                                 ],
+                      "provide":[]},
+              "control":{"input":["input"],
+                         "output":["success","failure"]}},
+   "nodes": [
+             {"name":"parse","type":"MessageParse","args":[]},
+             {"name":"epoch","type":"DatetimePrimitive","args":[]},
+             {"name":"message","type":"StringPrimitive","args":[]}
+             ],
+   "edges":{
+            "data":[
+                    {"source":{"node":"Receiver","face":"message"},
+                     "target":{"node":"message","face":None}},
+                    {"source":{"node":"epoch","face":None},
+                     "target":{"node":"parse","face":"template"}},
+                    {"source":{"node":"parse","face":"object"},
+                     "target":{"node":"epoch","face":None}},
+                    {"source":{"node":"message","face":None},
+                     "target":{"node":"parse","face":"message"}}],
+            "control":[{"source":{"node":"Receiver","face":"input"},
+                        "target":{"node":"parse","face":"input"}},
+                       {"source":{"node":"parse","face":"output"},
+                        "target":{"node":"Receiver","face":"success"}}]
+            }
 }
 
 main = {
@@ -112,32 +80,23 @@ main = {
     "type": CompositeBehavior.__name__,
     "path": pickle.dumps(CompositeBehavior),
     "story": { },
-    "nodes": [
-        {
-            "name": "receiver",
-            "type": "Receiver",
-            "pins": [ ]
-        },
-        {
-            "name": "transmitter",
-            "type": "Transmitter",
-            "pins": [ ]
-        }
-    ],
-    "links": [
-        { 
-            "source": { "node": "transmitter", "pin": "message" },
-            "target": { "node": "receiver", "pin": "message" }
-        }
-    ],
-    "pins": [ ],
-    "rules": [
-        {
-            "source": "transmitter",
-            "events": [ ],
-            "conditions": [ ],
-            "actions": [ ],
-            "target": "receiver"
-        }
-    ]
+    "faces": {
+              "data":{
+                      "require":[],
+                      "provide":[]},
+              "control":{"input":[],
+                         "output":["success","failure"]}},
+   "nodes": [
+             {"name":"receiver","type":"Receiver","args":[]},
+             {"name":"transmitter","type":"Transmitter","args":[]}
+             ],
+   "edges":{
+            "data":[
+                    {"source":{"node":"transmitter","face":"message"},
+                     "target":{"node":"receiver","face":"message"}}],
+            "control":[{"source":{"node":"transmitter","face":"success"},
+                        "target":{"node":"receiver","face":"input"}},
+                       {"source":{"node":"receiver","face":"success"},
+                        "target":{"node":"main","face":"success"}}]
+            }
 }

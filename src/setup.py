@@ -56,20 +56,21 @@ del _
 
 import library.order as _
 
-_.BeforeOrder.install(service)
-_.AfterOrder.install(service)
+_.OrderComparison.install(service)
 
 del _
 
-import library.control as _
-
-_.ControlPrimitive.install(service)
-_.AcceptedControl.install(service)
-_.RejectedControl.install(service)
-_.PositiveControl.install(service)
-_.NegativeControl.install(service)
-
-del _
+#===============================================================================
+# import library.control as _
+# 
+# _.ControlPrimitive.install(service)
+# _.AcceptedControl.install(service)
+# _.RejectedControl.install(service)
+# _.PositiveControl.install(service)
+# _.NegativeControl.install(service)
+# 
+# del _
+#===============================================================================
 
 import main as _
     

@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   15 October 2014
+Modified:   21 April 2015
 
 TBD.
 
@@ -20,6 +20,7 @@ Date          Author          Version     Description
 2014-09-10    shenely         1.2         Forcing everything to strings
 2014-09-11    shenely         1.3         Organized behavior decorators
 2014-10-15    shenely         1.4         Removed messaging arguments
+2015-04-21    shenely         1.5         Support for factory rewrite
 
 """
 
@@ -57,129 +58,150 @@ __all__ = ["NumberPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.4"#current version [major.minor]
+__version__ = "1.5"#current version [major.minor]
 # 
 ####################
 
-@behavior()
+
+@behavior(name="NumberPrimitive",
+          type="PrimitiveBehavior")
 class NumberPrimitive(PrimitiveBehavior):
     
-    def __init__(self,name,pins,*args,**kwargs):
-        for pin in pins:
-            if pin.name == "value":
-                assert isinstance(pin.value,(types.IntType,
-                                             types.FloatType,
-                                             types.ComplexType))
-            
-                break
-        else:
-            pins.append(ObjectDict(name="value",value=0.0))
+    def __init__(self,name,*args,**kwargs):
+        self.value = kwargs.pop("value",0.0)
         
-        super(NumberPrimitive,self).__init__(name,pins,*args,**kwargs)
+        assert isinstance(self.value,(types.IntType,
+                                      types.FloatType,
+                                      types.ComplexType))
+        
+        super(NumberPrimitive,self).__init__(name,*args,**kwargs)
 
-@behavior()
+@behavior(name="StringPrimitive",
+          type="PrimitiveBehavior")
 class StringPrimitive(PrimitiveBehavior):
     
-    def __init__(self,name,pins,*args,**kwargs):
-        for pin in pins:
-            if pin.name == "value":
-                assert isinstance(pin.value,types.StringTypes)
-                
-                pin.value = str(pin.value)
-            
-                break
-        else:
-            pins.append(ObjectDict(name="value",value=""))
+    def __init__(self,name,*args,**kwargs):
+        self.value = kwargs.pop("value","")
         
-        super(StringPrimitive,self).__init__(name,pins,*args,**kwargs)
+        assert isinstance(self.value,types.StringTypes)
+        
+        super(StringPrimitive,self).__init__(name,*args,**kwargs)
 
-@provided("message",PrimitiveBehavior)
-@behavior()
+@behavior(name="SourcePrimitive",
+          type="PrimitiveBehavior",
+          faces=dict(data=dict(require=list(),
+                               provide=list()),
+                     control=dict(input=list(),
+                                  output=list("output"))))
 class SourcePrimitive(PrimitiveBehavior):
     
     def _process(self):
         logging.debug("{0}:  Receiving".\
-                      format(self._name))
+                      format(self.name))
         
-        self._receive()
+        faces = self._receive()
         
         logging.debug("{0}:  Received".\
-                      format(self._name))
+                      format(self.name))
         
-        return Ellipsis
+        return "output",faces
     
     def _receive(self):
         raise NotImplemented
     
-@provided("message",PrimitiveBehavior)
+@behavior(name="TargetPrimitive",
+          type="PrimitiveBehavior",
+          faces=dict(data=dict(require=list(),
+                               provide=list()),
+                     control=dict(input=list("input"),
+                                  output=list())))
 class TargetPrimitive(PrimitiveBehavior):
     
     def _process(self):
         logging.debug("{0}:  Sending".\
-                      format(self._name))
+                      format(self.name))
         
-        self._send()
+        faces = self._receive()
         
         logging.debug("{0}:  Sent".\
-                      format(self._name))
+                      format(self.name))
         
-        return Ellipsis
+        return None,faces
     
     def _send(self):
         raise NotImplemented
 
+
+@behavior(name="ConditionPrimitive",
+          type="PrimitiveBehavior",
+          faces=dict(data=dict(require=list(),
+                               provide=list()),
+                     control=dict(input=list("input"),
+                                  output=[True,False])))
 class ConditionPrimitive(PrimitiveBehavior):
     
     def _process(self):
         logging.debug("{0}:  Satisfying".\
-                      format(self._name))
+                      format(self.name))
+        
+        state,faces = self._satisfy()
             
-        if self._satisfy():
+        if state is True:
             logging.debug("{0}:  Satisfied".\
-                          format(self._name))
-            
-            return True
+                          format(self.name))
         else:
             logging.warning("{0}:  Not satisfied".\
-                         format(self._name))
+                         format(self.name))
             
-            return False
+        return state,faces
     
     def _satisfy(self):
         raise NotImplemented
 
+@behavior(name="EventPrimitive",
+          type="PrimitiveBehavior",
+          faces=dict(data=dict(require=list(),
+                               provide=list()),
+                     control=dict(input=list("input"),
+                                  output=list("output"))))
 class EventPrimitive(PrimitiveBehavior):
     
     def _process(self):
         logging.debug("{0}:  Occurring".\
-                      format(self._name))
+                      format(self.name))
         
-        if self._occur() is not None:
+        state,faces = self._occur()
+        
+        if state is not None:
             logging.debug("{0}:  Occurred".\
-                         format(self._name))
-            
-            return Ellipsis
+                         format(self.name))
         else:
             logging.warn("{0}:  False alarm".\
-                         format(self._name))
+                         format(self.name))
             
-            return None
+        return state,faces
     
     def _occur(self):
         raise NotImplemented
 
+@behavior(name="ActionPrimitive",
+          type="PrimitiveBehavior",
+          faces=dict(data=dict(require=list(),
+                               provide=list()),
+                     control=dict(input=list("input"),
+                                  output=list("output"))))
 class ActionPrimitive(PrimitiveBehavior):
     
     def _process(self):
         logging.debug("{0}:  Executing".\
-                      format(self._name))
+                      format(self.name))
         
-        self._execute()
+        faces = self._execute()
         
         logging.debug("{0}:  Executed".\
-                     format(self._name))
+                     format(self.name))
             
-        return Ellipsis
+        return "output",faces
     
     def _execute(self):
         raise NotImplemented

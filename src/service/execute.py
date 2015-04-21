@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   15 September 2014
+Modified:   20 April 2015
 
 TBD.
 
@@ -20,6 +20,7 @@ Date          Author          Version     Description
 2014-06-11    shenely                     Added documentation
 2014-09-10    shenely         1.1         Reorganized processor
 2014-09-15    shenely         1.2         Added messaging service
+2015-04-20    shenely         1.3         Support for factory rewrite
 
 """
 
@@ -32,7 +33,7 @@ Date          Author          Version     Description
 #External libraries
 
 #Internal libraries
-from factory import behavior_factory
+from factory import BehaviorFactory
 from . import ServiceObject
 from .message import MessagingService
 from .process import ProcessorService
@@ -52,7 +53,7 @@ __all__ = ["ExecutionService"]
 ####################
 # Constant section #
 #
-__version__ = "1.2"#current version [major.minor]
+__version__ = "1.3"#current version [major.minor]
 
 #Default MongoDB settings
 MONGO_HOST = "localhost"
@@ -69,7 +70,7 @@ MAIN_NAME = "main"
 class ExecutionService(ServiceObject):
     """Behavior execution service"""
     
-    classes = dict()
+    _memoized_classes = dict()
     
     def __init__(self,name):
         super(ExecutionService,self).__init__()
@@ -129,6 +130,6 @@ class ExecutionService(ServiceObject):
     def run(self):
         """Initialize main behavior."""
         if self._running:
-            self._main = behavior_factory(self,self.name)(name=MAIN_NAME,pins=[])
+            self._main = BehaviorFactory(self,self.name)(MAIN_NAME)
         else:
             self.resume()
