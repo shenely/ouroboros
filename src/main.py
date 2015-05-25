@@ -27,8 +27,6 @@ transmitter = {
                      "target":{"node":"Transmitter","face":"message"}},
                     {"source":{"node":"epoch","face":None},
                      "target":{"node":"clock","face":"epoch"}},
-                    {"source":{"node":"epoch","face":None},
-                     "target":{"node":"format","face":"template"}},
                     {"source":{"node":"clock","face":"message"},
                      "target":{"node":"format","face":"object"}},
                     {"source":{"node":"format","face":"message"},
@@ -62,8 +60,6 @@ receiver = {
             "data":[
                     {"source":{"node":"Receiver","face":"message"},
                      "target":{"node":"message","face":None}},
-                    {"source":{"node":"epoch","face":None},
-                     "target":{"node":"parse","face":"template"}},
                     {"source":{"node":"parse","face":"object"},
                      "target":{"node":"epoch","face":None}},
                     {"source":{"node":"message","face":None},

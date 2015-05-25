@@ -50,6 +50,7 @@ import pickle
 
 #External libraries
 from networkx import DiGraph
+from bson import json_util
 
 #Internal libraries
 from common import *
@@ -121,9 +122,9 @@ class BehaviorObject(BaseObject):
         for key in kwargs:
             value = kwargs[key]
             
-            self._data_graph.node[key]["obj"].value = value
+            self._data_graph.node[(key,)]["obj"].value = value
     
-    def set_required_data(self):pass
+    def set_required_data(self,process,):pass
     def get_provided_data(self):pass
     
     def recv_input_control(self):pass
@@ -133,6 +134,21 @@ class BehaviorObject(BaseObject):
           type="BehaviorObject")
 class PrimitiveBehavior(BehaviorObject):
     """Primitive (simple) behavior"""
+    
+    def __call__(self,face):
+        return self._process()
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self,type,value,traceback):
+        pass
+    
+    def default(self,obj):
+        return json_util.default(obj)
+    
+    def object_hook(self,dct):
+        return json_util.object_hook(dct)
 
 @behavior(name="CompositeBehavior",
           type="BehaviorObject")

@@ -41,10 +41,11 @@ Date          Author          Version     Description
 #Built-in libraries
 from datetime import timedelta
 from Queue import PriorityQueue
+import logging
 
 #External libraries
 from zmq.eventloop import ioloop
-from networkx import DiGraph
+from networkx import DiGraph,dfs_predecessors,dfs_successors
 
 #Internal libraries
 from . import ServiceObject
@@ -76,6 +77,7 @@ TRIVIAL =  10000
 #
 ####################
 
+ioloop.install()
 
 def instruction(priority):
     def decorator(method):
@@ -93,6 +95,8 @@ def instruction(priority):
         return function
     
     return decorator
+    
+class InterruptException(BaseException):pass
 
 class ProcessorService(ServiceObject):
     _loop = ioloop.IOLoop.instance()#event loop
@@ -149,20 +153,28 @@ class ProcessorService(ServiceObject):
         
     @instruction(priority=LOW)
     def schedule(self,graph,node):
-        node,face = node[:-1],node[-1]
+        node,face = (node,None) \
+                    if graph.has_node(node) else \
+                    (node[:-1],node[-1])
+
+        with graph.node[node].get("obj") as behavior:
+            face = behavior(face)
         
-        behavior = graph.node[node].get("obj")
-        
-        face_c,faces_d = behavior(face)
-        
-        for face_d in faces_d:
-            self.reference(graph,node + (face_d,))
-        
-        node = node + (face_c,) \
-               if face_c is not None else \
+        node = node + (face,) \
+               if face is not None else \
                None
-        
-        return self.schedule,node
+               
+        if node is not None:
+            if graph.has_node(node):
+                for node in graph.successors_iter(node):
+                    self.schedule(graph,node)
+            else:
+                node,face = node[:-1],node[-1]
+                for source,target,data in graph.out_edges_iter(node,data=True):
+                    if source == node and \
+                       data["mode"] == face and \
+                       graph.node[target]["obj"] is not None:
+                        self.schedule(graph,target)
         
     @instruction(priority=HIGH)
     def reference(self,graph,node):
@@ -173,7 +185,7 @@ class ProcessorService(ServiceObject):
         def recursion(e):
             node_set.add(e)
             
-            for n in node_set:
+            for n in list(node_set):
                 for p in graph.predecessors_iter(n):
                     if p not in node_set:
                         recursion(p)
@@ -188,9 +200,23 @@ class ProcessorService(ServiceObject):
         for n in node_set:
             target = graph.node[n].get("obj")
             
-            target.value = source.value
+            logging.debug("{0}:  Referenced to {1}".\
+                          format(target.name,source.name))
             
-        return self.reference,None
+            try:
+                target.value = source.value
+                target.default = source.default
+                target.object_hook = source.object_hook
+            except:
+                try:
+                    source.value = target.value
+                    source.default = target.default
+                    source.object_hook = target.object_hook
+                except:
+                    pass
+            
+    def interrupt(self):
+        raise InterruptException
 
     def _dispatch(self):
         """Execute process and schedule"""
@@ -199,9 +225,8 @@ class ProcessorService(ServiceObject):
         assert isinstance(graph,DiGraph)
         assert graph.has_node(node)
         
-        method,node = command(self,graph,node)
-        
-        if method is not None and node is not None:
-            for node in graph.successors_iter(node):
-                method(graph,node)
+        try:
+            command(self,graph,node)
+        except InterruptException:
+            self._queue.put((priority+TRIVIAL,command,graph,node))
         

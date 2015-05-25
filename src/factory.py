@@ -44,6 +44,7 @@ from networkx import union,relabel_nodes
 
 #Internal libraries
 from behavior import PrimitiveBehavior,CompositeBehavior
+from library.watch import WatcherPrimitive
 from library.listen import ListenerPrimitive
 #
 ##################=
@@ -97,7 +98,7 @@ class BehaviorFactory(type):
         self._input_control = self.doc.faces.control.input
         self._output_control = self.doc.faces.control.output
         
-    def __call__(self,name,*args,**kwargs):
+    def __call__(self,name,top=True,*args,**kwargs):
         #Instantiate behaviors (should this really do anything?)
         obj = super(BehaviorFactory,self).__call__(name)
         
@@ -118,7 +119,7 @@ class BehaviorFactory(type):
         for node in self.doc.nodes:
             #Create each contained behaviors
             behavior = BehaviorFactory(self.app,node.type)\
-                                      (node.name,
+                                      (node.name,False,
                                        **{arg.name: arg.value \
                                           for arg in node.args})
             
@@ -157,10 +158,16 @@ class BehaviorFactory(type):
         #XXX:  Initialize variables *after* object creation
         obj._update(*args,**kwargs)
         
-        #Add listeners to the event loop
-        for node,data in obj._control_graph.nodes_iter(data=True):
-            if isinstance(data["obj"],ListenerPrimitive):
-                data["obj"].listen(self.app,obj._control_graph,node)
+        if top:
+            #Add watchers to the event loop
+            for node,data in obj._data_graph.nodes_iter(data=True):
+                if isinstance(data["obj"],WatcherPrimitive):
+                    data["obj"].watch(self.app,obj._data_graph,node)
+            
+            #Add listeners to the event loop
+            for node,data in obj._control_graph.nodes_iter(data=True):
+                if isinstance(data["obj"],ListenerPrimitive):
+                    data["obj"].listen(self.app,obj._control_graph,node)
             
         #Create new edges in data graph
         for edge in self.doc.edges.data:
@@ -190,7 +197,7 @@ class BehaviorFactory(type):
                     # This is only valid because the empty tuple created will be
                     #   concatenated with a tuple that references the context of
                     #   the shallow node.
-                    source_iter = iter(list(tuple()))
+                    source_iter = iter([()])
             
             #Is target of the edge...
             if edge.target.node == obj.__class__.__name__:# ...self?
@@ -217,7 +224,7 @@ class BehaviorFactory(type):
                     # This is only valid because the empty tuple created will be
                     #   concatenated with a tuple that references the context of
                     #   the shallow node.
-                    target_iter = iter(list(tuple()))
+                    target_iter = iter([()])
                 
             for source_name in source_iter:
                 #Extract source for some checks
@@ -244,8 +251,10 @@ class BehaviorFactory(type):
                         raise#cannot require/provide composite behaviors
                              
                     #Confirm that target and source are somehow related
-                    assert issubclass(target,source) \
-                        or issubclass(source,target)
+                    assert issubclass(target.__mro__[1],
+                                      source.__mro__[1]) \
+                        or issubclass(source.__mro__[1],
+                                      target.__mro__[1])
                     
                     #Create data edge between source and target
                     obj._data_graph.add_edge((edge.source.node,)+source_name,
@@ -256,6 +265,8 @@ class BehaviorFactory(type):
             
             if edge.source.node == obj.__class__.__name__:
                 source_iter = iter([(edge.source.face,)])
+                
+                mode_iter = iter([edge.source.face,])
             else:
                 #Referenced nodes must exist in control graph
                 assert obj._control_graph.has_node((edge.source.node,))
@@ -268,9 +279,20 @@ class BehaviorFactory(type):
                 assert edge.source.face in source._output_control
                 
                 #Get all predecessors to output interface in subgraph
-                source_iter = source._control_graph\
-                                    .predecessors_iter((source.__class__.__name__,
-                                                        edge.source.face))
+                if isinstance(source,PrimitiveBehavior):
+                    source_iter = iter([()])
+                    
+                    mode_iter = iter([edge.source.face,])
+                else:
+                    source_iter = source._control_graph\
+                                        .predecessors((source.__class__.__name__,
+                                                       edge.source.face))
+                                        
+                    mode_iter = iter([source._control_graph.edge[node]\
+                                                                [(source.__class__.__name__,
+                                                                  edge.source.face)]\
+                                                                ["mode"] \
+                                      for node in source_iter])
             
             if edge.target.node == obj.__class__.__name__:
                 target_iter = iter([(edge.target.face,)])
@@ -283,19 +305,26 @@ class BehaviorFactory(type):
                 target = target_node["obj"]
                 
                 #Target must be an input
-                print edge.target.face, target._input_control
                 assert edge.target.face in target._input_control
     
                 #Get all successors to input interface in subgraph
-                target_iter = target._control_graph\
-                                    .successors_iter((target.__class__.__name__,
-                                                      edge.target.face))
-                
+                if isinstance(target,PrimitiveBehavior):
+                    target_iter = iter([()])
+                else:
+                    target_iter = target._control_graph\
+                                        .successors_iter((target.__class__.__name__,
+                                                          edge.target.face))
+                                    
+            
+            #TODO:  Mode origin (shenely, 2015-05-23)
+            # The mode must come from the source edge
             for source_name in source_iter:
+                mode = mode_iter.next()
                 for target_name in target_iter:
                     #Create control edge between source and target
                     obj._control_graph.add_edge((edge.source.node,)+source_name,
-                                                (edge.target.node,)+target_name)
+                                                (edge.target.node,)+target_name,
+                                                mode=mode)
         
         return obj
         

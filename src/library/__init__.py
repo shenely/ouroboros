@@ -99,12 +99,12 @@ class SourcePrimitive(PrimitiveBehavior):
         logging.debug("{0}:  Receiving".\
                       format(self.name))
         
-        faces = self._receive()
+        self._receive()
         
         logging.debug("{0}:  Received".\
                       format(self.name))
         
-        return "output",faces
+        return "output"
     
     def _receive(self):
         raise NotImplemented
@@ -121,12 +121,12 @@ class TargetPrimitive(PrimitiveBehavior):
         logging.debug("{0}:  Sending".\
                       format(self.name))
         
-        faces = self._receive()
+        self._receive()
         
         logging.debug("{0}:  Sent".\
                       format(self.name))
         
-        return None,faces
+        return None
     
     def _send(self):
         raise NotImplemented
@@ -144,7 +144,7 @@ class ConditionPrimitive(PrimitiveBehavior):
         logging.debug("{0}:  Satisfying".\
                       format(self.name))
         
-        state,faces = self._satisfy()
+        state = self._satisfy()
             
         if state is True:
             logging.debug("{0}:  Satisfied".\
@@ -153,7 +153,7 @@ class ConditionPrimitive(PrimitiveBehavior):
             logging.warning("{0}:  Not satisfied".\
                          format(self.name))
             
-        return state,faces
+        return state
     
     def _satisfy(self):
         raise NotImplemented
@@ -170,7 +170,7 @@ class EventPrimitive(PrimitiveBehavior):
         logging.debug("{0}:  Occurring".\
                       format(self.name))
         
-        state,faces = self._occur()
+        state = self._occur()
         
         if state is not None:
             logging.debug("{0}:  Occurred".\
@@ -179,7 +179,7 @@ class EventPrimitive(PrimitiveBehavior):
             logging.warn("{0}:  False alarm".\
                          format(self.name))
             
-        return state,faces
+        return state
     
     def _occur(self):
         raise NotImplemented
@@ -201,7 +201,7 @@ class ActionPrimitive(PrimitiveBehavior):
         logging.debug("{0}:  Executed".\
                      format(self.name))
             
-        return "output",faces
+        return "output"
     
     def _execute(self):
         raise NotImplemented

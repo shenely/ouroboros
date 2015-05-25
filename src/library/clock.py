@@ -41,6 +41,7 @@ from bson.tz_util import utc
 #Internal libraries
 from behavior import behavior,PrimitiveBehavior
 from . import SourcePrimitive
+from .watch import WatcherPrimitive
 from .listen import PeriodicListener
 #
 ##################=
@@ -62,6 +63,7 @@ __all__ = ["DatetimePrimitive",
 #
 __version__ = "1.7"#current version [major.minor]
 
+UNIX = datetime(1970,1,1,0,tzinfo=utc)
 J2000 = datetime(2000,1,1,12,tzinfo=utc)#Julian epoch (2000-01-01T12:00:00Z)
 
 CLOCK_PERIOD = timedelta(milliseconds=100)
@@ -138,16 +140,16 @@ class ElapsedPrimitive(PrimitiveBehavior):
                          {"source":{"node":"message","face":None},
                           "target":{"node":"ClockSource","face":"message"}}],
                  "control":[]})
-class ClockSource(SourcePrimitive,PeriodicListener):
+class ClockSource(SourcePrimitive,PeriodicListener,WatcherPrimitive):
     
-    def __init__(self,name,*args,**kwargs):
+    def _update(self,*args,**kwargs):
         kwargs["epoch"] = kwargs.get("epoch",J2000)
         kwargs["period"] = kwargs.get("period",CLOCK_PERIOD)
             
-        super(ClockSource,self).__init__(name,*args,**kwargs)
+        super(ClockSource,self)._update(*args,**kwargs)
     
     def _receive(self):
-        message = self._data_graph.node["message"]["obj"]
+        message = self._data_graph.node[("message",)]["obj"]
         
         logging.info("{0}:  Ticking from {1}".\
                      format(self.name,message.value))
@@ -157,7 +159,7 @@ class ClockSource(SourcePrimitive,PeriodicListener):
         logging.info("{0}:  Ticked to {1}".\
                      format(self.name,message.value))
         
-        return ["message"]
+        return
     
     def _tick(self):
         raise NotImplemented
@@ -194,15 +196,18 @@ class ClockSource(SourcePrimitive,PeriodicListener):
 class ContinuousClock(ClockSource):
     
     def __init__(self,name,*args,**kwargs):
-        kwargs["scale"] = kwargs.get("scale",CLOCK_SCALE)
-            
         super(ContinuousClock,self).__init__(name,*args,**kwargs)
         
         self._then = datetime.utcnow()
+        
+    def _update(self,*args,**kwargs):
+        kwargs["scale"] = kwargs.get("scale",CLOCK_SCALE)
+        
+        super(ContinuousClock,self)._update(*args,**kwargs)
     
     def _tick(self):
-        message = self._data_graph.node["message"]["obj"]
-        scale = self._data_graph.node["scale"]["obj"]
+        message = self._data_graph.node[("message",)]["obj"]
+        scale = self._data_graph.node[("scale",)]["obj"]
             
         self._now = datetime.utcnow()
         

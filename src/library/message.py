@@ -39,6 +39,7 @@ import zmq
 #Internal libraries
 from behavior import behavior,PrimitiveBehavior
 from . import StringPrimitive,EventPrimitive,ActionPrimitive
+from .watch import WatcherPrimitive
 #
 ##################=
 
@@ -62,82 +63,68 @@ __version__ = "1.6"#current version [major.minor]
 
 @behavior(name="MessageParse",
           type="EventPrimitive",
-          faces={"data":{"require":[{"name":"template",
-                                     "type":"PrimitiveBehavior"},
-                                    {"name":"message",
+          faces={"data":{"require":[{"name":"message",
                                      "type":"StringPrimitive"}],
                          "provide":[{"name":"object",
                                      "type":"PrimitiveBehavior"}]},
                  "control":{"input":["input"],
                             "output":["output"]}},
-          nodes=[{"name":"template",
-                  "type":"PrimitiveBehavior","args":[]},
-                 {"name":"message",
+          nodes=[{"name":"message",
                   "type":"StringPrimitive","args":[]},
                  {"name":"object",
                   "type":"PrimitiveBehavior","args":[]}],
-          edges={"data":[{"source":{"node":"MessageParse","face":"template"},
-                          "target":{"node":"template","face":None}},
-                         {"source":{"node":"MessageParse","face":"message"},
+          edges={"data":[{"source":{"node":"MessageParse","face":"message"},
                           "target":{"node":"message","face":None}},
                          {"source":{"node":"object","face":None},
                           "target":{"node":"MessageParse","face":"object"}}],
                  "control":[]})
-class MessageParse(EventPrimitive):
+class MessageParse(EventPrimitive,WatcherPrimitive):
     
     def _occur(self):
-        template = self._data_graph.node["template"]["obj"]
-        message = self._data_graph.node["message"]["obj"]
-        object = self._data_graph.node["object"]["obj"]
+        message = self._data_graph.node[("message",)]["obj"]
+        object = self._data_graph.node[("object",)]["obj"]
         
         logging.info("{0}:  Parsing from {1}".\
                      format(self.name,message.value))
         
         object.value = json.loads(message.value,
-                                  object_hook=template.object_hook)
+                                  object_hook=object.object_hook)
         
         logging.info("{0}:  Parsed".\
                      format(self.name))
         
-        return "output",["object"]
+        return "output"
 
 @behavior(name="MessageFormat",
           type="ActionPrimitive",
-          faces={"data":{"require":[{"name":"template",
-                                     "type":"PrimitiveBehavior"},
-                                    {"name":"object",
+          faces={"data":{"require":[{"name":"object",
                                      "type":"PrimitiveBehavior"}],
                          "provide":[{"name":"message",
                                      "type":"StringPrimitive"}]},
                  "control":{"input":["input"],
                             "output":["output"]}},
-          nodes=[{"name":"template",
-                  "type":"PrimitiveBehavior","args":[]},
-                 {"name":"object",
+          nodes=[{"name":"object",
                   "type":"PrimitiveBehavior","args":[]},
                  {"name":"message",
                   "type":"StringPrimitive","args":[]}],
-          edges={"data":[{"source":{"node":"MessageFormat","face":"template"},
-                          "target":{"node":"template","face":None}},
-                         {"source":{"node":"MessageFormat","face":"object"},
+          edges={"data":[{"source":{"node":"MessageFormat","face":"object"},
                           "target":{"node":"object","face":None}},
                          {"source":{"node":"message","face":None},
                           "target":{"node":"MessageFormat","face":"message"}}],
                  "control":[]})
-class MessageFormat(ActionPrimitive):
+class MessageFormat(ActionPrimitive,WatcherPrimitive):
     
     def _execute(self):
-        template = self._data_graph.node["template"]["obj"]
-        object = self._data_graph.node["object"]["obj"]
-        message = self._data_graph.node["message"]["obj"]
+        object = self._data_graph.node[("object",)]["obj"]
+        message = self._data_graph.node[("message",)]["obj"]
         
         logging.info("{0}:  Formatting".\
                      format(self.name))
         
         message.value = json.dumps(object.value,
-                                   default=template.default)
+                                   default=object.default)
         
         logging.info("{0}:  Formatted to {1}".\
                      format(self.name,message.value))
         
-        return "output",["message"]
+        return "output"
