@@ -59,7 +59,6 @@ class WatcherPrimitive(PrimitiveBehavior):
         super(WatcherPrimitive,self).__init__(*args,**kwargs)
         
         self._lookback = False
-        self._lookahead = False
     
     def watch(self,app,graph,node):
             
@@ -86,10 +85,6 @@ class WatcherPrimitive(PrimitiveBehavior):
         
     def __exit__(self,type,value,traceback):
         if type is None:
-            if not self._lookahead:
-                self._lookahead = True
-                self._loopup(False,*self._provided_data.keys())
-            else:
-                self._lookahead = False
+            self._loopup(False,*self._provided_data.keys())
         
         return super(WatcherPrimitive,self).__exit__(type,value,traceback)
