@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   20 April 2015
+Modified:   04 June 2015
 
 TBD.
 
@@ -28,6 +28,7 @@ Date          Author          Version     Description
 2014-09-15    shenely         1.6         Events are now listeners
 2014-10-15    shenely         1.7         Creates custom composites
 2015-04-20    shenely         2.0         Complete rewrite
+2015-06-04    shenely         2.1         Passes args down to node
 
 
 """
@@ -61,7 +62,7 @@ __all__ = ["BehaviorFactory"]
 ####################
 # Constant section #
 #
-__version__ = "2.0"#current version [major.minor]
+__version__ = "2.2"#current version [major.minor]
 #
 ####################
 
@@ -100,7 +101,7 @@ class BehaviorFactory(type):
         
     def __call__(self,name,top=True,*args,**kwargs):
         #Instantiate behaviors (should this really do anything?)
-        obj = super(BehaviorFactory,self).__call__(name)
+        obj = super(BehaviorFactory,self).__call__(name,*args,**kwargs)
         
         #Interfaces are defined via behavior classes, not instances
         for face in self._required_data:# required data interfaces
@@ -251,6 +252,7 @@ class BehaviorFactory(type):
                         raise#cannot require/provide composite behaviors
                              
                     #Confirm that target and source are somehow related
+                    #XXX:  To account for the behavior factory metaclass
                     assert issubclass(target.__mro__[1],
                                       source.__mro__[1]) \
                         or issubclass(source.__mro__[1],

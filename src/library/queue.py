@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   21 April 2015
+Modified:   27 May 2015
 
 TBD.
 
@@ -18,6 +18,7 @@ Date          Author          Version     Description
 2014-09-11    shenely         1.0         Initial revision
 2014-09-15    shenely         1.1         Priority is provided on get
 2015-04-21    shenely         1.2         Support for factory rewrite
+2015-05-27    shenely         1.3         Graph access by tuple
 
 """
 
@@ -34,6 +35,7 @@ import logging
 #Internal libraries
 from behavior import *
 from . import EventPrimitive,ActionPrimitive
+from .watch import WatcherPrimitive
 #
 ##################=
 
@@ -51,7 +53,7 @@ __all__ = ["QueuePrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.2"#current version [major.minor]
+__version__ = "1.3"#current version [major.minor]
 # 
 ####################
 
@@ -88,12 +90,12 @@ class QueuePrimitive(PrimitiveBehavior):
                          {"source":{"node":"object","face":None},
                           "target":{"node":"QueueGet","face":"object"}}],
                  "control":[]})
-class QueueGet(EventPrimitive):
+class QueueGet(EventPrimitive,WatcherPrimitive):
     
     def _occur(self):
-        queue = self._data_graph.node["queue"]["obj"]
-        priority = self._data_graph.node["priority"]["obj"]
-        object = self._data_graph.node["object"]["obj"]
+        queue = self._data_graph.node[("queue",)]["obj"]
+        priority = self._data_graph.node[("priority",)]["obj"]
+        object = self._data_graph.node[("object",)]["obj"]
         
         if not queue.value.empty(): 
             priority.value,object.value = queue.value.get()
@@ -101,12 +103,12 @@ class QueueGet(EventPrimitive):
             logging.info("{0}: Got from queue".\
                          format(self.name))
             
-            return Ellipsis,["object"]
+            return Ellipsis
         else:
             logging.warn("{0}:  Queue is empty".\
                          format(self.name))
             
-            return None,[]
+            return None
 
 @behavior(name="QueuePut",
           type="ActionPrimitive",
@@ -132,12 +134,12 @@ class QueueGet(EventPrimitive):
                          {"source":{"node":"QueuePut","face":"object"},
                           "target":{"node":"object","face":None}}],
                  "control":[]})
-class QueuePut(ActionPrimitive):
+class QueuePut(ActionPrimitive,WatcherPrimitive):
            
     def _execute(self):
-        queue = self._data_graph.node["queue"]["obj"]
-        priority = self._data_graph.node["priority"]["obj"]
-        object = self._data_graph.node["object"]["obj"]
+        queue = self._data_graph.node[("queue",)]["obj"]
+        priority = self._data_graph.node[("priority",)]["obj"]
+        object = self._data_graph.node[("object",)]["obj"]
         
         if not queue.value.full():
             queue.value.put((priority.value,

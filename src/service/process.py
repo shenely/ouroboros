@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   20 April 2015
+Modified:   04 June 2015
 
 TBD.
 
@@ -31,6 +31,7 @@ Date          Author          Version     Description
 2014-10-15    shenely         1.7         Super is now behavior, not
                                             node
 2015-04-20    shenely         1.8         Support for factory rewrite
+2015-06-04    shenely         1.9         Added examine native method
 
 """
 
@@ -45,7 +46,7 @@ import logging
 
 #External libraries
 from zmq.eventloop import ioloop
-from networkx import DiGraph,dfs_predecessors,dfs_successors
+from networkx import DiGraph
 
 #Internal libraries
 from . import ServiceObject
@@ -124,10 +125,6 @@ class ProcessorService(ServiceObject):
     def pause(self):
         """Remove main function from event loop."""
         if super(ProcessorService,self).pause():
-            self._main = self._loop.add_callback(self._main) \
-                         if self._main is not None else \
-                         None
-            
             return True
         else:
             return False
@@ -203,17 +200,32 @@ class ProcessorService(ServiceObject):
             logging.debug("{0}:  Referenced to {1}".\
                           format(target.name,source.name))
             
-            try:
-                target.value = source.value
-                target.default = source.default
-                target.object_hook = source.object_hook
-            except:
-                try:
+            if hasattr(source,"value"):
+                if source.value is None and \
+                   hasattr(target,"value"):
                     source.value = target.value
                     source.default = target.default
                     source.object_hook = target.object_hook
-                except:
-                    pass
+                else:
+                    target.value = source.value
+                    target.default = source.default
+                    target.object_hook = source.object_hook
+            elif hasattr(target,"value") and \
+                 target.value is not None:
+                source.value = target.value
+                source.default = target.default
+                source.object_hook = target.object_hook
+                
+    @instruction(priority=MEDIUM)
+    def examine(self,graph,node):
+        obj = graph.node[node].get("obj")
+        
+        obj._caller()
+        
+        def handler(handle,events):
+            self.schedule(graph,node)
+
+        self._handler = self._loop.add_handler(obj.handle,handler,ioloop.POLLIN)
             
     def interrupt(self):
         raise InterruptException

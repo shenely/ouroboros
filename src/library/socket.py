@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   21 April 2014
+Modified:   04 June 2014
 
 TBD.
 
@@ -22,6 +22,7 @@ Date          Author          Version     Description
 2014-09-12    shenely         1.4         Added event mixins
 2014-09-15    shenely         1.5         Got two sockets communicating
 2015-04-21    shenely         1.6         Support for factory rewrite
+2015-06-04    shenely         1.7         Graph access by tuple
 
 """
 
@@ -40,6 +41,7 @@ import zmq
 from behavior import behavior,PrimitiveBehavior
 from . import StringPrimitive,SourcePrimitive,TargetPrimitive
 from .listen import HandlerListener
+from .watch import WatcherPrimitive
 #
 ##################=
 
@@ -57,12 +59,12 @@ __all__ = ["SocketPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.6"#current version [major.minor]
+__version__ = "1.7"#current version [major.minor]
 # 
 ####################
 
 
-@behavior(name="QueuePrimitive",
+@behavior(name="SocketPrimitive",
           type="PrimitiveBehavior",
           faces={"data":{"require":[],
                          "provide":[]},
@@ -71,23 +73,23 @@ __version__ = "1.6"#current version [major.minor]
           nodes=[{"name":"type",
                   "type":"StringPrimitive","args":[]},
                  {"name":"address",
-                  "type":"StringPrimitive","args":[]},
-                 {"name":"identity",
                   "type":"StringPrimitive","args":[]}])
 class SocketPrimitive(PrimitiveBehavior):
     
-    def __init__(self,name,pins,*args,**kwargs):
-        super(SocketPrimitive,self).__init__(name,pins,*args,**kwargs)
+    def __init__(self,name,*args,**kwargs):
+        super(SocketPrimitive,self).__init__(name,*args,**kwargs)
         
         type = kwargs.get("type")
         address = kwargs.get("address")
-        identity = kwargs.get("identity")
         
-        context = zmq.Context.instance()
-        
-        self.value = context.socket(getattr(zmq,type))
-        self.value.connect(address)
-        self.value.setsockopt(zmq.IDENTITY,identity)
+        if type is not None and \
+           address is not None:
+            context = zmq.Context.instance()
+            
+            self.value = context.socket(getattr(zmq,type))
+            self.value.connect(address)
+        else:
+            self.value = None
 
 @behavior(name="SocketSubscribe",
           type="SourcePrimitive",
@@ -112,37 +114,38 @@ class SocketPrimitive(PrimitiveBehavior):
                          {"source":{"node":"message","face":None},
                           "target":{"node":"SocketSubscribe","face":"message"}}],
                  "control":[]})
-class SocketSubscribe(SourcePrimitive,HandlerListener):
+class SocketSubscribe(SourcePrimitive,HandlerListener,WatcherPrimitive):
     
     @property
     def handle(self):
-        return self._data_graph.node["socket"].value
+        return self._data_graph.node[("socket",)]["obj"].value
     
     def _receive(self):
-        socket = self._data_graph.node["socket"]
-        address = self._data_graph.node["address"]
-        message = self._data_graph.node["message"]
+        socket = self._data_graph.node[("socket",)]["obj"]
+        address = self._data_graph.node[("address",)]["obj"]
+        message = self._data_graph.node[("message",)]["obj"]
         
         temp = socket.value.recv_multipart()
         
-        assert isinstance(temp,types.TupleType) and len(type) == 2
+        assert isinstance(temp,types.ListType) and len(temp) == 2
         assert isinstance(temp[0],types.StringTypes)
         assert address.value in temp[0]
         assert isinstance(temp[1],types.StringTypes)
         
-        message.value = message
+        message.value = temp[1]
                 
         logging.info("{0}:  From address {1}".\
                      format(self.name,address.value))
         
-        return ["message"]
-        
     def listen(self,app,graph,node):
-        socket = self._data_graph.node["socket"]
-        address = self._data_graph.node["address"]
+        socket = self._data_graph.node[("socket",)]["obj"]
+        address = self._data_graph.node[("address",)]["obj"]
         
-        socket.value.setsockopt(zmq.SUBSCRIBE,address.value)
-        
+        def caller():
+            socket.value.setsockopt(zmq.SUBSCRIBE,address.value)
+            
+        self._caller = caller
+                    
         super(SocketSubscribe,self).listen(app,graph,node)
 
 @behavior(name="SocketPublish",
@@ -169,12 +172,12 @@ class SocketSubscribe(SourcePrimitive,HandlerListener):
                          {"source":{"node":"SocketPublish","face":"message"},
                           "target":{"node":"message","face":None}}],
                  "control":[]})
-class SocketPublish(TargetPrimitive):
+class SocketPublish(TargetPrimitive,WatcherPrimitive):
            
     def _send(self):
-        socket = self._data_graph.node["socket"]
-        address = self._data_graph.node["address"]
-        message = self._data_graph.node["message"]
+        socket = self._data_graph.node[("socket",)]["obj"]
+        address = self._data_graph.node[("address",)]["obj"]
+        message = self._data_graph.node[("message",)]["obj"]
         
         socket.value.send_multipart((address.value,
                                      message.value))

@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   20 April 2015
+Modified:   04 June 2015
 
 TBD
 
@@ -19,6 +19,7 @@ Date          Author          Version     Description
 2014-10-15    shenely         1.1         Super is now behavior, not
                                             node
 2015-04-20    shenely         1.2         Supporting new graph format
+2015-06-04    shenely         1.3         Support handlers natively
 
 """
 
@@ -54,9 +55,9 @@ __all__ = ["ListenerPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.1"#current version [major.minor]
+__version__ = "1.3"#current version [major.minor]
 
-TIMEOUT = timedelta(0,1,0,0)#time between running
+TIMEOUT = timedelta(seconds=1)#time between running
 #
 ####################
 
@@ -104,7 +105,7 @@ class DelayedListener(ListenerPrimitive):
         if self._callback is not None:
             app._process._loop.remove_timeout(self._callback)
             
-        def callback():
+        def callback():            
             app._process.schedule(graph,node)
             
         self._callback = app._process._loop.add_timeout(self._timeout,callback)
@@ -116,10 +117,6 @@ class HandlerListener(ListenerPrimitive):
         raise NotImplemented
     
     def listen(self,app,graph,node):
-        if self.handle is not None:
-            app._process._loop.remove_handler(self.handle)
+        app._process.examine(graph,node)
             
-        def callback(handle,events):
-            app._process.schedule(graph,node)
-            
-        app._process._loop.add_handler(self.handle.value,callback,ioloop.POLLIN)
+        

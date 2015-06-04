@@ -158,8 +158,6 @@ class ClockSource(SourcePrimitive,PeriodicListener,WatcherPrimitive):
                 
         logging.info("{0}:  Ticked to {1}".\
                      format(self.name,message.value))
-        
-        return
     
     def _tick(self):
         raise NotImplemented

@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   21 April 2015
+Modified:   05 May 2015
 
 TBD.
 
@@ -19,6 +19,7 @@ Date          Author          Version     Description
 2014-10-20    shenely         1.1         Incorporated a margin
 2014-11-14    shenely         1.2         Converted to stated machine
 2015-04-21    shenely         1.3         Support for factory rewrite
+2015-05-27    shenely         1.4         Graph access by tuple
 
 """
 
@@ -33,6 +34,7 @@ import logging
 
 #Internal libraries
 from behavior import behavior,PrimitiveBehavior
+from .watch import WatcherPrimitive
 #
 ##################=
 
@@ -48,7 +50,7 @@ __all__ = ["OrderComparison"]
 ####################
 # Constant section #
 #
-__version__ = "1.3"#current version [major.minor]
+__version__ = "1.4"#current version [major.minor]
 # 
 ####################
 
@@ -79,7 +81,7 @@ __version__ = "1.3"#current version [major.minor]
                          {"source":{"node":"OrderComparison","face":"object"},
                           "target":{"node":"object","face":None}}],
                  "control":[]})
-class OrderComparison(PrimitiveBehavior):
+class OrderComparison(WatcherPrimitive):
     
     def _process(self):
         logging.debug("{0}:  Comparing".\
@@ -88,12 +90,15 @@ class OrderComparison(PrimitiveBehavior):
         return self._compare()
         
     def _compare(self):
-        reference = self._data_graph.node["reference"]["obj"]
-        margin = self._data_graph.node["margin"]["obj"]
-        object = self._data_graph.node["object"]["obj"]
+        reference = self._data_graph.node[("reference",)]["obj"]
+        margin = self._data_graph.node[("margin",)]["obj"]
+        object = self._data_graph.node[("object",)]["obj"]
         
-        assert issubclass(reference.__class__,object.__class__) \
-            or issubclass(object.__class__,reference.__class__)
+        #XXX:  To account for the behavior factory metaclass
+        assert issubclass(reference.__class__.__mro__[1],
+                          object.__class__.__mro__[1]) \
+            or issubclass(object.__class__.__mro__[1],
+                          reference.__class__.__mro__[1])
         
         #NOTE:  Comparison values (shenely, 2014-10-20)
         # All relevant objects (object, reference, and margin) are
@@ -115,4 +120,4 @@ class OrderComparison(PrimitiveBehavior):
             logging.info("{0}:  Around".\
                      format(self.name))
             
-            return "around",[]
+            return "around"

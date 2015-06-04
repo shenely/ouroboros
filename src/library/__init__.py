@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   21 April 2015
+Modified:   04 June 2015
 
 TBD.
 
@@ -20,7 +20,7 @@ Date          Author          Version     Description
 2014-09-10    shenely         1.2         Forcing everything to strings
 2014-09-11    shenely         1.3         Organized behavior decorators
 2014-10-15    shenely         1.4         Removed messaging arguments
-2015-04-21    shenely         1.5         Support for factory rewrite
+2015-06-04    shenely         1.6         Added checks to primitives
 
 """
 
@@ -58,7 +58,7 @@ __all__ = ["NumberPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.5"#current version [major.minor]
+__version__ = "1.6"#current version [major.minor]
 # 
 ####################
 
@@ -68,11 +68,12 @@ __version__ = "1.5"#current version [major.minor]
 class NumberPrimitive(PrimitiveBehavior):
     
     def __init__(self,name,*args,**kwargs):
-        self.value = kwargs.pop("value",0.0)
+        self.value = kwargs.pop("value",None)
         
         assert isinstance(self.value,(types.IntType,
                                       types.FloatType,
-                                      types.ComplexType))
+                                      types.ComplexType)) or \
+               self.value is None
         
         super(NumberPrimitive,self).__init__(name,*args,**kwargs)
 
@@ -81,11 +82,23 @@ class NumberPrimitive(PrimitiveBehavior):
 class StringPrimitive(PrimitiveBehavior):
     
     def __init__(self,name,*args,**kwargs):
-        self.value = kwargs.pop("value","")
-        
-        assert isinstance(self.value,types.StringTypes)
+        self._value = None
+        self.value = kwargs.pop("value",None)
+
+        assert isinstance(self.value,types.StringTypes) or \
+               self.value is None
         
         super(StringPrimitive,self).__init__(name,*args,**kwargs)
+        
+    @property
+    def value(self):
+        return self._value
+    
+    @value.setter
+    def value(self,value):
+        self._value = str(value) \
+                      if isinstance(value,types.UnicodeType) \
+                      else value
 
 @behavior(name="SourcePrimitive",
           type="PrimitiveBehavior",
@@ -121,7 +134,7 @@ class TargetPrimitive(PrimitiveBehavior):
         logging.debug("{0}:  Sending".\
                       format(self.name))
         
-        self._receive()
+        self._send()
         
         logging.debug("{0}:  Sent".\
                       format(self.name))
