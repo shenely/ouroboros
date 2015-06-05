@@ -20,7 +20,7 @@ Date          Author          Version     Description
 2014-09-10    shenely         1.2         Forcing everything to strings
 2014-09-11    shenely         1.3         Organized behavior decorators
 2014-10-15    shenely         1.4         Removed messaging arguments
-2015-06-04    shenely         1.6         Added checks to primitives
+2015-06-04    shenely         1.5         Added checks to primitives
 
 """
 
@@ -67,7 +67,7 @@ __version__ = "1.6"#current version [major.minor]
           type="PrimitiveBehavior")
 class NumberPrimitive(PrimitiveBehavior):
     
-    def __init__(self,name,*args,**kwargs):
+    def _update(self,*args,**kwargs):
         self.value = kwargs.pop("value",None)
         
         assert isinstance(self.value,(types.IntType,
@@ -75,20 +75,20 @@ class NumberPrimitive(PrimitiveBehavior):
                                       types.ComplexType)) or \
                self.value is None
         
-        super(NumberPrimitive,self).__init__(name,*args,**kwargs)
+        super(NumberPrimitive,self)._update(*args,**kwargs)
 
 @behavior(name="StringPrimitive",
           type="PrimitiveBehavior")
 class StringPrimitive(PrimitiveBehavior):
     
-    def __init__(self,name,*args,**kwargs):
+    def _update(self,*args,**kwargs):
         self._value = None
         self.value = kwargs.pop("value",None)
 
         assert isinstance(self.value,types.StringTypes) or \
                self.value is None
         
-        super(StringPrimitive,self).__init__(name,*args,**kwargs)
+        super(StringPrimitive,self)._update(*args,**kwargs)
         
     @property
     def value(self):

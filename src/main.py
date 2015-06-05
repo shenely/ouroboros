@@ -2,44 +2,78 @@ import pickle
 
 from behavior import CompositeBehavior
 
+clock = {
+    "name": "Clock",
+    "type": CompositeBehavior.__name__,
+    "path": pickle.dumps(CompositeBehavior),
+    "story": { },
+    "faces": {"data":{"require":[],
+                      "provide":[{"name":"queue","type":"QueuePrimitive"}]},
+              "control":{"input":[],
+                         "output":["output"]}},
+   "nodes": [{"name":"clock","type":"ContinuousClock","args":[]},
+             {"name":"priority","type":"NumberPrimitive",
+              "args":[{"name":"value","value":0}]},
+             {"name":"put","type":"QueuePut","args":[]},
+             {"name":"queue","type":"QueuePrimitive","args":[]}],
+   "edges":{"data":[{"source":{"node":"clock","face":"message"},
+                     "target":{"node":"put","face":"object"}},
+                    {"source":{"node":"priority","face":None},
+                     "target":{"node":"put","face":"priority"}},
+                    {"source":{"node":"queue","face":None},
+                     "target":{"node":"put","face":"queue"}},
+                    {"source":{"node":"queue","face":None},
+                     "target":{"node":"Clock","face":"queue"}}],
+            "control":[{"source":{"node":"clock","face":"output"},
+                        "target":{"node":"put","face":"input"}},
+                       {"source":{"node":"put","face":"output"},
+                        "target":{"node":"Clock","face":"output"}}]}
+}
+
 transmitter = {
     "name": "Transmitter",
     "type": CompositeBehavior.__name__,
     "path": pickle.dumps(CompositeBehavior),
     "story": { },
-    "faces": {"data":{"require":[],
+    "faces": {"data":{"require":[{"name":"queue","type":"QueuePrimitive"}],
                       "provide":[]},
-              "control":{"input":[],
-                         "output":[]}},
-   "nodes": [{"name":"clock","type":"ContinuousClock","args":[]},
+              "control":{"input":["input"],
+                         "output":["output"]}},
+   "nodes": [{"name":"queue","type":"QueuePrimitive","args":[]},
+             {"name":"priority","type":"NumberPrimitive",
+              "args":[{"name":"value","value":0}]},
+             {"name":"get","type":"QueueGet","args":[]},
              {"name":"format","type":"MessageFormat","args":[]},
              {"name":"publish","type":"SocketPublish",
               "args":[{ "name": "address", "value": "system.clock.epoch" }]},
-             {"name":"epoch","type":"DatetimePrimitive","args":[]},
              {"name":"socket","type":"SocketPrimitive",
               "args":[{ "name": "type", "value": "PUB" },
                       { "name": "address", "value": "tcp://localhost:5555" }]}],
-   "edges":{"data":[{"source":{"node":"epoch","face":None},
-                     "target":{"node":"clock","face":"epoch"}},
-                    {"source":{"node":"clock","face":"message"},
+   "edges":{"data":[{"source":{"node":"queue","face":None},
+                     "target":{"node":"get","face":"queue"}},
+                    {"source":{"node":"priority","face":None},
+                     "target":{"node":"get","face":"priority"}},
+                    {"source":{"node":"get","face":"object"},
                      "target":{"node":"format","face":"object"}},
                     {"source":{"node":"format","face":"message"},
                      "target":{"node":"publish","face":"message"}},
                     {"source":{"node":"socket","face":None},
-                     "target":{"node":"publish","face":"socket"}}],
-            "control":[{"source":{"node":"clock","face":"output"},
+                     "target":{"node":"publish","face":"socket"}},
+                    {"source":{"node":"Transmitter","face":"queue"},
+                     "target":{"node":"queue","face":None}}],
+            "control":[{"source":{"node":"Transmitter","face":"input"},
+                        "target":{"node":"get","face":"input"}},
+                       {"source":{"node":"get","face":"output"},
                         "target":{"node":"format","face":"input"}},
                        {"source":{"node":"format","face":"output"},
-                        "target":{"node":"publish","face":"input"}}]}
-}
+                        "target":{"node":"publish","face":"input"}}]}}
 
 receiver = {
     "name": "Receiver",
     "type": CompositeBehavior.__name__,
     "path": pickle.dumps(CompositeBehavior),
     "story": { },
-    "faces": {"data":{
-                      "require":[ ],
+    "faces": {"data":{"require":[ ],
                       "provide":[ ]},
               "control":{"input":[],
                          "output":["success","failure"]}},
@@ -59,25 +93,23 @@ receiver = {
             "control":[{"source":{"node":"subscribe","face":"output"},
                         "target":{"node":"parse","face":"input"}},
                        {"source":{"node":"parse","face":"output"},
-                        "target":{"node":"Receiver","face":"success"}}]}
-}
+                        "target":{"node":"Receiver","face":"success"}}]}}
 
 main = {
     "name": "main",
     "type": CompositeBehavior.__name__,
     "path": pickle.dumps(CompositeBehavior),
     "story": { },
-    "faces": {
-              "data":{
-                      "require":[],
+    "faces": {"data":{"require":[],
                       "provide":[]},
               "control":{"input":[],
                          "output":["success","failure"]}},
-   "nodes": [{"name":"receiver","type":"Receiver","args":[]},
-             {"name":"transmitter","type":"Transmitter","args":[]}],
-   "edges":{
-            "data":[ ],
-            "control":[{"source":{"node":"receiver","face":"success"},
-                        "target":{"node":"main","face":"success"}}]
-            }
-}
+   "nodes": [{"name":"clock","type":"Clock","args":[]},
+             {"name":"transmitter","type":"Transmitter","args":[]},
+             {"name":"receiver","type":"Receiver","args":[]}],
+   "edges":{"data":[{"source":{"node":"clock","face":"queue"},
+                     "target":{"node":"transmitter","face":"queue"}}],
+            "control":[{"source":{"node":"clock","face":"output"},
+                        "target":{"node":"transmitter","face":"input"}},
+                       {"source":{"node":"receiver","face":"success"},
+                        "target":{"node":"main","face":"success"}}]}}

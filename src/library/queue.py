@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   27 May 2015
+Modified:   04 June 2015
 
 TBD.
 
@@ -19,7 +19,7 @@ Date          Author          Version     Description
 2014-09-15    shenely         1.1         Priority is provided on get
 2015-04-21    shenely         1.2         Support for factory rewrite
 2015-05-27    shenely         1.3         Graph access by tuple
-
+2015-06-04    shenely         1.4         Moved init to update
 """
 
 
@@ -53,7 +53,7 @@ __all__ = ["QueuePrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.3"#current version [major.minor]
+__version__ = "1.4"#current version [major.minor]
 # 
 ####################
 
@@ -62,8 +62,8 @@ __version__ = "1.3"#current version [major.minor]
           type="PrimitiveBehavior")
 class QueuePrimitive(PrimitiveBehavior):
     
-    def __init__(self,name,*args,**kwargs):
-        super(QueuePrimitive,self).__init__(name,*args,**kwargs)
+    def _update(self,*args,**kwargs):
+        super(QueuePrimitive,self)._update(*args,**kwargs)
         
         self.value = PriorityQueue()
 
@@ -103,7 +103,7 @@ class QueueGet(EventPrimitive,WatcherPrimitive):
             logging.info("{0}: Got from queue".\
                          format(self.name))
             
-            return Ellipsis
+            return "output"
         else:
             logging.warn("{0}:  Queue is empty".\
                          format(self.name))

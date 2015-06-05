@@ -39,7 +39,7 @@ import zmq
 
 #Internal libraries
 from behavior import behavior,PrimitiveBehavior
-from . import StringPrimitive,SourcePrimitive,TargetPrimitive
+from . import SourcePrimitive,TargetPrimitive
 from .listen import HandlerListener
 from .watch import WatcherPrimitive
 #
@@ -76,8 +76,8 @@ __version__ = "1.7"#current version [major.minor]
                   "type":"StringPrimitive","args":[]}])
 class SocketPrimitive(PrimitiveBehavior):
     
-    def __init__(self,name,*args,**kwargs):
-        super(SocketPrimitive,self).__init__(name,*args,**kwargs)
+    def _update(self,*args,**kwargs):
+        super(SocketPrimitive,self)._update(*args,**kwargs)
         
         type = kwargs.get("type")
         address = kwargs.get("address")

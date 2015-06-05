@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   05 May 2015
+Modified:   04 June 2015
 
 TBD.
 
@@ -20,6 +20,7 @@ Date          Author          Version     Description
 2014-11-14    shenely         1.2         Converted to stated machine
 2015-04-21    shenely         1.3         Support for factory rewrite
 2015-05-27    shenely         1.4         Graph access by tuple
+2015-06-04    shenely         1.5         Removed data graph outputs
 
 """
 
@@ -50,7 +51,7 @@ __all__ = ["OrderComparison"]
 ####################
 # Constant section #
 #
-__version__ = "1.4"#current version [major.minor]
+__version__ = "1.5"#current version [major.minor]
 # 
 ####################
 
@@ -110,12 +111,12 @@ class OrderComparison(WatcherPrimitive):
             logging.info("{0}:  After".\
                      format(self.name))
             
-            return "after",[]
+            return "after"
         elif object.value - reference.value < margin.value:
             logging.info("{0}:  Before".\
                      format(self.name))
             
-            return "before",[]
+            return "before"
         else:
             logging.info("{0}:  Around".\
                      format(self.name))
