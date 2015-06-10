@@ -33,7 +33,7 @@ import types
 
 #Internal libraries
 from . import ServiceObject
-from device.database import DatabaseDevice
+from dev.database import DatabaseDevice
 #
 ##################
 

@@ -1,4 +1,4 @@
-from service.persist import PersistenceService
+from srv.persist import PersistenceService
 
 service = PersistenceService()
 
@@ -10,7 +10,7 @@ import behavior as _
 _.PrimitiveBehavior.install(service)
 _.CompositeBehavior.install(service)
 
-import library as _
+import lib as _
 
 _.NumberPrimitive.install(service)
 _.StringPrimitive.install(service)
@@ -22,7 +22,7 @@ _.ActionPrimitive.install(service)
 
 del _
 
-import library.clock as _
+import lib.clock as _
 
 _.DatetimePrimitive.install(service)
 _.ElapsedPrimitive.install(service)
@@ -31,7 +31,7 @@ _.DiscreteClock.install(service)
 
 del _
 
-import library.socket as _
+import lib.socket as _
 
 _.SocketPrimitive.install(service)
 _.SocketSubscribe.install(service)
@@ -39,14 +39,14 @@ _.SocketPublish.install(service)
 
 del _
 
-import library.message as _
+import lib.message as _
 
 _.MessageParse.install(service)
 _.MessageFormat.install(service)
 
 del _
 
-import library.queue as _
+import lib.queue as _
 
 _.QueuePrimitive.install(service)
 _.QueueGet.install(service)
@@ -54,7 +54,7 @@ _.QueuePut.install(service)
 
 del _
 
-import library.order as _
+import lib.order as _
 
 _.OrderComparison.install(service)
 

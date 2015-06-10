@@ -45,8 +45,8 @@ from networkx import union,relabel_nodes
 
 #Internal libraries
 from behavior import PrimitiveBehavior,CompositeBehavior
-from library.watch import WatcherPrimitive
-from library.listen import ListenerPrimitive
+from lib.watch import WatcherPrimitive
+from lib.listen import ListenerPrimitive
 #
 ##################=
 

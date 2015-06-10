@@ -34,7 +34,7 @@ from zmq.devices import ThreadDevice
 
 #Internal libraries
 from . import ServiceObject
-from device.router import ThreadRouter
+from dev.router import ThreadRouter
 #
 ##################
 
