@@ -78,23 +78,23 @@ CLOCK_STEP = timedelta(seconds=60)#Clock step (default to 60 seconds)
           type="PrimitiveBehavior")
 class DatetimePrimitive(PrimitiveBehavior):
     
-    def __init__(self,name,*args,**kwargs):
+    def _update(self,*args,**kwargs):
         self.value = kwargs.pop("value",J2000)
             
         assert isinstance(self.value,datetime)
         
-        super(DatetimePrimitive,self).__init__(name,*args,**kwargs)
+        super(DatetimePrimitive,self)._update(*args,**kwargs)
 
 @behavior(name="ElapsedPrimitive",
           type="PrimitiveBehavior")
 class ElapsedPrimitive(PrimitiveBehavior):
     
-    def __init__(self,name,*args,**kwargs):
+    def _update(self,*args,**kwargs):
         self.value = kwargs.pop("value",CLOCK_STEP)
         
         assert isinstance(self.value,timedelta)
         
-        super(ElapsedPrimitive,self).__init__(name,*args,**kwargs)
+        super(ElapsedPrimitive,self)._update(*args,**kwargs)
         
     def default(self,obj):
         if isinstance(obj,timedelta):
