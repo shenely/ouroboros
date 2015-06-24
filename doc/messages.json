@@ -28,14 +28,14 @@
     edges: {
       data: [
         { 
-          source: { node: String, face: String },
-          target: { node: String, face: String }
+          source: { node: String, face: [String|Null] },
+          target: { node: String, face: [String|Null] }
         },
       ],
       control: [
         { 
-          source: { node: String, face: [String|Number|Boolean|Null] },
-          target: { node: String, face: [String|Number|Boolean|Null] }
+          source: { node: String, face: [String|Number|Boolean] },
+          target: { node: String, face: [String|Number|Boolean]] }
         },
       ]
     }
