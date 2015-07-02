@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   04 June 2015
+Modified:   01 July 2015
 
 TBD.
 
@@ -20,6 +20,7 @@ Date          Author          Version     Description
 2015-04-21    shenely         1.2         Support for factory rewrite
 2015-05-27    shenely         1.3         Graph access by tuple
 2015-06-04    shenely         1.4         Moved init to update
+2015-07-01    shenely         1.6         Removing unused dependencies
 """
 
 
@@ -33,7 +34,7 @@ import logging
 #External libraries
 
 #Internal libraries
-from behavior import *
+from ouroboros.behavior import behavior,PrimitiveBehavior
 from . import EventPrimitive,ActionPrimitive
 from .watch import WatcherPrimitive
 #
@@ -53,7 +54,7 @@ __all__ = ["QueuePrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.4"#current version [major.minor]
+__version__ = "1.5"#current version [major.minor]
 # 
 ####################
 
@@ -150,3 +151,8 @@ class QueuePut(ActionPrimitive,WatcherPrimitive):
         else:                    
             logging.warn("{0}:  Queue is full".\
                          format(self.name))
+    
+def install(service):
+    QueuePrimitive.install(service)
+    QueueGet.install(service)
+    QueuePut.install(service)

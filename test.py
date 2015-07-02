@@ -1,6 +1,12 @@
 import pickle
 
-from behavior import CompositeBehavior
+from ouroboros.behavior import CompositeBehavior
+from ouroboros.srv.persist import PersistenceService
+
+service = PersistenceService()
+
+service.start()
+service.run()
 
 clock = {
     "name": "Clock",
@@ -27,8 +33,8 @@ clock = {
             "control":[{"source":{"node":"clock","face":"output"},
                         "target":{"node":"put","face":"input"}},
                        {"source":{"node":"put","face":"output"},
-                        "target":{"node":"Clock","face":"output"}}]}
-}
+                        "target":{"node":"Clock","face":"output"}}]}}
+service.set({ "name": clock["name"] },clock)
 
 transmitter = {
     "name": "Transmitter",
@@ -67,6 +73,7 @@ transmitter = {
                         "target":{"node":"format","face":"input"}},
                        {"source":{"node":"format","face":"output"},
                         "target":{"node":"publish","face":"input"}}]}}
+service.set({ "name": transmitter["name"] },transmitter)
 
 receiver = {
     "name": "Receiver",
@@ -94,6 +101,7 @@ receiver = {
                         "target":{"node":"parse","face":"input"}},
                        {"source":{"node":"parse","face":"output"},
                         "target":{"node":"Receiver","face":"success"}}]}}
+service.set({ "name": receiver["name"] },receiver)
 
 main = {
     "name": "main",
@@ -113,3 +121,10 @@ main = {
                         "target":{"node":"transmitter","face":"input"}},
                        {"source":{"node":"receiver","face":"success"},
                         "target":{"node":"main","face":"success"}}]}}
+service.set({ "name": main["name"] },main)
+
+service.pause()
+service.stop()
+
+import ouroboros.__main__
+

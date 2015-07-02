@@ -1,6 +1,9 @@
 import logging
 
-from srv.execute import ExecutionService
+import ouroboros
+from ouroboros.srv.execute import ExecutionService
+
+ouroboros.install()
 
 logging.basicConfig(level=logging.DEBUG)
     
@@ -8,4 +11,3 @@ app = ExecutionService("main")
 
 app.start()
 app.run()
-

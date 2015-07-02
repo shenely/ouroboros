@@ -1,4 +1,4 @@
-from behavior import behavior,PrimitiveBehavior
+from ouroboros.behavior import behavior,PrimitiveBehavior
 
 class CelestialPrimitive(PrimitiveBehavior):pass
 class StarPrimitive(CelestialPrimitive):pass

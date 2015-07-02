@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   04 June 2015
+Modified:   30 June 2015
 
 TBD
 
@@ -20,6 +20,7 @@ Date          Author          Version     Description
                                             node
 2015-04-20    shenely         1.2         Supporting new graph format
 2015-06-04    shenely         1.3         Support handlers natively
+2015-06-30    shenely         1.4         Removing unused dependencies
 
 """
 
@@ -32,11 +33,9 @@ from datetime import timedelta
 import logging
 
 #External libraries
-from zmq.eventloop import ioloop
-import zmq
 
 #Internal libraries
-from behavior import PrimitiveBehavior
+from ouroboros.behavior import PrimitiveBehavior
 #
 ##################
 
@@ -55,7 +54,7 @@ __all__ = ["ListenerPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.3"#current version [major.minor]
+__version__ = "1.4"#current version [major.minor]
 
 TIMEOUT = timedelta(seconds=1)#time between running
 #

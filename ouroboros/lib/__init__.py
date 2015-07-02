@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   04 June 2015
+Modified:   01 July 2015
 
 TBD.
 
@@ -21,6 +21,7 @@ Date          Author          Version     Description
 2014-09-11    shenely         1.3         Organized behavior decorators
 2014-10-15    shenely         1.4         Removed messaging arguments
 2015-06-04    shenely         1.5         Added checks to primitives
+2015-07-01    shenely         1.6         Added install function
 
 """
 
@@ -35,8 +36,8 @@ import logging
 #External libraries
 
 #Internal libraries
-from common import ObjectDict
-from behavior import *
+from ouroboros.common import ObjectDict
+from ouroboros.behavior import *
 #
 ##################=
 
@@ -58,7 +59,7 @@ __all__ = ["NumberPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.6"#current version [major.minor]
+__version__ = "1.7"#current version [major.minor]
 # 
 ####################
 
@@ -218,4 +219,28 @@ class ActionPrimitive(PrimitiveBehavior):
     
     def _execute(self):
         raise NotImplemented
+    
+def install(service):
+    NumberPrimitive.install(service)
+    StringPrimitive.install(service)
+    SourcePrimitive.install(service)
+    TargetPrimitive.install(service)
+    ConditionPrimitive.install(service)
+    EventPrimitive.install(service)
+    ActionPrimitive.install(service)
+    
+    from . import clock as _
+    _.install(service)
+    
+    from . import message as _
+    _.install(service)
+    
+    from . import order as _
+    _.install(service)
+    
+    from . import queue as _
+    _.install(service)
+    
+    from . import socket as _
+    _.install(service)
         

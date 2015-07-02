@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   10 September 2014
+Modified:   01 July 2015
 
 TBD.
 
@@ -19,6 +19,7 @@ Date          Author          Version     Description
 2014-06-12    shenely         1.0         Initial revision
 2014-06-26    shenely         1.1         Moved database to device
 2014-09-10    shenely         1.2         Added a run method
+2015-07-01    shenely         1.3         Added delete method
 
 """
 
@@ -33,7 +34,7 @@ import types
 
 #Internal libraries
 from . import ServiceObject
-from dev.database import DatabaseDevice
+from ouroboros.dev.database import DatabaseDevice
 #
 ##################
 
@@ -49,7 +50,7 @@ __all__ = ["PersistenceService"]
 ####################
 # Constant section #
 #
-__version__ = "1.2"#current version [major.minor]
+__version__ = "1.3"#current version [major.minor]
 
 BEHAVIOR_COLLECTION = "behaviors"
 #
@@ -104,9 +105,16 @@ class PersistenceService(ServiceObject):
             #TODO:  Persistence running exception (shenely, 2014-06-12)
             raise Exception# is not running
             
-    def set(self,document):
+    def set(self,query,document):
         if self._running:
-            self._database.save(BEHAVIOR_COLLECTION,document)# to database
+            self._database.save(BEHAVIOR_COLLECTION,query,document)# to database
+        else:
+            #TODO:  Persistence running exception (shenely, 2014-06-12)
+            raise Exception# is not running
+            
+    def delete(self,query):
+        if self._running:
+            self._database.remove(BEHAVIOR_COLLECTION,query)# to database
         else:
             #TODO:  Persistence running exception (shenely, 2014-06-12)
             raise Exception# is not running

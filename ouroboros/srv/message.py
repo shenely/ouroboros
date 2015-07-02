@@ -34,7 +34,7 @@ from zmq.devices import ThreadDevice
 
 #Internal libraries
 from . import ServiceObject
-from dev.router import ThreadRouter
+from ouroboros.dev.router import ThreadRouter
 #
 ##################
 

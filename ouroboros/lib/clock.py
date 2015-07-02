@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   20 April 2015
+Modified:   01 July 2015
 
 TBD.
 
@@ -24,6 +24,7 @@ Date          Author          Version     Description
 2014-10-20    shenely         1.6         Propagate clock period to timeout
                                             node
 2015-04-21    shenely         1.7         Support for factory rewrite
+2015-07-01    shenely         1.8         Added install function
 """
 
 
@@ -39,7 +40,7 @@ import logging
 from bson.tz_util import utc
 
 #Internal libraries
-from behavior import behavior,PrimitiveBehavior
+from ouroboros.behavior import behavior,PrimitiveBehavior
 from . import SourcePrimitive
 from .watch import WatcherPrimitive
 from .listen import PeriodicListener
@@ -61,7 +62,7 @@ __all__ = ["DatetimePrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.7"#current version [major.minor]
+__version__ = "1.8"#current version [major.minor]
 
 UNIX = datetime(1970,1,1,0,tzinfo=utc)
 J2000 = datetime(2000,1,1,12,tzinfo=utc)#Julian epoch (2000-01-01T12:00:00Z)
@@ -257,3 +258,9 @@ class DiscreteClock(ClockSource):
         
         #Increase simulation time
         message.value = message.value + step.value
+    
+def install(service):    
+    DatetimePrimitive.install(service)
+    ElapsedPrimitive.install(service)
+    ContinuousClock.install(service)
+    DiscreteClock.install(service)

@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   08 February 2015
+Modified:   01 July 2015
 
 TBD.
 
@@ -39,6 +39,7 @@ Date          Author          Version     Description
 2014-10-22    shenely         1.10        Separating synchronization and
                                              tree traversal steps
 2015-02-08    shenely         2.0         Complete rewrite
+2015-07-01    shenely         2.1         Added uninstall method
 """
 
 
@@ -53,7 +54,7 @@ from networkx import DiGraph
 from bson import json_util
 
 #Internal libraries
-from common import *
+from ouroboros.common import *
 #
 ##################=
 
@@ -72,7 +73,7 @@ __all__ = ["behavior",
 ####################
 # Constant section #
 #
-__version__ = "2.0"#current version [major.minor]
+__version__ = "2.1"#current version [major.minor]
 
 DEFAULT_DOCUMENT = dict(story=dict(),
                         faces=dict(data=dict(require=list(),
@@ -110,7 +111,18 @@ class BehaviorObject(BaseObject):
     def install(cls,service):
         cls.doc["path"] = pickle.dumps(cls)
         
-        service.set(cls.doc)
+        service.set({ "name": cls.doc["name"] },cls.doc)
+    
+    @classmethod
+    def uninstall(cls,service):
+        cls.doc["path"] = pickle.dumps(cls)
+        
+        service.delete({ "name": cls.doc["name"] })
+    
+    @classmethod
+    def reinstall(cls,service):
+        cls.uninstall(service)
+        cls.install(service)
     
     def __init__(self,name,*arg,**kwargs):
         self.name = name
@@ -154,3 +166,18 @@ class PrimitiveBehavior(BehaviorObject):
           type="BehaviorObject")
 class CompositeBehavior(BehaviorObject):
     """Composite (complex) behavior"""
+    
+def install():
+    from ouroboros.srv.persist import PersistenceService
+    
+    service = PersistenceService()
+    service.start()
+    service.run()
+    
+    PrimitiveBehavior.install(service)
+    CompositeBehavior.install(service)
+    
+    service.pause()
+    service.stop()
+    
+install()

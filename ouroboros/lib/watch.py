@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   04 June 2015
+Modified:   30 June 2015
 
 TBD
 
@@ -17,6 +17,7 @@ Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2015-05-23    shenely         1.0         Initial revision
 2015-06-04    shenely         1.1         Its not calling, its watching
+2015-06-30    shenely         1.2         Removing unused dependencies
 
 """
 
@@ -25,15 +26,12 @@ Date          Author          Version     Description
 # Import section #
 #
 #Built-in libraries
-from datetime import timedelta
 import logging
 
 #External libraries
-from zmq.eventloop import ioloop
-import zmq
 
 #Internal libraries
-from behavior import PrimitiveBehavior
+from ouroboros.behavior import PrimitiveBehavior
 #
 ##################
 
@@ -49,7 +47,7 @@ __all__ = ["WatcherPrimitive"]
 ####################
 # Constant section #
 #
-__version__ = "1.1"#current version [major.minor]
+__version__ = "1.2"#current version [major.minor]
 #
 ####################
 

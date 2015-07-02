@@ -33,7 +33,7 @@ Date          Author          Version     Description
 #External libraries
 
 #Internal libraries
-from factory import BehaviorFactory
+from ouroboros.factory import BehaviorFactory
 from . import ServiceObject
 from .message import MessagingService
 from .process import ProcessorService

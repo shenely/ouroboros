@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   04 June 2014
+Modified:   01 July 2014
 
 TBD.
 
@@ -23,6 +23,7 @@ Date          Author          Version     Description
 2014-09-15    shenely         1.5         Got two sockets communicating
 2015-04-21    shenely         1.6         Support for factory rewrite
 2015-06-04    shenely         1.7         Graph access by tuple
+2015-07-01    shenely         1.8         Added install function
 
 """
 
@@ -38,7 +39,7 @@ import logging
 import zmq
 
 #Internal libraries
-from behavior import behavior,PrimitiveBehavior
+from ouroboros.behavior import behavior,PrimitiveBehavior
 from . import SourcePrimitive,TargetPrimitive
 from .listen import HandlerListener
 from .watch import WatcherPrimitive
@@ -59,7 +60,7 @@ __all__ = ["SocketPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.7"#current version [major.minor]
+__version__ = "1.8"#current version [major.minor]
 # 
 ####################
 
@@ -184,3 +185,8 @@ class SocketPublish(TargetPrimitive,WatcherPrimitive):
                 
         logging.info("{0}:  To address {1}".\
                      format(self.name,address.value))
+    
+def install(service):
+    SocketPrimitive.install(service)
+    SocketSubscribe.install(service)
+    SocketPublish.install(service)

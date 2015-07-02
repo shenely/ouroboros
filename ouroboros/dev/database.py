@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   10 September 2014
+Modified:   01 July 2015
 
 TBD.
 
@@ -18,6 +18,7 @@ Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-06-26    shenely         1.0         Initial revision
 2014-09-10    shenely         1.1         Saves don't modified document
+2015-07-01    shenely         1.2         Added remove method
 
 """
 
@@ -31,7 +32,7 @@ Date          Author          Version     Description
 import pymongo
 
 #Internal libraries
-from common import ObjectDict
+from ouroboros.common import ObjectDict
 #
 ##################
 
@@ -47,7 +48,7 @@ __all__ = ["DatabaseDevice"]
 ####################
 # Constant section #
 #
-__version__ = "1.1"#current version [major.minor]
+__version__ = "1.2"#current version [major.minor]
 
 #Default MongoDB settings
 DEFAULT_HOST = "localhost"
@@ -77,7 +78,10 @@ class DatabaseDevice:
         
         return document
     
-    def save(self,name,document):
-        _id = self._database[name].save(document,manipulate=False)
+    def save(self,name,query,document):
+        _id = self._database[name].replace_one(query,document,upsert=True).upserted_id
         
         return _id
+    
+    def remove(self,name,query):
+        self._database[name].delete_one(query)

@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   21 April 2014
+Modified:   01 July 2015
 
 TBD.
 
@@ -22,6 +22,7 @@ Date          Author          Version     Description
 2014-09-15    shenely         1.4         Parsing returns something
 2014-10-15    shenely         1.5         Modify behaviors, not values
 2015-04-21    shenely         1.6         Support for factory rewrite
+2015-07-01    shenely         1.7         Removing unused dependencies
 
 """
 
@@ -34,11 +35,10 @@ import logging
 import json
 
 #External libraries
-import zmq
 
 #Internal libraries
-from behavior import behavior,PrimitiveBehavior
-from . import StringPrimitive,EventPrimitive,ActionPrimitive
+from ouroboros.behavior import behavior
+from . import EventPrimitive,ActionPrimitive
 from .watch import WatcherPrimitive
 #
 ##################=
@@ -56,7 +56,7 @@ __all__ = ["MessageParse",
 ####################
 # Constant section #
 #
-__version__ = "1.6"#current version [major.minor]
+__version__ = "1.7"#current version [major.minor]
 # 
 ####################
 
@@ -128,3 +128,7 @@ class MessageFormat(ActionPrimitive,WatcherPrimitive):
                      format(self.name,message.value))
         
         return "output"
+    
+def install(service):
+    MessageParse.install(service)
+    MessageFormat.install(service)

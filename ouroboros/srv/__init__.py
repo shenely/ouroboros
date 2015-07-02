@@ -32,7 +32,7 @@ Date          Author          Version     Description
 #External libraries
 
 #Internal libraries
-from common import BaseObject
+from ouroboros.common import BaseObject
 #
 ##################=
 

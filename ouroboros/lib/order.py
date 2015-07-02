@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   04 June 2015
+Modified:   01 July 2015
 
 TBD.
 
@@ -21,6 +21,7 @@ Date          Author          Version     Description
 2015-04-21    shenely         1.3         Support for factory rewrite
 2015-05-27    shenely         1.4         Graph access by tuple
 2015-06-04    shenely         1.5         Removed data graph outputs
+2015-07-01    shenely         1.6         Removing unused dependencies
 
 """
 
@@ -34,7 +35,7 @@ import logging
 #External libraries
 
 #Internal libraries
-from behavior import behavior,PrimitiveBehavior
+from ouroboros.behavior import behavior
 from .watch import WatcherPrimitive
 #
 ##################=
@@ -51,7 +52,7 @@ __all__ = ["OrderComparison"]
 ####################
 # Constant section #
 #
-__version__ = "1.5"#current version [major.minor]
+__version__ = "1.6"#current version [major.minor]
 # 
 ####################
 
@@ -122,3 +123,6 @@ class OrderComparison(WatcherPrimitive):
                      format(self.name))
             
             return "around"
+    
+def install(service):    
+    OrderComparison.install(service)

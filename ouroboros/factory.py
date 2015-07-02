@@ -44,9 +44,9 @@ import pickle
 from networkx import union,relabel_nodes
 
 #Internal libraries
-from behavior import PrimitiveBehavior,CompositeBehavior
-from lib.watch import WatcherPrimitive
-from lib.listen import ListenerPrimitive
+from ouroboros.behavior import PrimitiveBehavior
+from ouroboros.lib.watch import WatcherPrimitive
+from ouroboros.lib.listen import ListenerPrimitive
 #
 ##################=
 
