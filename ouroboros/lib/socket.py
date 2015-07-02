@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   01 July 2014
+Modified:   02 July 2014
 
 TBD.
 
@@ -24,6 +24,7 @@ Date          Author          Version     Description
 2015-04-21    shenely         1.6         Support for factory rewrite
 2015-06-04    shenely         1.7         Graph access by tuple
 2015-07-01    shenely         1.8         Added install function
+2015-07-02    shenely         1.9         Cleaned up behavior definitions
 
 """
 
@@ -60,17 +61,13 @@ __all__ = ["SocketPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.8"#current version [major.minor]
+__version__ = "1.9"#current version [major.minor]
 # 
 ####################
 
 
 @behavior(name="SocketPrimitive",
           type="PrimitiveBehavior",
-          faces={"data":{"require":[],
-                         "provide":[]},
-                 "control":{"input":[],
-                            "output":["output"]}},
           nodes=[{"name":"type",
                   "type":"StringPrimitive","args":[]},
                  {"name":"address",

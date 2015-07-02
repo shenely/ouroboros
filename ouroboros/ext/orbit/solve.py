@@ -1,5 +1,7 @@
-'''
-Created on Jun 11, 2015
+from ouroboros.behavior import behavior
+from ouroboros.lib import ActionPrimitive
 
-@author: shenely
-'''
+class OrbitPropagator(ActionPrimitive):pass
+class KeplerPropagator(ActionPrimitive):pass
+class SimplePropagator(ActionPrimitive):pass
+class EphemerisPropagator(ActionPrimitive):pass

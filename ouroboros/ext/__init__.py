@@ -1,2 +1,3 @@
 def install(service):
-    pass
+    from . import orbit as _
+    _.install(service)

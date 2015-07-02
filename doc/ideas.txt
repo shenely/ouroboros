@@ -36,28 +36,30 @@ lib
 ext
     orbit
         OrbitPrimitive
+        KeplerOrbit
         SimpleOrbit
-        event
-            OrbitEvent
-            Perigee
-            Apogee
-            AscendingNode
-            DescendingNode
-            NorthernPole
-            SouthernPole
+        ephem
+        	EphemerisPrimitive
+        	StateEphemeris
+        	DevelopmentEphemeris
+        solve
+            OrbitPropagator
+            KeplerPropagator
+            SimplePropagator
+            EphemerisPropagator
         body
             CelestialPrimitive
             Sun
             Earth
             Moon
-        solve
-            OrbitPropagator
-            SimplePropagator
-        coord
-            CoordinateSystem
-            EclipticSystem
-            EquatorialSystem
-            HorizontalSystem
+        event
+            OrbitEvent
+            PeriapsisEvent
+            ApoapsisEvent
+            AscendingNodeEvent
+            DescendingNodeEvent
+            NorthernPoleEvent
+            SouthernPoleEvent
     physics
         UnitPrimitive
         ScalarPrimitive
@@ -66,22 +68,15 @@ ext
         interpolate
             PolynomialInterpolator
             LinearInterpolator
-            CubicSplineInterpolator
-        plane
-            HorizontalPlane
-            EquatorialPlane
-            EclipticPlane
-        origin
-            GeocentricOrigin
-            HeliocentricOrigin
-        frame
-            InertialFrame
-            RotatingFrame
-        coord
+            CubicInterpolator
+        coordinate
             CoordinatePrimitive
             Cartesian2Coordinates
             Cartesian3Coordinates
             PolarCoordinates
+            CoordinateTransform
+            CoordinateFrameTransform
+            CoordinateSystemTransform
             CylindricalCoordinates
             SphericalCoordinates
         transform
@@ -89,6 +84,3 @@ ext
             TransformPrimitive
             MatrixTransform
             IdentityTransform
-            CoordinateTransform
-            CoordinateFrameTransform
-            CoordinateSystemTransform
