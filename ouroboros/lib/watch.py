@@ -59,30 +59,20 @@ class WatcherPrimitive(PrimitiveBehavior):
         
         self._lookback = False
     
-    def watch(self,app,graph,node):
-            
-        def watcher(force,*faces):
-            for face in faces:
-                app._process.reference(graph,node + (face,))
-                
-            if app._process._running and force and len(faces) > 0:
-                app._process.interrupt()
-                
-        self._loopup = watcher
-        
-        self._loopup(False,*self._required_data.keys())
-        self._loopup(False,*self._provided_data.keys())
+    def watch(self,app,graph,node):        
+        app._process.watch(graph,node,*self._required_data.keys())
+        app._process.watch(graph,node,*self._provided_data.keys())
     
-    def __enter__(self):
-        if not self._lookback:
-            self._lookback = True
-            self._loopup(True,*self._required_data.keys())
-        
-        return super(WatcherPrimitive,self).__enter__()
-        
-    def __exit__(self,type,value,traceback):
-        if type is None:
-            self._loopup(False,*self._provided_data.keys())
-            self._lookback = False
-        
-        return super(WatcherPrimitive,self).__exit__(type,value,traceback)
+#     def __enter__(self):
+#         if not self._lookback:
+#             self._lookback = True
+#             self._loopup(True,*self._required_data.keys())
+#          
+#         return super(WatcherPrimitive,self).__enter__()
+#          
+#     def __exit__(self,type,value,traceback):
+#         if type is None:
+#             self._loopup(False,*self._provided_data.keys())
+#             self._lookback = False
+#          
+#         return super(WatcherPrimitive,self).__exit__(type,value,traceback)

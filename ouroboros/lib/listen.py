@@ -29,10 +29,12 @@ Date          Author          Version     Description
 # Import section #
 #
 #Built-in libraries
-from datetime import timedelta
+import types
 import logging
 
 #External libraries
+from zmq.eventloop import ioloop
+import simpy
 
 #Internal libraries
 from ouroboros.behavior import PrimitiveBehavior
@@ -55,8 +57,6 @@ __all__ = ["ListenerPrimitive",
 # Constant section #
 #
 __version__ = "1.4"#current version [major.minor]
-
-TIMEOUT = timedelta(seconds=1)#time between running
 #
 ####################
 
@@ -69,45 +69,41 @@ class ListenerPrimitive(PrimitiveBehavior):
 class PeriodicListener(ListenerPrimitive):
     
     def __init__(self,*args,**kwargs):
-        self._timeout = kwargs.pop("timeout",TIMEOUT)
+        self._timeout = kwargs.pop("timeout",1)
         self._callback = None
         
-        assert isinstance(self._timeout,timedelta)
+        assert isinstance(self._timeout,(types.IntType,
+                                         types.FloatType))
         
         super(PeriodicListener,self).__init__(*args,**kwargs)
     
-    def listen(self,app,graph,node):
-        if self._callback is not None:
-            app._process._loop.remove_timeout(self._callback)
-            
-        def caller():
-            self._callback = app._process._loop.add_timeout(self._timeout,callback)
-            
+    def listen(self,app,thing,node):
         def callback():
-            app._process.schedule(graph,node)
-            
-            app._process._loop.add_callback(caller)
+            while True:
+                yield app._process.schedule(thing,node)
+                                
+                yield app._process._env.timeout(self._timeout)
         
-        app._process._loop.add_callback(caller)
+        app._process.listen(callback)
 
 class DelayedListener(ListenerPrimitive):
     
-    def __init__(self,timeout=TIMEOUT,*args,**kwargs):
-        self._timeout = kwargs.pop("timeout",TIMEOUT)
+    def __init__(self,*args,**kwargs):
+        self._timeout = kwargs.pop("timeout",1)
         self._callback = None
         
-        assert isinstance(self._timeout,timedelta)
+        assert isinstance(self._timeout,(types.IntType,
+                                         types.FloatType))
         
         super(DelayedListener,self).__init__(*args,**kwargs)
     
-    def listen(self,app,graph,node):
-        if self._callback is not None:
-            app._process._loop.remove_timeout(self._callback)
+    def listen(self,app,thing,node):
+        def callback():
+            yield app._process._env.timeout(self._timeout)
             
-        def callback():            
-            app._process.schedule(graph,node)
+            yield app._process.schedule(thing,node)
             
-        self._callback = app._process._loop.add_timeout(self._timeout,callback)
+        app._process.listen(callback)
 
 class HandlerListener(ListenerPrimitive):
     
@@ -115,7 +111,19 @@ class HandlerListener(ListenerPrimitive):
     def handle(self):
         raise NotImplemented
     
-    def listen(self,app,graph,node):
-        app._process.examine(graph,node)
+    def listen(self,app,thing,node):
+        def callback():
+            yield app._process._env.timeout(0)
+            
+            obj = thing._control_graph.node[node].get("obj")
+            
+            obj._caller()
+        
+            def handler(handle,events):
+                app._process.schedule(thing,node)
+
+            self._handler = app._process._loop.add_handler(obj.handle,handler,ioloop.POLLIN)
+            
+        app._process.listen(callback)
             
         

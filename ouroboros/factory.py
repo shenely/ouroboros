@@ -168,7 +168,7 @@ class BehaviorFactory(type):
             #Add listeners to the event loop
             for node,data in obj._control_graph.nodes_iter(data=True):
                 if isinstance(data["obj"],ListenerPrimitive):
-                    data["obj"].listen(self.app,obj._control_graph,node)
+                    data["obj"].listen(self.app,obj,node)
             
         #Create new edges in data graph
         for edge in self.doc.edges.data:

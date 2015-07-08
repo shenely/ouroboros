@@ -47,6 +47,7 @@ import logging
 #External libraries
 from zmq.eventloop import ioloop
 from networkx import DiGraph
+import simpy
 
 #Internal libraries
 from . import ServiceObject
@@ -81,32 +82,31 @@ TRIVIAL =  10000
 ioloop.install()
 
 def instruction(priority):
-    def decorator(method):
-        def function(self,graph,node):
+    def decorator(command):
+        def function(self,event,graph,node):
             """Schedule a process for execution."""
             assert isinstance(graph,DiGraph)
             assert graph.has_node(node)
             
-            self._queue.put((priority,
-                             method,
-                             graph,node))
+            gen = command(self,event,graph,node)
             
-            self.resume()
+            return self._env.process(gen)
             
         return function
     
     return decorator
-    
-class InterruptException(BaseException):pass
 
 class ProcessorService(ServiceObject):
     _loop = ioloop.IOLoop.instance()#event loop
     _main = None                    #main function
     _queue = PriorityQueue()        #process queue
+    #_env = simpy.RealtimeEnvironment()
+    _env = simpy.Environment()
                 
     def start(self):
         """Start the event loop."""
         if super(ProcessorService,self).start():
+            self._loop.add_callback(self.resume)
             self._loop.start()
             
             return True
@@ -125,6 +125,8 @@ class ProcessorService(ServiceObject):
     def pause(self):
         """Remove main function from event loop."""
         if super(ProcessorService,self).pause():
+            self._dead.succeed()
+            
             return True
         else:
             return False
@@ -132,7 +134,9 @@ class ProcessorService(ServiceObject):
     def resume(self):
         """Inject main function into event loop."""
         if super(ProcessorService,self).resume():
-            self._main = self._loop.add_callback(self.run)
+            self._dead = self._env.event()
+            
+            self._loop.add_callback(self.run)
             
             return True
         else:
@@ -141,104 +145,100 @@ class ProcessorService(ServiceObject):
     def run(self):
         """"""
         if self._running:
-            while not self._queue.empty():
-                self._dispatch()
-            else:
-                self.pause()
+            self._env.run(self._dead)
         else:
             self.resume()
-        
-    @instruction(priority=LOW)
-    def schedule(self,graph,node):
+            
+    def schedule(self,thing,node,starter=None):
         node,face = (node,None) \
-                    if graph.has_node(node) else \
+                    if thing._control_graph.has_node(node) else \
                     (node[:-1],node[-1])
-
-        with graph.node[node].get("obj") as behavior:
-            face = behavior(face)
+                    
+        if starter is None:
+            starter = self._env.event()
+            self._loop.add_callback(starter.succeed)
+            
+        ender = self._env.event()
         
-        node = node + (face,) \
-               if face is not None else \
-               None
-               
-        if node is not None:
-            if graph.has_node(node):
-                for node in graph.successors_iter(node):
-                    self.schedule(graph,node)
-            else:
-                node,face = node[:-1],node[-1]
-                for source,target,data in graph.out_edges_iter(node,data=True):
+        def process():
+            yield starter
+            
+            with thing._control_graph.node[node].get("obj") as behavior:
+                events = {mode:self._env.event() \
+                          for mode in behavior._output_control}
+                
+                for source,target,data in thing._control_graph.out_edges_iter(node,data=True):
                     if source == node and \
-                       data["mode"] == face and \
-                       graph.node[target]["obj"] is not None:
-                        self.schedule(graph,target)
-        
-    @instruction(priority=HIGH)
-    def reference(self,graph,node):
-        node_set = set()
-        
-        source = graph.node[node].get("obj")
-        
-        def recursion(e):
-            node_set.add(e)
+                       thing._control_graph.node[target]["obj"] is not None:
+                        self.schedule(thing,target,events[data["mode"]])
+                
+                yield self.watch(thing._data_graph,node,*behavior._required_data)
+                
+                face = behavior(face)
+                
+                yield self.watch(thing._data_graph,node,*behavior._provided_data)
             
-            for n in list(node_set):
-                for p in graph.predecessors_iter(n):
-                    if p not in node_set:
-                        recursion(p)
-                for s in graph.successors_iter(n):
-                    if s not in node_set:
-                        recursion(s)
-        
-        recursion(node)
-        
-        node_set.remove(node)
-        
-        for n in node_set:
-            target = graph.node[n].get("obj")
+                events[face].succeed()
             
-            logging.debug("{0}:  Referenced to {1}".\
-                          format(target.name,source.name))
+            ender.succeed()
             
-            if hasattr(source,"value"):
-                if source.value is None and \
-                   hasattr(target,"value"):
+        self._env.process(process())
+        
+        return ender
+    
+    def listen(self,callback):
+        def caller():
+            self._env.process(callback())
+            
+        self._loop.add_callback(caller)
+        
+    def watch(self,graph,node,*faces):
+        starter = self._env.event()
+        self._loop.add_callback(starter.succeed)
+        
+        def looker():
+            yield starter
+            
+            node_set = set()
+            
+            source = graph.node[node].get("obj")
+            
+            def recursion(e):
+                node_set.add(e)
+                
+                for n in list(node_set):
+                    for p in graph.predecessors_iter(n):
+                        if p not in node_set:
+                            recursion(p)
+                    for s in graph.successors_iter(n):
+                        if s not in node_set:
+                            recursion(s)
+            
+            recursion(node)
+            
+            node_set.remove(node)
+            
+            for n in node_set:
+                target = graph.node[n].get("obj")
+                
+                logging.debug("{0}:  Referenced to {1}".\
+                              format(target.name,source.name))
+                
+                if hasattr(source,"value"):
+                    if source.value is None and \
+                       hasattr(target,"value"):
+                        source.value = target.value
+                        source.default = target.default
+                        source.object_hook = target.object_hook
+                    else:
+                        target.value = source.value
+                        target.default = source.default
+                        target.object_hook = source.object_hook
+                elif hasattr(target,"value") and \
+                     target.value is not None:
                     source.value = target.value
                     source.default = target.default
                     source.object_hook = target.object_hook
-                else:
-                    target.value = source.value
-                    target.default = source.default
-                    target.object_hook = source.object_hook
-            elif hasattr(target,"value") and \
-                 target.value is not None:
-                source.value = target.value
-                source.default = target.default
-                source.object_hook = target.object_hook
-                
-    @instruction(priority=MEDIUM)
-    def examine(self,graph,node):
-        obj = graph.node[node].get("obj")
         
-        obj._caller()
-        
-        def handler(handle,events):
-            self.schedule(graph,node)
-
-        self._handler = self._loop.add_handler(obj.handle,handler,ioloop.POLLIN)
-            
-    def interrupt(self):
-        raise InterruptException
-
-    def _dispatch(self):
-        """Execute process and schedule"""
-        priority,command,graph,node = self._queue.get()
-        
-        assert isinstance(graph,DiGraph)
-        assert graph.has_node(node)
-        
-        try:
-            command(self,graph,node)
-        except InterruptException:
-            self._queue.put((priority+TRIVIAL,command,graph,node))
+        return self._env.process(looker())
         
