@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   01 July 2015
+Modified:   07 July 2015
 
 TBD.
 
@@ -25,6 +25,7 @@ Date          Author          Version     Description
                                             node
 2015-04-21    shenely         1.7         Support for factory rewrite
 2015-07-01    shenely         1.8         Added install function
+2015-07-07    shenely         1.9         Using JSON parser now
 """
 
 
@@ -62,7 +63,7 @@ __all__ = ["DatetimePrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.8"#current version [major.minor]
+__version__ = "1.9"#current version [major.minor]
 
 UNIX = datetime(1970,1,1,0,tzinfo=utc)
 J2000 = datetime(2000,1,1,12,tzinfo=utc)#Julian epoch (2000-01-01T12:00:00Z)
@@ -92,6 +93,9 @@ class ElapsedPrimitive(PrimitiveBehavior):
     
     def _update(self,*args,**kwargs):
         self.value = kwargs.pop("value",CLOCK_STEP)
+        
+        if isinstance(self.value,types.DictType):
+            self.value = self.object_hook(self.value)
         
         assert isinstance(self.value,timedelta)
         

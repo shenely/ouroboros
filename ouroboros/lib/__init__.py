@@ -109,7 +109,7 @@ class StringPrimitive(PrimitiveBehavior):
                                   output=list("output"))))
 class SourcePrimitive(PrimitiveBehavior):
     
-    def _process(self):
+    def _process(self,face):
         logging.debug("{0}:  Receiving".\
                       format(self.name))
         
@@ -131,7 +131,7 @@ class SourcePrimitive(PrimitiveBehavior):
                                   output=list())))
 class TargetPrimitive(PrimitiveBehavior):
     
-    def _process(self):
+    def _process(self,face):
         logging.debug("{0}:  Sending".\
                       format(self.name))
         
@@ -154,7 +154,7 @@ class TargetPrimitive(PrimitiveBehavior):
                                   output=[True,False])))
 class ConditionPrimitive(PrimitiveBehavior):
     
-    def _process(self):
+    def _process(self,face):
         logging.debug("{0}:  Satisfying".\
                       format(self.name))
         
@@ -180,7 +180,7 @@ class ConditionPrimitive(PrimitiveBehavior):
                                   output=list("output"))))
 class EventPrimitive(PrimitiveBehavior):
     
-    def _process(self):
+    def _process(self,face):
         logging.debug("{0}:  Occurring".\
                       format(self.name))
         
@@ -206,7 +206,7 @@ class EventPrimitive(PrimitiveBehavior):
                                   output=list("output"))))
 class ActionPrimitive(PrimitiveBehavior):
     
-    def _process(self):
+    def _process(self,face):
         logging.debug("{0}:  Executing".\
                       format(self.name))
         

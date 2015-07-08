@@ -34,6 +34,21 @@ lib
     watch
         WatcherPrimitive
 ext
+    math
+    	ArrayPrimitive
+    	PolynomialPrimitive
+        coord
+            CoordinatePrimitive
+            Cartesian2Coordinates
+            Cartesian3Coordinates
+            PolarCoordinates
+            CylindricalCoordinates
+            SphericalCoordinates
+        transform
+            MatrixPrimitive
+            TransformPrimitive
+            MatrixTransform
+            IdentityTransform
     orbit
         OrbitPrimitive
         KeplerOrbit
@@ -42,6 +57,10 @@ ext
         	EphemerisPrimitive
         	StateEphemeris
         	DevelopmentEphemeris
+        interpolate
+            PolynomialInterpolator
+            LinearInterpolator
+            CubicInterpolator
         solve
             OrbitPropagator
             KeplerPropagator
@@ -60,27 +79,3 @@ ext
             DescendingNodeEvent
             NorthernPoleEvent
             SouthernPoleEvent
-    physics
-        UnitPrimitive
-        ScalarPrimitive
-        VectorPrimitive
-        TensorPrimitive
-        interpolate
-            PolynomialInterpolator
-            LinearInterpolator
-            CubicInterpolator
-        coordinate
-            CoordinatePrimitive
-            Cartesian2Coordinates
-            Cartesian3Coordinates
-            PolarCoordinates
-            CoordinateTransform
-            CoordinateFrameTransform
-            CoordinateSystemTransform
-            CylindricalCoordinates
-            SphericalCoordinates
-        transform
-            MatrixPrimitive
-            TransformPrimitive
-            MatrixTransform
-            IdentityTransform

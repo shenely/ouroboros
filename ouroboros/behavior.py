@@ -148,7 +148,7 @@ class PrimitiveBehavior(BehaviorObject):
     """Primitive (simple) behavior"""
     
     def __call__(self,face):
-        return self._process()
+        return self._process(face)
     
     def __enter__(self):
         return self

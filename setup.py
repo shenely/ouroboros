@@ -17,12 +17,13 @@ setup(name="ouroboros",
                         ],
       )
 
-setup(name="ob-physics",
+setup(name="ob-math",
       version="0.1",
       author="shenely",
       description="On the shoulders of giants",
       packages=["ouroboros.ext.physics",],
-      install_requires=["ouroboros"],
+      install_requires=["ouroboros",
+                        "numpy>=1.4.0"],
       )
 
 setup(name="ob-orbit",
@@ -31,7 +32,7 @@ setup(name="ob-orbit",
       description="Circles within circles",
       packages=["ouroboros.ext.orbit",],
       install_requires=["ouroboros",
-                        "ob-physics"
+                        "ob-math",
                         "sgp4",
                         "jplephem",
                         "de405"],
