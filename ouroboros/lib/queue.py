@@ -20,7 +20,8 @@ Date          Author          Version     Description
 2015-04-21    shenely         1.2         Support for factory rewrite
 2015-05-27    shenely         1.3         Graph access by tuple
 2015-06-04    shenely         1.4         Moved init to update
-2015-07-01    shenely         1.6         Removing unused dependencies
+2015-07-01    shenely         1.5         Removing unused dependencies
+2015-07-24    shenely         1.6         Removed need for thread safety
 """
 
 
@@ -28,7 +29,7 @@ Date          Author          Version     Description
 # Import section #
 #
 #Built-in libraries
-from Queue import PriorityQueue
+import heapq
 import logging
 
 #External libraries
@@ -66,15 +67,15 @@ class QueuePrimitive(PrimitiveBehavior):
     def _update(self,*args,**kwargs):
         super(QueuePrimitive,self)._update(*args,**kwargs)
         
-        self.value = PriorityQueue()
+        self.value = list()
 
 @behavior(name="QueueGet",
           type="EventPrimitive",
           faces={"data":{"require":[{"name":"queue",
-                                     "type":"QueuePrimitive"},
-                                    {"name":"priority",
-                                     "type":"PrimitiveBehavior"}],
-                         "provide":[{"name":"object",
+                                     "type":"QueuePrimitive"}],
+                         "provide":[{"name":"priority",
+                                     "type":"PrimitiveBehavior"},
+                                    {"name":"object",
                                      "type":"PrimitiveBehavior"}]},
                  "control":{"input":["input"],
                             "output":["output"]}},
@@ -98,8 +99,8 @@ class QueueGet(EventPrimitive,WatcherPrimitive):
         priority = self._data_graph.node[("priority",)]["obj"]
         object = self._data_graph.node[("object",)]["obj"]
         
-        if not queue.value.empty(): 
-            priority.value,object.value = queue.value.get()
+        if len(queue.value) > 0: 
+            priority.value,object.value = heapq.heappop(queue.value)
                     
             logging.info("{0}: Got from queue".\
                          format(self.name))
@@ -142,9 +143,9 @@ class QueuePut(ActionPrimitive,WatcherPrimitive):
         priority = self._data_graph.node[("priority",)]["obj"]
         object = self._data_graph.node[("object",)]["obj"]
         
-        if not queue.value.full():
-            queue.value.put((priority.value,
-                             object.value))
+        if True:
+            heapq.heappush(queue.value,
+                           (priority.value,object.value))
                     
             logging.info("{0}:  Put to queue".\
                          format(self.name))

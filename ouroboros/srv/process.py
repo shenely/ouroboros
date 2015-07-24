@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   04 June 2015
+Modified:   24 July 2015
 
 TBD.
 
@@ -32,6 +32,7 @@ Date          Author          Version     Description
                                             node
 2015-04-20    shenely         1.8         Support for factory rewrite
 2015-06-04    shenely         1.9         Added examine native method
+2015-07-24    shenely         1.10        Removed socket support
 
 """
 
@@ -41,11 +42,9 @@ Date          Author          Version     Description
 #
 #Built-in libraries
 from datetime import timedelta
-from Queue import PriorityQueue
 import logging
 
 #External libraries
-from zmq.eventloop import ioloop
 from networkx import DiGraph
 import simpy
 
@@ -66,7 +65,7 @@ __all__ = ["ProcessorService"]
 ####################
 # Constant section #
 #
-__version__ = "1.8"#current version [major.minor]
+__version__ = "1.10"#current version [major.minor]
 
 TIMEOUT = timedelta(0,0,0,100)#time between running
 
@@ -79,7 +78,6 @@ TRIVIAL =  10000
 #
 ####################
 
-ioloop.install()
 
 def instruction(priority):
     def decorator(command):
@@ -97,17 +95,14 @@ def instruction(priority):
     return decorator
 
 class ProcessorService(ServiceObject):
-    _loop = ioloop.IOLoop.instance()#event loop
-    _main = None                    #main function
-    _queue = PriorityQueue()        #process queue
-    #_env = simpy.RealtimeEnvironment()
-    _env = simpy.Environment()
+    _main = None        #main function
+    _env = simpy.RealtimeEnvironment()
+    #_env = simpy.Environment()
                 
     def start(self):
         """Start the event loop."""
         if super(ProcessorService,self).start():
-            self._loop.add_callback(self.resume)
-            self._loop.start()
+            self.resume()
             
             return True
         else:
@@ -116,7 +111,7 @@ class ProcessorService(ServiceObject):
     def stop(self):
         """Stop the event loop."""
         if super(ProcessorService,self).stop():
-            self._loop.stop()
+            self.pause()
             
             return True
         else:
@@ -136,7 +131,7 @@ class ProcessorService(ServiceObject):
         if super(ProcessorService,self).resume():
             self._dead = self._env.event()
             
-            self._loop.add_callback(self.run)
+            self.run()
             
             return True
         else:
@@ -145,100 +140,112 @@ class ProcessorService(ServiceObject):
     def run(self):
         """"""
         if self._running:
-            self._env.run(self._dead)
+            self._env.run()#self._dead)
         else:
             self.resume()
             
-    def schedule(self,thing,node,starter=None):
-        node,face = (node,None) \
-                    if thing._control_graph.has_node(node) else \
-                    (node[:-1],node[-1])
-                    
-        if starter is None:
+    def schedule(self,root,path,starter=None):
+        flag = starter is None
+        
+        if flag:
             starter = self._env.event()
-            self._loop.add_callback(starter.succeed)
             
         ender = self._env.event()
         
         def process():
-            yield starter
+            try:
+                yield starter
+            except:
+                return
             
-            with thing._control_graph.node[node].get("obj") as behavior:
+            node,face = (path,None) \
+                  if root._control_graph.has_node(path) else \
+                  (path[:-1],path[-1])
+            
+            with root._control_graph.node[node].get("obj") as behavior:
                 events = {mode:self._env.event() \
                           for mode in behavior._output_control}
                 
-                for source,target,data in thing._control_graph.out_edges_iter(node,data=True):
+                for source,target,data in root._control_graph.out_edges_iter(node,data=True):
                     if source == node and \
-                       thing._control_graph.node[target]["obj"] is not None:
-                        self.schedule(thing,target,events[data["mode"]])
+                       root._control_graph.node[target]["obj"] is not None:
+                        self.schedule(root,target,events[data["mode"]])
                 
-                yield self.watch(thing._data_graph,node,*behavior._required_data)
+                yield self.watch(root._data_graph,node,*behavior._required_data)
                 
                 face = behavior(face)
                 
-                yield self.watch(thing._data_graph,node,*behavior._provided_data)
-            
-                events[face].succeed()
+                yield self.watch(root._data_graph,node,*behavior._provided_data)
+                
+                for key in events.keys():
+                    if key != face:
+                        events[key].fail(Exception)
+                else:
+                    if face is not None:
+                        events[face].succeed()
             
             ender.succeed()
             
         self._env.process(process())
         
+        if flag:
+            starter.succeed()
+        
         return ender
     
     def listen(self,callback):
-        def caller():
-            self._env.process(callback())
-            
-        self._loop.add_callback(caller)
+        self._env.process(callback())
         
     def watch(self,graph,node,*faces):
         starter = self._env.event()
-        self._loop.add_callback(starter.succeed)
+        #self._loop.add_callback(starter.succeed)
         
         def looker():
             yield starter
             
-            node_set = set()
-            
-            source = graph.node[node].get("obj")
-            
-            def recursion(e):
-                node_set.add(e)
+            for face in faces:
+                node_set = set()
                 
-                for n in list(node_set):
-                    for p in graph.predecessors_iter(n):
-                        if p not in node_set:
-                            recursion(p)
-                    for s in graph.successors_iter(n):
-                        if s not in node_set:
-                            recursion(s)
-            
-            recursion(node)
-            
-            node_set.remove(node)
-            
-            for n in node_set:
-                target = graph.node[n].get("obj")
+                source = graph.node[node + (face,)].get("obj")
                 
-                logging.debug("{0}:  Referenced to {1}".\
-                              format(target.name,source.name))
+                def recursion(e):
+                    node_set.add(e)
+                    
+                    for n in list(node_set):
+                        for p in graph.predecessors_iter(n):
+                            if p not in node_set:
+                                recursion(p)
+                        for s in graph.successors_iter(n):
+                            if s not in node_set:
+                                recursion(s)
                 
-                if hasattr(source,"value"):
-                    if source.value is None and \
-                       hasattr(target,"value"):
+                recursion(node + (face,))
+                
+                node_set.remove(node + (face,))
+                
+                for n in node_set:
+                    target = graph.node[n].get("obj")
+                    
+                    logging.debug("{0}:  Referenced to {1}".\
+                                  format(target.name,source.name))
+                    
+                    if hasattr(source,"value"):
+                        if source.value is None and \
+                           hasattr(target,"value"):
+                            source.value = target.value
+                            source.default = target.default
+                            source.object_hook = target.object_hook
+                        else:
+                            target.value = source.value
+                            target.default = source.default
+                            target.object_hook = source.object_hook
+                    elif hasattr(target,"value") and \
+                         target.value is not None:
                         source.value = target.value
                         source.default = target.default
                         source.object_hook = target.object_hook
-                    else:
-                        target.value = source.value
-                        target.default = source.default
-                        target.object_hook = source.object_hook
-                elif hasattr(target,"value") and \
-                     target.value is not None:
-                    source.value = target.value
-                    source.default = target.default
-                    source.object_hook = target.object_hook
         
-        return self._env.process(looker())
+        process = self._env.process(looker())
+        starter.succeed()
         
+        return process

@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   30 June 2015
+Modified:   24 July 2015
 
 TBD
 
@@ -21,6 +21,7 @@ Date          Author          Version     Description
 2015-04-20    shenely         1.2         Supporting new graph format
 2015-06-04    shenely         1.3         Support handlers natively
 2015-06-30    shenely         1.4         Removing unused dependencies
+2015-07-24    shenely         1.5         Removed handler listener
 
 """
 
@@ -33,8 +34,6 @@ import types
 import logging
 
 #External libraries
-from zmq.eventloop import ioloop
-import simpy
 
 #Internal libraries
 from ouroboros.behavior import PrimitiveBehavior
@@ -47,8 +46,7 @@ from ouroboros.behavior import PrimitiveBehavior
 #
 __all__ = ["ListenerPrimitive",
            "PeriodicListener",
-           "DelayedListener",
-           "HandlerListener"]
+           "DelayedListener"]
 #
 ##################
 
@@ -56,7 +54,7 @@ __all__ = ["ListenerPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.4"#current version [major.minor]
+__version__ = "1.5"#current version [major.minor]
 #
 ####################
 
@@ -102,27 +100,6 @@ class DelayedListener(ListenerPrimitive):
             yield app._process._env.timeout(self._timeout)
             
             yield app._process.schedule(thing,node)
-            
-        app._process.listen(callback)
-
-class HandlerListener(ListenerPrimitive):
-    
-    @property
-    def handle(self):
-        raise NotImplemented
-    
-    def listen(self,app,thing,node):
-        def callback():
-            yield app._process._env.timeout(0)
-            
-            obj = thing._control_graph.node[node].get("obj")
-            
-            obj._caller()
-        
-            def handler(handle,events):
-                app._process.schedule(thing,node)
-
-            self._handler = app._process._loop.add_handler(obj.handle,handler,ioloop.POLLIN)
             
         app._process.listen(callback)
             

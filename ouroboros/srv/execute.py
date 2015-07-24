@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   20 April 2015
+Modified:   24 July 2015
 
 TBD.
 
@@ -21,6 +21,7 @@ Date          Author          Version     Description
 2014-09-10    shenely         1.1         Reorganized processor
 2014-09-15    shenely         1.2         Added messaging service
 2015-04-20    shenely         1.3         Support for factory rewrite
+2015-07-24    shenely         1.4         Removed socket support
 
 """
 
@@ -35,7 +36,6 @@ Date          Author          Version     Description
 #Internal libraries
 from ouroboros.factory import BehaviorFactory
 from . import ServiceObject
-from .message import MessagingService
 from .process import ProcessorService
 from .persist import PersistenceService
 #
@@ -53,7 +53,7 @@ __all__ = ["ExecutionService"]
 ####################
 # Constant section #
 #
-__version__ = "1.3"#current version [major.minor]
+__version__ = "1.4"#current version [major.minor]
 
 #Default MongoDB settings
 MONGO_HOST = "localhost"
@@ -79,13 +79,11 @@ class ExecutionService(ServiceObject):
         
         self._process = ProcessorService()
         self._database = PersistenceService()
-        self._message = MessagingService()
     
     def start(self):
         """Connect to behavior database."""
         if super(ExecutionService,self).start():
             self._database.start()
-            self._message.start()
             
             return True
         else:
@@ -95,7 +93,6 @@ class ExecutionService(ServiceObject):
         """Disconnect from behavior database."""
         if super(ExecutionService,self).stop():
             self._database.stop()
-            self._message.stop()
             
             return True
         else:
@@ -105,7 +102,6 @@ class ExecutionService(ServiceObject):
         """Pause the processing service."""
         if super(ExecutionService,self).pause():
             self._database.pause()
-            self._message.pause()
             
             self._process.stop()
             
@@ -117,7 +113,6 @@ class ExecutionService(ServiceObject):
         """Resume the processing service."""
         if super(ExecutionService,self).resume():
             self._database.resume()
-            self._message.resume()
             
             self.run()
             

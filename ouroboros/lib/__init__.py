@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   01 July 2015
+Modified:   24 July 2015
 
 TBD.
 
@@ -22,6 +22,7 @@ Date          Author          Version     Description
 2014-10-15    shenely         1.4         Removed messaging arguments
 2015-06-04    shenely         1.5         Added checks to primitives
 2015-07-01    shenely         1.6         Added install function
+2015-07-24    shenely         1.7         Removed socket support
 
 """
 
@@ -239,8 +240,5 @@ def install(service):
     _.install(service)
     
     from . import queue as _
-    _.install(service)
-    
-    from . import socket as _
     _.install(service)
         
