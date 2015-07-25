@@ -12,8 +12,7 @@ setup(name="ouroboros",
                 #"ouroboros.ext.orbit",
                 ],
       install_requires=["networkx>=0.99",
-                        "pymongo>=3.0",
-                        "pyzmq>=2.0.7"
+                        "pymongo>=3.0"                        
                         ],
       )
 
@@ -21,7 +20,7 @@ setup(name="ob-math",
       version="0.1",
       author="shenely",
       description="On the shoulders of giants",
-      packages=["ouroboros.ext.physics",],
+      packages=["ouroboros.ext.math",],
       install_requires=["ouroboros",
                         "numpy>=1.4.0"],
       )

@@ -79,25 +79,9 @@ TRIVIAL =  10000
 ####################
 
 
-def instruction(priority):
-    def decorator(command):
-        def function(self,event,graph,node):
-            """Schedule a process for execution."""
-            assert isinstance(graph,DiGraph)
-            assert graph.has_node(node)
-            
-            gen = command(self,event,graph,node)
-            
-            return self._env.process(gen)
-            
-        return function
-    
-    return decorator
-
 class ProcessorService(ServiceObject):
-    _main = None        #main function
-    #_env = simpy.RealtimeEnvironment()
-    _env = simpy.Environment()
+    _env = simpy.RealtimeEnvironment()
+    #_env = simpy.Environment()
                 
     def start(self):
         """Start the event loop."""
