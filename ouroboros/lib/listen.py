@@ -78,11 +78,11 @@ class PeriodicListener(ListenerPrimitive):
     def listen(self,app,thing,node):
         def callback():
             while True:
-                yield app._process.schedule(thing,node)
+                yield app.schedule(thing,node,app._start)
                                 
-                yield app._process._env.timeout(self._timeout)
+                yield app._env.timeout(self._timeout)
         
-        app._process.listen(callback)
+        app._env.process(callback())
 
 class DelayedListener(ListenerPrimitive):
     
@@ -97,10 +97,10 @@ class DelayedListener(ListenerPrimitive):
     
     def listen(self,app,thing,node):
         def callback():
-            yield app._process._env.timeout(self._timeout)
+            yield app._env.timeout(self._timeout)
             
-            yield app._process.schedule(thing,node)
+            yield app.schedule(thing,node,app._start)
             
-        app._process.listen(callback)
+        return app._env.process(callback())
             
         

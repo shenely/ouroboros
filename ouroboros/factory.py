@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   04 June 2015
+Modified:   24 July 2015
 
 TBD.
 
@@ -29,6 +29,7 @@ Date          Author          Version     Description
 2014-10-15    shenely         1.7         Creates custom composites
 2015-04-20    shenely         2.0         Complete rewrite
 2015-06-04    shenely         2.1         Passes args down to node
+2015-07-24    shenely         2.2         Pass process instead of executive
 
 
 """
@@ -163,12 +164,15 @@ class BehaviorFactory(type):
             #Add watchers to the event loop
             for node,data in obj._data_graph.nodes_iter(data=True):
                 if isinstance(data["obj"],WatcherPrimitive):
-                    data["obj"].watch(self.app,obj._data_graph,node)
+                    data["obj"].watch(self.app._process,obj,node,
+                                      *data["obj"]._provided_data)
+                    data["obj"].watch(self.app._process,obj,node,
+                                      *data["obj"]._required_data)
             
             #Add listeners to the event loop
             for node,data in obj._control_graph.nodes_iter(data=True):
                 if isinstance(data["obj"],ListenerPrimitive):
-                    data["obj"].listen(self.app,obj,node)
+                    data["obj"].listen(self.app._process,obj,node)
             
         #Create new edges in data graph
         for edge in self.doc.edges.data:

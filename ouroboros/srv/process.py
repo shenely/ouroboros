@@ -96,12 +96,13 @@ def instruction(priority):
 
 class ProcessorService(ServiceObject):
     _main = None        #main function
-    _env = simpy.RealtimeEnvironment()
-    #_env = simpy.Environment()
+    #_env = simpy.RealtimeEnvironment()
+    _env = simpy.Environment()
                 
     def start(self):
         """Start the event loop."""
         if super(ProcessorService,self).start():
+            self._start = self._env.event()
             self.resume()
             
             return True
@@ -120,7 +121,7 @@ class ProcessorService(ServiceObject):
     def pause(self):
         """Remove main function from event loop."""
         if super(ProcessorService,self).pause():
-            self._dead.succeed()
+            self._pause.succeed()
             
             return True
         else:
@@ -129,7 +130,8 @@ class ProcessorService(ServiceObject):
     def resume(self):
         """Inject main function into event loop."""
         if super(ProcessorService,self).resume():
-            self._dead = self._env.event()
+            self._pause = self._env.event()
+            self._start.succeed()
             
             self.run()
             
@@ -140,21 +142,14 @@ class ProcessorService(ServiceObject):
     def run(self):
         """"""
         if self._running:
-            self._env.run()#self._dead)
+            self._env.run(self._pause)
         else:
             self.resume()
             
-    def schedule(self,root,path,starter=None):
-        flag = starter is None
-        
-        if flag:
-            starter = self._env.event()
-            
-        ender = self._env.event()
-        
+    def schedule(self,root,path,trigger):
         def process():
             try:
-                yield starter
+                yield trigger
             except:
                 return
             
@@ -171,11 +166,11 @@ class ProcessorService(ServiceObject):
                        root._control_graph.node[target]["obj"] is not None:
                         self.schedule(root,target,events[data["mode"]])
                 
-                yield self.watch(root._data_graph,node,*behavior._required_data)
+                yield behavior.watch(self,root,node,*behavior._required_data)
                 
                 face = behavior(face)
                 
-                yield self.watch(root._data_graph,node,*behavior._provided_data)
+                yield behavior.watch(self,root,node,*behavior._provided_data)
                 
                 for key in events.keys():
                     if key != face:
@@ -184,68 +179,4 @@ class ProcessorService(ServiceObject):
                     if face is not None:
                         events[face].succeed()
             
-            ender.succeed()
-            
-        self._env.process(process())
-        
-        if flag:
-            starter.succeed()
-        
-        return ender
-    
-    def listen(self,callback):
-        self._env.process(callback())
-        
-    def watch(self,graph,node,*faces):
-        starter = self._env.event()
-        #self._loop.add_callback(starter.succeed)
-        
-        def looker():
-            yield starter
-            
-            for face in faces:
-                node_set = set()
-                
-                source = graph.node[node + (face,)].get("obj")
-                
-                def recursion(e):
-                    node_set.add(e)
-                    
-                    for n in list(node_set):
-                        for p in graph.predecessors_iter(n):
-                            if p not in node_set:
-                                recursion(p)
-                        for s in graph.successors_iter(n):
-                            if s not in node_set:
-                                recursion(s)
-                
-                recursion(node + (face,))
-                
-                node_set.remove(node + (face,))
-                
-                for n in node_set:
-                    target = graph.node[n].get("obj")
-                    
-                    logging.debug("{0}:  Referenced to {1}".\
-                                  format(target.name,source.name))
-                    
-                    if hasattr(source,"value"):
-                        if source.value is None and \
-                           hasattr(target,"value"):
-                            source.value = target.value
-                            source.default = target.default
-                            source.object_hook = target.object_hook
-                        else:
-                            target.value = source.value
-                            target.default = source.default
-                            target.object_hook = source.object_hook
-                    elif hasattr(target,"value") and \
-                         target.value is not None:
-                        source.value = target.value
-                        source.default = target.default
-                        source.object_hook = target.object_hook
-        
-        process = self._env.process(looker())
-        starter.succeed()
-        
-        return process
+        return self._env.process(process())
