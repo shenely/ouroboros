@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   07 July 2015
+Modified:   25 July 2015
 
 TBD.
 
@@ -16,6 +16,7 @@ Classes:
 Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2015-07-07    shenely         1.0         Initial revision
+2015-07-25    shenely         1.0         Added new (Hermite) interpolators
 
 """
 
@@ -41,8 +42,9 @@ from ouroboros.lib.watch import WatcherPrimitive
 # Export section #
 #
 __all__ = ["InterpolatorPrimitive",
-           "KinematicInterpolator",
-           "SplineInterpolator"]
+           "LinearInterpolator",
+           "CubicInterpolator",
+           "QuinticInterpolator"]
 #
 ##################
 
@@ -50,7 +52,7 @@ __all__ = ["InterpolatorPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.0"#current version [major.minor]
+__version__ = "1.1"#current version [major.minor]
 # 
 ####################
 
@@ -63,106 +65,102 @@ class InterpolatorPrimitive(PrimitiveBehavior,WatcherPrimitive):
         return self._up(face) \
             if face == "up" else \
             self._eval(face)
-
-@behavior(name="KinematicInterpolator",
+    
+@behavior(name="LinearInterpolator",
           type="InterpolatorPrimitive",
-          faces={"data":{"require":[{"name":"up_t","type":"DatetimePrimitive"},
-                                    {"name":"up_p","type":"ArrayPrimitive"},
-                                    {"name":"up_v","type":"ArrayPrimitive"},
+          faces={"data":{"require":[{"name":"t1","type":"DatetimePrimitive"},
+                                    {"name":"a1","type":"ArrayPrimitive"},
                                     {"name":"t","type":"DatetimePrimitive"}],
-                         "provide":[{"name":"p","type":"ArrayPrimitive"},
-                                    {"name":"v","type":"ArrayPrimitive"}]},
+                         "provide":[{"name":"a","type":"ArrayPrimitive"}]},
                  "control":{"input":["up","in"],
                             "output":["up","out"]}},
-          nodes=[{"name":"up_t","type":"DatetimePrimitive","args":[]},
-                 {"name":"up_p","type":"ArrayPrimitive","args":[]},
-                 {"name":"up_v","type":"ArrayPrimitive","args":[]},
+          nodes=[{"name":"t1","type":"DatetimePrimitive","args":[]},
+                 {"name":"a1","type":"ArrayPrimitive","args":[]},
                  {"name":"t","type":"DatetimePrimitive","args":[]},
-                 {"name":"p","type":"ArrayPrimitive","args":[]},
-                 {"name":"v","type":"ArrayPrimitive","args":[]}],
-          edges={"data":[{"source":{"node":"KinematicInterpolator","face":"up_t"},
-                          "target":{"node":"up_t","face":None}},
-                         {"source":{"node":"KinematicInterpolator","face":"up_p"},
-                          "target":{"node":"up_p","face":None}},
-                         {"source":{"node":"KinematicInterpolator","face":"up_v"},
-                          "target":{"node":"up_v","face":None}},
-                         {"source":{"node":"KinematicInterpolator","face":"t"},
+                 {"name":"a","type":"ArrayPrimitive","args":[]}],
+          edges={"data":[{"source":{"node":"SplineInterpolator","face":"t1"},
+                          "target":{"node":"t1","face":None}},
+                         {"source":{"node":"SplineInterpolator","face":"a1"},
+                          "target":{"node":"a1","face":None}},
+                         {"source":{"node":"SplineInterpolator","face":"t"},
                           "target":{"node":"t","face":None}},
-                         {"source":{"node":"p","face":None},
-                          "target":{"node":"KinematicInterpolator","face":"p"}},
-                         {"source":{"node":"v","face":None},
-                          "target":{"node":"KinematicInterpolator","face":"v"}}],
+                         {"source":{"node":"a","face":None},
+                          "target":{"node":"SplineInterpolator","face":"a"}}],
                  "control":[]})
-class KinematicInterpolator(InterpolatorPrimitive):
+class LinearInterpolator(InterpolatorPrimitive):
+    
+    def _update(self,*args,**kwargs):
+        super(LinearInterpolator,self)._update(*args,**kwargs)
+        
+        self.h00 = Polynomial([1,-1],domain=[0,1])
+        self.h01 = Polynomial([0,1],domain=[0,1])
 
     def _up(self,face):
-            logging.info("{0}:  Updating".\
-                         format(self.name))
-            
-            self.t0 = self.t1
-            self.p0 = self.p1
-            self.v0 = self.v1
-            
-            self.t1 = self._data_graph.node[("up_t",)]["obj"].value
-            self.p1 = self._data_graph.node[("up_p",)]["obj"].value
-            self.v1 = self._data_graph.node[("up_v",)]["obj"].value
-            
-            logging.info("{0}:  Updated to {1}".\
-                         format(self.name,self.t1))
-            
-            return face
+        logging.info("{0}:  Updating".\
+                     format(self.name))
+        
+        self.t0 = self.t1
+        self.a0 = self.a1
+        
+        self.t1 = self._data_graph.node[("t1",)]["obj"].value
+        self.a1 = self._data_graph.node[("a1",)]["obj"].value
+        self.dt = (self.t1.value - self.t0).total_seconds()
+        
+        window = array([0,self.dt])
+        self.h00.convert(window=window)
+        self.h01.convert(window=window)
+        
+        logging.info("{0}:  Updated to {1}".\
+                     format(self.name,self.t1))
+        
+        return face
     
     def _eval(self,face):
         logging.info("{0}:  Evaluating".\
                      format(self.name))
         
         t = self._data_graph.node[("t",)]["obj"]
-        p = self._data_graph.node[("p",)]["obj"]
-        v = self._data_graph.node[("v",)]["obj"]
+        a = self._data_graph.node[("a",)]["obj"]
         
-        dt = (t.value - self.t0).total_seconds()
+        x = (t.value - self.t0).total_seconds()
         
-        p.value = self.p0 + (self.v1 + self.v0) * dt / 2
-        v.value = 2 * (self.p1 - self.p0) / dt - self.v0
+        a.value = self.a0 * self.h00(x) \
+                + self.a1 * self.h01(x)
         
         logging.info("{0}:  Evaluated at {1}".\
                      format(self.name,t.value))
     
         return face
 
-@behavior(name="SplineInterpolator",
+@behavior(name="CubicInterpolator",
           type="InterpolatorPrimitive",
-          faces={"data":{"require":[{"name":"up_t","type":"DatetimePrimitive"},
-                                    {"name":"up_p","type":"ArrayPrimitive"},
-                                    {"name":"up_v","type":"ArrayPrimitive"},
+          faces={"data":{"require":[{"name":"t1","type":"DatetimePrimitive"},
+                                    {"name":"v1","type":"ArrayPrimitive"},
+                                    {"name":"a1","type":"ArrayPrimitive"},
                                     {"name":"t","type":"DatetimePrimitive"}],
-                         "provide":[{"name":"p","type":"ArrayPrimitive"},
-                                    {"name":"v","type":"ArrayPrimitive"}]},
+                         "provide":[{"name":"v","type":"ArrayPrimitive"}]},
                  "control":{"input":["up","in"],
                             "output":["up","out"]}},
-          nodes=[{"name":"up_t","type":"DatetimePrimitive","args":[]},
-                 {"name":"up_p","type":"ArrayPrimitive","args":[]},
-                 {"name":"up_v","type":"ArrayPrimitive","args":[]},
+          nodes=[{"name":"t1","type":"DatetimePrimitive","args":[]},
+                 {"name":"v1","type":"ArrayPrimitive","args":[]},
+                 {"name":"a1","type":"ArrayPrimitive","args":[]},
                  {"name":"t","type":"DatetimePrimitive","args":[]},
-                 {"name":"p","type":"ArrayPrimitive","args":[]},
                  {"name":"v","type":"ArrayPrimitive","args":[]}],
-          edges={"data":[{"source":{"node":"SplineInterpolator","face":"up_t"},
-                          "target":{"node":"up_t","face":None}},
-                         {"source":{"node":"SplineInterpolator","face":"up_p"},
-                          "target":{"node":"up_p","face":None}},
-                         {"source":{"node":"SplineInterpolator","face":"up_v"},
-                          "target":{"node":"up_v","face":None}},
+          edges={"data":[{"source":{"node":"SplineInterpolator","face":"t1"},
+                          "target":{"node":"t1","face":None}},
+                         {"source":{"node":"SplineInterpolator","face":"v1"},
+                          "target":{"node":"v1","face":None}},
+                         {"source":{"node":"SplineInterpolator","face":"a1"},
+                          "target":{"node":"a1","face":None}},
                          {"source":{"node":"SplineInterpolator","face":"t"},
                           "target":{"node":"t","face":None}},
-                         {"source":{"node":"p","face":None},
-                          "target":{"node":"SplineInterpolator","face":"p"}},
                          {"source":{"node":"v","face":None},
                           "target":{"node":"SplineInterpolator","face":"v"}}],
                  "control":[]})
-class SplineInterpolator(InterpolatorPrimitive):
+class CubicInterpolator(InterpolatorPrimitive):
     
     def _update(self,*args,**kwargs):
-        super(SplineInterpolator,self)._update(*args,**kwargs)
+        super(CubicInterpolator,self)._update(*args,**kwargs)
         
         self.h00 = Polynomial([1,0,-3,2],domain=[0,1])
         self.h01 = Polynomial([0,0,3,-2],domain=[0,1])
@@ -174,14 +172,15 @@ class SplineInterpolator(InterpolatorPrimitive):
                      format(self.name))
         
         self.t0 = self.t1
-        self.p0 = self.p1
         self.v0 = self.v1
+        self.a0 = self.a1
         
-        self.t1 = self._data_graph.node[("up_t",)]["obj"].value
-        self.p1 = self._data_graph.node[("up_p",)]["obj"].value
-        self.v1 = self._data_graph.node[("up_v",)]["obj"].value
+        self.t1 = self._data_graph.node[("t1",)]["obj"].value
+        self.v1 = self._data_graph.node[("v1",)]["obj"].value
+        self.a1 = self._data_graph.node[("a1",)]["obj"].value
+        self.dt = (self.t1.value - self.t0).total_seconds()
         
-        window = array([0,(self.t1-self.t0).total_seconds()])
+        window = array([0,self.dt])
         self.h00.convert(window=window)
         self.h01.convert(window=window)
         self.h10.convert(window=window)
@@ -197,20 +196,104 @@ class SplineInterpolator(InterpolatorPrimitive):
                      format(self.name))
         
         t = self._data_graph.node[("t",)]["obj"]
-        p = self._data_graph.node[("p",)]["obj"]
         v = self._data_graph.node[("v",)]["obj"]
+        
+        x = (t.value - self.t0).total_seconds()
+        
+        v.value = self.v0 * self.h00(x) \
+                + self.v1 * self.h01(x) \
+                + self.a0 * self.h10(x) * self.dt \
+                + self.a1 * self.h11(x) * self.dt
+        
+        logging.info("{0}:  Evaluated at {1}".\
+                     format(self.name,t.value))
+    
+        return face
+
+@behavior(name="QuinticInterpolator",
+          type="InterpolatorPrimitive",
+          faces={"data":{"require":[{"name":"t1","type":"DatetimePrimitive"},
+                                    {"name":"p1","type":"ArrayPrimitive"},
+                                    {"name":"v1","type":"ArrayPrimitive"},
+                                    {"name":"a1","type":"ArrayPrimitive"},
+                                    {"name":"t","type":"DatetimePrimitive"}],
+                         "provide":[{"name":"p","type":"ArrayPrimitive"}]},
+                 "control":{"input":["up","in"],
+                            "output":["up","out"]}},
+          nodes=[{"name":"t1","type":"DatetimePrimitive","args":[]},
+                 {"name":"p1","type":"ArrayPrimitive","args":[]},
+                 {"name":"v1","type":"ArrayPrimitive","args":[]},
+                 {"name":"a1","type":"ArrayPrimitive","args":[]},
+                 {"name":"t","type":"DatetimePrimitive","args":[]},
+                 {"name":"p","type":"ArrayPrimitive","args":[]}],
+          edges={"data":[{"source":{"node":"SplineInterpolator","face":"t1"},
+                          "target":{"node":"t1","face":None}},
+                         {"source":{"node":"SplineInterpolator","face":"p1"},
+                          "target":{"node":"p1","face":None}},
+                         {"source":{"node":"SplineInterpolator","face":"v1"},
+                          "target":{"node":"v1","face":None}},
+                         {"source":{"node":"SplineInterpolator","face":"a1"},
+                          "target":{"node":"a1","face":None}},
+                         {"source":{"node":"SplineInterpolator","face":"t"},
+                          "target":{"node":"t","face":None}},
+                         {"source":{"node":"p","face":None},
+                          "target":{"node":"SplineInterpolator","face":"p"}}],
+                 "control":[]})
+class QuinticInterpolator(InterpolatorPrimitive):
+    
+    def _update(self,*args,**kwargs):
+        super(QuinticInterpolator,self)._update(*args,**kwargs)
+        
+        self.h00 = Polynomial([1,0,0,-10,15,-6],domain=[0,1])
+        self.h01 = Polynomial([0,0,0,10,-15,6],domain=[0,1])
+        self.h10 = Polynomial([0,1,0,-6,8,-3],domain=[0,1])
+        self.h11 = Polynomial([0,0,0,-4,7,-3],domain=[0,1])
+        self.h20 = Polynomial([0,0,1,-3,3,-1],domain=[0,1]) / 2
+        self.h21 = Polynomial([0,0,0,1,-2,1],domain=[0,1]) / 2
+
+    def _up(self,face):
+        logging.info("{0}:  Updating".\
+                     format(self.name))
+        
+        self.t0 = self.t1
+        self.p0 = self.p1
+        self.v0 = self.v1
+        self.a0 = self.a1
+        
+        self.t1 = self._data_graph.node[("t1",)]["obj"].value
+        self.p1 = self._data_graph.node[("p1",)]["obj"].value
+        self.v1 = self._data_graph.node[("v1",)]["obj"].value
+        self.a1 = self._data_graph.node[("a1",)]["obj"].value
+        self.dt = (self.t1.value - self.t0).total_seconds()
+        
+        window = array([0,self.dt])
+        self.h00.convert(window=window)
+        self.h01.convert(window=window)
+        self.h10.convert(window=window)
+        self.h11.convert(window=window)
+        self.h20.convert(window=window)
+        self.h21.convert(window=window)
+        
+        logging.info("{0}:  Updated to {1}".\
+                     format(self.name,self.t1))
+        
+        return face
+    
+    def _eval(self,face):
+        logging.info("{0}:  Evaluating".\
+                     format(self.name))
+        
+        t = self._data_graph.node[("t",)]["obj"]
+        p = self._data_graph.node[("p",)]["obj"]
         
         x = (t.value - self.t0).total_seconds()
         
         p.value = self.p0 * self.h00(x) \
                 + self.p1 * self.h01(x) \
-                + self.v0 * self.h10(x) \
-                + self.v1 * self.h11(x)
-        
-        v.value = self.p0 * self.diff_h00(x) \
-                + self.p1 * self.diff_h01(x) \
-                + self.v0 * self.diff_h10(x) \
-                + self.v1 * self.diff_h11(x)
+                + self.v0 * self.h10(x) * self.dt \
+                + self.v1 * self.h11(x) * self.dt \
+                + self.a0 * self.h20(x) * self.dt ** 2 \
+                + self.a1 * self.h21(x) * self.dt ** 2
         
         logging.info("{0}:  Evaluated at {1}".\
                      format(self.name,t.value))
@@ -219,5 +302,6 @@ class SplineInterpolator(InterpolatorPrimitive):
         
 def install(service):
     InterpolatorPrimitive.install(service)
-    KinematicInterpolator.install(service)
-    SplineInterpolator.install(service)
+    LinearInterpolator.install(service)
+    CubicInterpolator.install(service)
+    QuinticInterpolator.install(service)
