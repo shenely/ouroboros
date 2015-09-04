@@ -68,24 +68,24 @@ class InterpolatorPrimitive(PrimitiveBehavior,WatcherPrimitive):
     
 @behavior(name="LinearInterpolator",
           type="InterpolatorPrimitive",
-          faces={"data":{"require":[{"name":"t1","type":"DatetimePrimitive"},
-                                    {"name":"a1","type":"ArrayPrimitive"},
-                                    {"name":"t","type":"DatetimePrimitive"}],
-                         "provide":[{"name":"a","type":"ArrayPrimitive"}]},
+          faces={"data":{"require":[{"name":"point","type":"DatetimePrimitive"},
+                                    {"name":"value","type":"ArrayPrimitive"},
+                                    {"name":"x","type":"DatetimePrimitive"}],
+                         "provide":[{"name":"y","type":"ArrayPrimitive"}]},
                  "control":{"input":["up","in"],
                             "output":["up","out"]}},
-          nodes=[{"name":"t1","type":"DatetimePrimitive","args":[]},
-                 {"name":"a1","type":"ArrayPrimitive","args":[]},
-                 {"name":"t","type":"DatetimePrimitive","args":[]},
-                 {"name":"a","type":"ArrayPrimitive","args":[]}],
-          edges={"data":[{"source":{"node":"SplineInterpolator","face":"t1"},
-                          "target":{"node":"t1","face":None}},
-                         {"source":{"node":"SplineInterpolator","face":"a1"},
-                          "target":{"node":"a1","face":None}},
-                         {"source":{"node":"SplineInterpolator","face":"t"},
-                          "target":{"node":"t","face":None}},
-                         {"source":{"node":"a","face":None},
-                          "target":{"node":"SplineInterpolator","face":"a"}}],
+          nodes=[{"name":"point","type":"DatetimePrimitive","args":[]},
+                 {"name":"value","type":"ArrayPrimitive","args":[]},
+                 {"name":"x","type":"DatetimePrimitive","args":[]},
+                 {"name":"y","type":"ArrayPrimitive","args":[]}],
+          edges={"data":[{"source":{"node":"SplineInterpolator","face":"point"},
+                          "target":{"node":"point","face":None}},
+                         {"source":{"node":"SplineInterpolator","face":"value"},
+                          "target":{"node":"value","face":None}},
+                         {"source":{"node":"SplineInterpolator","face":"x"},
+                          "target":{"node":"x","face":None}},
+                         {"source":{"node":"y","face":None},
+                          "target":{"node":"SplineInterpolator","face":"y"}}],
                  "control":[]})
 class LinearInterpolator(InterpolatorPrimitive):
     
@@ -99,11 +99,11 @@ class LinearInterpolator(InterpolatorPrimitive):
         logging.info("{0}:  Updating".\
                      format(self.name))
         
-        self.t0 = self.t1
+        self.x0 = self.x1
         self.a0 = self.a1
         
-        self.t1 = self._data_graph.node[("t1",)]["obj"].value
-        self.a1 = self._data_graph.node[("a1",)]["obj"].value
+        self.t1 = self._data_graph.node[("point",)]["obj"].value
+        self.a1 = self._data_graph.node[("value",)]["obj"].value
         self.dt = (self.t1.value - self.t0).total_seconds()
         
         window = array([0,self.dt])
@@ -119,8 +119,8 @@ class LinearInterpolator(InterpolatorPrimitive):
         logging.info("{0}:  Evaluating".\
                      format(self.name))
         
-        t = self._data_graph.node[("t",)]["obj"]
-        a = self._data_graph.node[("a",)]["obj"]
+        t = self._data_graph.node[("x",)]["obj"]
+        a = self._data_graph.node[("y",)]["obj"]
         
         x = (t.value - self.t0).total_seconds()
         
@@ -134,28 +134,28 @@ class LinearInterpolator(InterpolatorPrimitive):
 
 @behavior(name="CubicInterpolator",
           type="InterpolatorPrimitive",
-          faces={"data":{"require":[{"name":"t1","type":"DatetimePrimitive"},
-                                    {"name":"v1","type":"ArrayPrimitive"},
-                                    {"name":"a1","type":"ArrayPrimitive"},
-                                    {"name":"t","type":"DatetimePrimitive"}],
-                         "provide":[{"name":"v","type":"ArrayPrimitive"}]},
+          faces={"data":{"require":[{"name":"point","type":"DatetimePrimitive"},
+                                    {"name":"value","type":"ArrayPrimitive"},
+                                    {"name":"slope","type":"ArrayPrimitive"},
+                                    {"name":"x","type":"DatetimePrimitive"}],
+                         "provide":[{"name":"y","type":"ArrayPrimitive"}]},
                  "control":{"input":["up","in"],
                             "output":["up","out"]}},
-          nodes=[{"name":"t1","type":"DatetimePrimitive","args":[]},
-                 {"name":"v1","type":"ArrayPrimitive","args":[]},
-                 {"name":"a1","type":"ArrayPrimitive","args":[]},
-                 {"name":"t","type":"DatetimePrimitive","args":[]},
-                 {"name":"v","type":"ArrayPrimitive","args":[]}],
-          edges={"data":[{"source":{"node":"SplineInterpolator","face":"t1"},
-                          "target":{"node":"t1","face":None}},
-                         {"source":{"node":"SplineInterpolator","face":"v1"},
-                          "target":{"node":"v1","face":None}},
-                         {"source":{"node":"SplineInterpolator","face":"a1"},
-                          "target":{"node":"a1","face":None}},
-                         {"source":{"node":"SplineInterpolator","face":"t"},
-                          "target":{"node":"t","face":None}},
-                         {"source":{"node":"v","face":None},
-                          "target":{"node":"SplineInterpolator","face":"v"}}],
+          nodes=[{"name":"point","type":"DatetimePrimitive","args":[]},
+                 {"name":"value","type":"ArrayPrimitive","args":[]},
+                 {"name":"slope","type":"ArrayPrimitive","args":[]},
+                 {"name":"x","type":"DatetimePrimitive","args":[]},
+                 {"name":"y","type":"ArrayPrimitive","args":[]}],
+          edges={"data":[{"source":{"node":"SplineInterpolator","face":"point"},
+                          "target":{"node":"point","face":None}},
+                         {"source":{"node":"SplineInterpolator","face":"value"},
+                          "target":{"node":"value","face":None}},
+                         {"source":{"node":"SplineInterpolator","face":"slope"},
+                          "target":{"node":"slope","face":None}},
+                         {"source":{"node":"SplineInterpolator","face":"x"},
+                          "target":{"node":"x","face":None}},
+                         {"source":{"node":"y","face":None},
+                          "target":{"node":"SplineInterpolator","face":"y"}}],
                  "control":[]})
 class CubicInterpolator(InterpolatorPrimitive):
     
@@ -175,9 +175,9 @@ class CubicInterpolator(InterpolatorPrimitive):
         self.v0 = self.v1
         self.a0 = self.a1
         
-        self.t1 = self._data_graph.node[("t1",)]["obj"].value
-        self.v1 = self._data_graph.node[("v1",)]["obj"].value
-        self.a1 = self._data_graph.node[("a1",)]["obj"].value
+        self.t1 = self._data_graph.node[("point",)]["obj"].value
+        self.v1 = self._data_graph.node[("value",)]["obj"].value
+        self.a1 = self._data_graph.node[("slope",)]["obj"].value
         self.dt = (self.t1.value - self.t0).total_seconds()
         
         window = array([0,self.dt])
@@ -195,8 +195,8 @@ class CubicInterpolator(InterpolatorPrimitive):
         logging.info("{0}:  Evaluating".\
                      format(self.name))
         
-        t = self._data_graph.node[("t",)]["obj"]
-        v = self._data_graph.node[("v",)]["obj"]
+        t = self._data_graph.node[("x",)]["obj"]
+        v = self._data_graph.node[("y",)]["obj"]
         
         x = (t.value - self.t0).total_seconds()
         
@@ -212,28 +212,28 @@ class CubicInterpolator(InterpolatorPrimitive):
 
 @behavior(name="QuinticInterpolator",
           type="InterpolatorPrimitive",
-          faces={"data":{"require":[{"name":"t1","type":"DatetimePrimitive"},
-                                    {"name":"p1","type":"ArrayPrimitive"},
-                                    {"name":"v1","type":"ArrayPrimitive"},
-                                    {"name":"a1","type":"ArrayPrimitive"},
-                                    {"name":"t","type":"DatetimePrimitive"}],
-                         "provide":[{"name":"p","type":"ArrayPrimitive"}]},
+          faces={"data":{"require":[{"name":"point","type":"DatetimePrimitive"},
+                                    {"name":"value","type":"ArrayPrimitive"},
+                                    {"name":"slope","type":"ArrayPrimitive"},
+                                    {"name":"curve","type":"ArrayPrimitive"},
+                                    {"name":"x","type":"DatetimePrimitive"}],
+                         "provide":[{"name":"y","type":"ArrayPrimitive"}]},
                  "control":{"input":["up","in"],
                             "output":["up","out"]}},
-          nodes=[{"name":"t1","type":"DatetimePrimitive","args":[]},
-                 {"name":"p1","type":"ArrayPrimitive","args":[]},
-                 {"name":"v1","type":"ArrayPrimitive","args":[]},
-                 {"name":"a1","type":"ArrayPrimitive","args":[]},
-                 {"name":"t","type":"DatetimePrimitive","args":[]},
-                 {"name":"p","type":"ArrayPrimitive","args":[]}],
-          edges={"data":[{"source":{"node":"SplineInterpolator","face":"t1"},
-                          "target":{"node":"t1","face":None}},
-                         {"source":{"node":"SplineInterpolator","face":"p1"},
-                          "target":{"node":"p1","face":None}},
-                         {"source":{"node":"SplineInterpolator","face":"v1"},
-                          "target":{"node":"v1","face":None}},
-                         {"source":{"node":"SplineInterpolator","face":"a1"},
-                          "target":{"node":"a1","face":None}},
+          nodes=[{"name":"point","type":"DatetimePrimitive","args":[]},
+                 {"name":"value","type":"ArrayPrimitive","args":[]},
+                 {"name":"slope","type":"ArrayPrimitive","args":[]},
+                 {"name":"curve","type":"ArrayPrimitive","args":[]},
+                 {"name":"x","type":"DatetimePrimitive","args":[]},
+                 {"name":"y","type":"ArrayPrimitive","args":[]}],
+          edges={"data":[{"source":{"node":"SplineInterpolator","face":"point"},
+                          "target":{"node":"point","face":None}},
+                         {"source":{"node":"SplineInterpolator","face":"value"},
+                          "target":{"node":"value","face":None}},
+                         {"source":{"node":"SplineInterpolator","face":"slope"},
+                          "target":{"node":"slope","face":None}},
+                         {"source":{"node":"SplineInterpolator","face":"curve"},
+                          "target":{"node":"curve","face":None}},
                          {"source":{"node":"SplineInterpolator","face":"t"},
                           "target":{"node":"t","face":None}},
                          {"source":{"node":"p","face":None},
@@ -260,10 +260,10 @@ class QuinticInterpolator(InterpolatorPrimitive):
         self.v0 = self.v1
         self.a0 = self.a1
         
-        self.t1 = self._data_graph.node[("t1",)]["obj"].value
-        self.p1 = self._data_graph.node[("p1",)]["obj"].value
-        self.v1 = self._data_graph.node[("v1",)]["obj"].value
-        self.a1 = self._data_graph.node[("a1",)]["obj"].value
+        self.t1 = self._data_graph.node[("point",)]["obj"].value
+        self.p1 = self._data_graph.node[("value",)]["obj"].value
+        self.v1 = self._data_graph.node[("slope",)]["obj"].value
+        self.a1 = self._data_graph.node[("curve",)]["obj"].value
         self.dt = (self.t1.value - self.t0).total_seconds()
         
         window = array([0,self.dt])
@@ -283,8 +283,8 @@ class QuinticInterpolator(InterpolatorPrimitive):
         logging.info("{0}:  Evaluating".\
                      format(self.name))
         
-        t = self._data_graph.node[("t",)]["obj"]
-        p = self._data_graph.node[("p",)]["obj"]
+        t = self._data_graph.node[("x",)]["obj"]
+        p = self._data_graph.node[("y",)]["obj"]
         
         x = (t.value - self.t0).total_seconds()
         
