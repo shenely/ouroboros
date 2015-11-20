@@ -16,7 +16,7 @@ Classes:
 Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2015-07-07    shenely         1.0         Initial revision
-2015-07-25    shenely         1.0         Added new (Hermite) interpolators
+2015-07-25    shenely         1.1         Added new (Hermite) interpolators
 
 """
 
