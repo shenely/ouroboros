@@ -5,7 +5,7 @@ from numpy import array, cross, dot, matrix, hstack, hsplit
 from scipy.linalg import norm
 from scipy.integrate import ode
 
-from .core import Process
+from core import Process
 
 #Unit vectors
 O = array([0,0,0])

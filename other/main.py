@@ -1,10 +1,8 @@
-from math import sqrt
 from datetime import datetime,timedelta
 
-from numpy import array, matrix
-
-from .core import System
-from .orbit import *
+from core import System
+from orbit import *
+import web
 
 EARTH_RADIUS = 6378.1
 EARTH_FLATTENING = 0.00335
@@ -26,13 +24,13 @@ K = array([0,0,1])
 def main():
     sys = System(t_dt=J2000,
                  dt_td=SECOND)
-    sys.set("earth",
-            th_G=100.4606184,
-            mu=EARTH_GRAVITATION,
-            f=EARTH_FLATTENING,
-            R_km=EARTH_RADIUS)
-    sys.set("gs",lat_deg=60,lon_deg=-60,alt_m=100)
-    sys.set("sc",r_bar=7000.0*I,v_bar=7.0*J)
+    sys.init("earth",
+             th_G=100.4606184,
+             mu=EARTH_GRAVITATION,
+             f=EARTH_FLATTENING,
+             R_km=EARTH_RADIUS)
+    sys.init("gs",lat_deg=60,lon_deg=-60,alt_m=100)
+    sys.init("sc",r_bar=7000.0*I,v_bar=7.0*J)
     
     sys.every(1,until=3600)
     sys.every(10,until=3600)
@@ -42,6 +40,8 @@ def main():
     earth(sys,None,"earth")
     geo(sys,None,"gs","earth")
     orbit(sys,None,"sc","earth")
+
+    web.main()
     
     sys._env.run()
     
