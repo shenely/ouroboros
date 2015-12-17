@@ -1,4 +1,4 @@
-from math import pi,radians,sqrt,cos,sin,atan2
+from math import pi,radians,degrees,sqrt,cos,sin,acos,asin,atan2
 import functools
 
 from numpy import array, cross, dot, matrix, hstack, hsplit
@@ -6,6 +6,8 @@ from scipy.linalg import norm
 from scipy.integrate import ode
 
 from core import Process
+
+EARTH_RADIUS = 6378.1
 
 #Unit vectors
 O = array([0,0,0])
@@ -33,11 +35,11 @@ def cosd(x):return cos(radians(x))
 @functools.wraps(sin)
 def sind(x):return sin(radians(x))
     
-@Process([(0,"t_dt"),(0,"dt_td")],
+@Process([(0,"t"),(0,"t_dt"),(0,"dt_td")],
          [(0,"+1*")],[(0,"clock")],
          [(0,"t")],[(0,"t_dt")])
-def clock(t_dt,dt_td):
-    t0 = 0
+def clock(t,t_dt,dt_td):
+    t0 = t
     while True:
         t, = yield t_dt,
         
@@ -46,7 +48,7 @@ def clock(t_dt,dt_td):
         t0 = t
 
 @Process([],
-         [(0,"+10*")],[(1,"earth")],
+         [(0,"+1*")],[(1,"earth")],
          [(0,"t_dt")],[(1,"th_G")])
 def earth():
     th_G = 100.4606184
@@ -78,7 +80,7 @@ def earth():
         th_G %= 360
         
 @Process([(2,"R_km"),(2,"f"),(2,"th_G"),(1,"lat_deg"),(1,"lon_deg"),(1,"alt_m")],
-         [(0,"+60*")],[(1,"geo")],
+         [(0,"+5*")],[(1,"geo")],
          [(2,"th_G")],[(1,"r_bar")]) 
 def geo(R_km,f,th_G,lat_deg,lon_deg,alt_m):
     alt_km = alt_m / KILO
@@ -87,12 +89,12 @@ def geo(R_km,f,th_G,lat_deg,lon_deg,alt_m):
         th_deg = th_G + lon_deg
         
         R_ph = R_km / sqrt(1 - (2 * f - f ** 2) * sind(lat_deg) ** 2)
-        R_c = R_ph + alt_km
-        R_s = R_ph * (1 - f) ** 2 + alt_km
+        R_cos = R_ph + alt_km
+        R_sin = R_ph * (1 - f) ** 2 + alt_km
         
-        r_bar = matrix([R_c * cosd(lat_deg) * cosd(th_deg),
-                        R_c * cosd(lat_deg) * sind(th_deg),
-                        R_s * sind(lat_deg)]).T
+        r_bar = array([R_cos * cosd(lat_deg) * cosd(th_deg),
+                       R_cos * cosd(lat_deg) * sind(th_deg),
+                       R_sin * sind(lat_deg)])
         
         th_G, = yield r_bar,
 
@@ -108,10 +110,10 @@ def astro():
                     
     yield r_hat,
 
-@Process([(0,"t"),(1,"r_bar"),(1,"v_bar"),(2,"mu")],
-         [(0,"+60*")],[(1,"orbit")],
-         [(0,"t"),],[(1,"r_bar"),(1,"v_bar")])
-def orbit(t0,r0_bar,v0_bar,mu):
+@Process([(0,"t_dt"),(1,"r_bar"),(1,"v_bar"),(2,"mu")],
+         [(0,"+1*")],[(1,"orbit")],
+         [(0,"t_dt"),],[(1,"r_bar"),(1,"v_bar")])
+def orbit(t0_dt,r0_bar,v0_bar,mu):
     def gravity(mu):
         def gravity(t,y):
             r_bar,v_bar = hsplit(y,2)
@@ -131,19 +133,37 @@ def orbit(t0,r0_bar,v0_bar,mu):
     
     box = ode(gravity(mu))\
             .set_integrator("dopri5") \
-            .set_initial_value(y,t0)
+            .set_initial_value(y,0)
     
     r_bar,v_bar = r0_bar,v0_bar
     
     while True:
         #Input/output
-        t, = yield r_bar,v_bar#time/position,velocity
+        t_dt, = yield r_bar,v_bar#time/position,velocity
         
         #Update state
-        y = box.integrate(t - t0)
+        y = box.integrate((t_dt - t0_dt).total_seconds())
         r_bar,v_bar = hsplit(y,2)
-        
-        print r_bar,v_bar
+
+@Process([],
+         [(0,"orbit")],[(0,"nrt2geo")],
+         [(0,"r_bar")],[(0,"arc_km"),(0,"lat_deg"),(0,"lon_deg")])
+def nrt2geo():
+    arc_km = 0
+    lat_deg = 0
+    lon_deg = 0
+
+    while True:
+        r_bar, = yield arc_km, lat_deg, lon_deg,
+
+        r = norm(r_bar)
+
+        alpha_rad = atan2(r_bar[1],r_bar[0])
+        delta_rad = asin(r_bar[2] / r)
+
+        arc_km = degrees(acos(EARTH_RADIUS / r))
+        lat_deg = degrees(delta_rad)
+        lon_deg = degrees(alpha_rad)
         
 @Process(["t","th_bar","om_bar"],
          ["+10*"],["attitude"],

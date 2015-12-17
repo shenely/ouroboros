@@ -1,28 +1,17 @@
 import operator
 import heapq
-import json
+from threading import Thread
 
 import simpy
 import zmq
-import zmq.eventloop.zmqstream
-from bson import json_util
+from zmq.eventloop.ioloop import IOLoop
 
-def coroutine(func):
-    def wrapper(*args,**kwargs):
-        gen = func(*args,**kwargs)
-        gen.next()
-        return gen
-    
-    wrapper.__name__ = func.__name__
-    wrapper.__dict__ = func.__dict__
-    wrapper.__doc__  = func.__doc__
-    
-    return wrapper
+from util import *
 
 class System(object):
 
     def __init__(self,t=0,**kwargs):
-        self._env = simpy.Environment()
+        self._env = simpy.RealtimeEnvironment()
         
         kwargs["t"] = t
 
@@ -34,20 +23,19 @@ class System(object):
 
         context = zmq.Context.instance()
 
-        socket = context.socket(zmq.PUB)
-        self._pub = zmq.eventloop.zmqstream.ZMQStream(socket)
-        self._pub.connect("tcp://127.0.0.1:5555")
+        self._zdata = context.socket(zmq.PAIR)
+        self._zdata.connect("inproc://data")
 
-        socket = context.socket(zmq.SUB)
-        self._sub = zmq.eventloop.zmqstream.ZMQStream(socket)
-        self._sub.connect("tcp://127.0.0.1:5556")
-        self._sub.setsockopt(zmq.SUBSCRIBE,"data")
-        self._sub.setsockopt(zmq.SUBSCRIBE,"ctrl")
-        self._sub.on_recv(self.recv)
+        self._zctrl = context.socket(zmq.PAIR)
+        self._zctrl.connect("inproc://ctrl")
         
     def init(self,prefix,**kwargs):
-        self._data.update({(prefix,kw):kwargs[kw] for kw in kwargs})
-        
+        self.set({(prefix,kw):kwargs[kw] for kw in kwargs})
+
+    def run(self):
+        IOLoop.instance().add_callback(Thread(target=self._env.run).start)
+        IOLoop.instance().start()
+
     def clock(self):
         def wrapper():
             while True:
@@ -118,43 +106,23 @@ class System(object):
         
         return name
 
-    def send(self,addr,obj):
-        if addr == "data":
-            msg = json.dumps([{"key":o,"value":obj[o]} for o in obj],
-                             default=json_util.default)
-        elif addr == "ctrl":
-            msg = json.dumps(obj,default=json_util.default)
-
-        msgs = addr,msg
-
-        self._pub.send_multipart(msgs)
-
-    def recv(self,msgs):
-        addr,msg = msgs
-
-        obj = json.loads(msg,object_hook=json_util.object_hook)
-
-        if addr == "data":
-            self.update({tuple(o.key):o.value for o in obj})
-        elif addr == "ctrl":
-            self.trigger([tuple(o) for o in obj])
-
     def get(self,keys):
         return [self._data[k] for k in keys]
 
     def set(self,keys):
         self._data.update(keys)
-        self.send("data",keys)
+        self._zdata.send(dumps([{"key":k,"value":keys[k]} \
+                                for k in keys]))
 
     def renew(self,keys):
         self._ctrl.update({k: self._env.event() for k in keys})
 
-    def listen(self,keys):
+    def stop(self,keys):
         return reduce(operator.__or__,[self._ctrl[k] for k in keys])
 
-    def trigger(self,keys):
+    def go(self,keys):
         map(simpy.Event.succeed,[self._ctrl[k] for k in keys])
-        self.send("ctrl",keys)
+        self._zctrl.send(dumps(keys))
 
         self.renew(keys)
 
@@ -170,27 +138,48 @@ class Process(object):
         self._pros = pros
         
         self._ins = ins
-        self._outs = outs   
+        self._outs = outs
     
     def __call__(self,func):
         self._func = coroutine(func)
               
         def caller(sys,*pres):
-            f = self._func(*sys.get([(pres[a[0]],a[1]) for a in self._args]))
-            
             def wrapper():
+                f = self._func(*sys.get([(pres[a[0]],a[1]) \
+                                         for a in self._args]))
+
                 sys.renew([(pres[o[0]],o[1]) for o in self._outs])
 
                 while True:
-                    yield sys.listen([(pres[i[0]],i[1]) for i in self._ins])
+                    yield sys.stop([(pres[i[0]],i[1]) for i in self._ins])
 
-                    sys.set((lambda d: \
-                             {(pres[self._pros[j][0]],self._pros[j][1]): d[j] \
-                              for j in range(len(self._pros))})\
-                            (f.send(sys.get([(pres[r[0]],r[1]) \
-                                             for r in self._reqs]))))
+                    try:
+                        try:
+                            sys.set((lambda d: \
+                                     {(pres[p[0]],p[1]): d[j] \
+                                      for j,p in enumerate(self._pros)}) \
+                                    (f.send(sys.get([(pres[r[0]],r[1]) \
+                                                     for r in self._reqs]))))
+                        except Go as err:
+                            f = self._func(*sys.get([(pres[a[0]],a[1]) \
+                                                     for a in self._args]))
 
-                    sys.trigger([(pres[o[0]],o[1]) for o in self._outs])
+                            raise err
+                    except All:
+                        outs = self._outs
+                    except Many as err:
+                        outs = err.value
+                    except One as err:
+                        outs = [err.value]
+                    except No:
+                        outs = []
+                    except:
+                        outs = []
+                        raise
+                    else:
+                        outs = self._outs
+                    finally:
+                        sys.go([(pres[o[0]],o[1]) for o in outs])
                     
             sys.process(wrapper)
             
