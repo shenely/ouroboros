@@ -33,7 +33,7 @@ def main():
              f=EARTH_FLATTENING,
              R_km=EARTH_RADIUS)
     sys.init("gs",lat_deg=60,lon_deg=-60,alt_m=100)
-    sys.init("sc",r_bar=sqrt(2)*7000.0/2*(I+K),v_bar=8.0*J)
+    sys.init("sc",r_bar=sqrt(2)*7000.0/2*(I+K),v_bar=7.4*J)
 
     sys.every(1,until=3600)
     sys.every(5,until=3600)
