@@ -1,4 +1,5 @@
 import json
+import types
 import functools
 from datetime import timedelta
 
@@ -6,8 +7,8 @@ from bson import json_util
 from numpy import ndarray,array
 
 __all__ = ["coroutine",
-           "Go","All","Many","One","No",
-           "dumps","loads"]
+           "Go", "All", "Many", "One", "No",
+           "dumps", "loads"]
 
 def coroutine(func):
     def wrapper(*args,**kwargs):

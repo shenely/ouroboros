@@ -32,10 +32,10 @@ def main():
     context = zmq.Context.instance()
 
     data = context.socket(zmq.PAIR)
-    data.bind("inproc://data")
+    data.bind("inproc://zdata")
 
     ctrl = context.socket(zmq.PAIR)
-    ctrl.bind("inproc://ctrl")
+    ctrl.bind("inproc://zctrl")
 
     app = Application([(r"/data",ZMQWebSocket, {"socket": data}),
                        (r'/static/(.*)', StaticFileHandler, {"path": "static"})])

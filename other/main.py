@@ -1,5 +1,4 @@
 from datetime import datetime,timedelta
-from math import sqrt
 
 from core import System
 from orbit import *
@@ -42,7 +41,8 @@ def main():
     earth(sys,None,"earth")
     geo(sys,None,"gs","earth")
     orbit(sys,None,"sc","earth")
-    nrt2geo(sys,"sc")
+    nrt2fix(sys,"earth","sc")
+    fix2geo(sys,"sc")
 
     sys.run()
     

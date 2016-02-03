@@ -1,12 +1,17 @@
 import operator
 import heapq
 from threading import Thread
+from collections import namedtuple
 
 import simpy
 import zmq
 from zmq.eventloop.ioloop import IOLoop
 
 from util import *
+
+__all__ = ["Config", "System", "Process"]
+
+Config = namedtuple("Config", ["args", "ins", "outs", "reqs", "pros"])
 
 class System(object):
 
@@ -24,10 +29,10 @@ class System(object):
         context = zmq.Context.instance()
 
         self._zdata = context.socket(zmq.PAIR)
-        self._zdata.connect("inproc://data")
+        self._zdata.connect("inproc://zdata")
 
         self._zctrl = context.socket(zmq.PAIR)
-        self._zctrl.connect("inproc://ctrl")
+        self._zctrl.connect("inproc://zctrl")
         
     def init(self,prefix,**kwargs):
         self.set({(prefix,kw):kwargs[kw] for kw in kwargs})
@@ -131,42 +136,47 @@ class System(object):
 
 class Process(object):
 
-    def __init__(self,args,ins,outs,reqs,pros):
-        self._args = args
-        
-        self._reqs = reqs
-        self._pros = pros
-        
-        self._ins = ins
-        self._outs = outs
+    def __init__(self,*conf):
+        self._conf = [Config(*c) for c in conf]
     
     def __call__(self,func):
         self._func = coroutine(func)
               
         def caller(sys,*pres):
             def wrapper():
-                f = self._func(*sys.get([(pres[a[0]],a[1]) \
-                                         for a in self._args]))
+                f = self._func(*sys.get([(pres[j],a) \
+                                         for j,c in enumerate(self._conf) \
+                                         for a in c.args]))
 
-                sys.renew([(pres[o[0]],o[1]) for o in self._outs])
+                sys.renew([(pres[j],o) \
+                           for j,c in enumerate(self._conf) \
+                           for o in c.outs])
 
                 while True:
-                    yield sys.stop([(pres[i[0]],i[1]) for i in self._ins])
+                    yield sys.stop([(pres[j],i) \
+                                    for j,c in enumerate(self._conf) \
+                                    for i in c.ins])
 
                     try:
                         try:
                             sys.set((lambda d: \
-                                     {(pres[p[0]],p[1]): d[j] \
-                                      for j,p in enumerate(self._pros)}) \
-                                    (f.send(sys.get([(pres[r[0]],r[1]) \
-                                                     for r in self._reqs]))))
+                                     {(pres[j],p): d[k] \
+                                      for k,(j,p) in enumerate([(j,p) \
+                                                                for j,c in enumerate(self._conf) \
+                                                                for p in c.pros])}) \
+                                    (f.send(sys.get([(pres[j],r) \
+                                                     for j,c in enumerate(self._conf) \
+                                                     for r in c.reqs]))))
                         except Go as err:
-                            f = self._func(*sys.get([(pres[a[0]],a[1]) \
-                                                     for a in self._args]))
+                            f = self._func(*sys.get([(pres[j],a) \
+                                                     for j,c in enumerate(self._conf) \
+                                                     for a in c.args]))
 
                             raise err
                     except All:
-                        outs = self._outs
+                        outs = [(j,o) \
+                                for j,c in enumerate(self._conf) \
+                                for o in c.outs]
                     except Many as err:
                         outs = err.value
                     except One as err:
@@ -177,9 +187,11 @@ class Process(object):
                         outs = []
                         raise
                     else:
-                        outs = self._outs
+                        outs = [(j,o) \
+                                for j,c in enumerate(self._conf) \
+                                for o in c.outs]
                     finally:
-                        sys.go([(pres[o[0]],o[1]) for o in outs])
+                        sys.go([(pres[j],o) for j,o in outs])
                     
             sys.process(wrapper)
             

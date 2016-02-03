@@ -65,6 +65,10 @@ function EarthControl( $scope, $element, ouroboros ) {
     $scope.mesh = new THREE.Mesh(geometry, material);
 
     ouroboros.data(function (data) {
+        th_G = data.find(function (d) { return angular.equals(d.key,["earth","th_G"]); } );
+
+        $scope.mesh.rotation.y = Math.PI * th_G.value / 180;
+
         texture.needsUpdate = true;
     });
 }
