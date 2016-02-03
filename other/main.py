@@ -1,7 +1,11 @@
+from math import sqrt
 from datetime import datetime,timedelta
+
+from numpy import array
 
 from core import System
 from orbit import *
+from coord import *
 import web
 
 EARTH_RADIUS = 6378.1
@@ -17,6 +21,7 @@ DAY = 24 * HOUR
 WEEK = 7 * DAY
 
 #Unit vectors
+O = array([0,0,0])
 I = array([1,0,0])
 J = array([0,1,0])
 K = array([0,0,1])
@@ -27,6 +32,7 @@ def main():
     sys = System(t_dt=J2000,
                  dt_td=MINUTE)
     sys.init("earth",
+             r_bar=O,
              th_G=100.4606184,
              mu=EARTH_GRAVITATION,
              f=EARTH_FLATTENING,
@@ -37,12 +43,11 @@ def main():
     sys.every(1,until=3600)
     sys.every(5,until=3600)
 
-    clock(sys,None)
-    earth(sys,None,"earth")
-    geo(sys,None,"gs","earth")
-    orbit(sys,None,"sc","earth")
-    nrt2fix(sys,"earth","sc")
-    fix2geo(sys,"sc")
+    clock(sys, None)
+    earth(sys, None, "earth")
+    orbit(sys, None,"sc", "earth")
+    #nrt2fix(sys, "earth", "sc", ("earth", "sc"))
+    #fix2geo(sys, "earth", ("earth", "sc"))
 
     sys.run()
     
