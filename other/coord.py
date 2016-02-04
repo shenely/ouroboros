@@ -1,7 +1,7 @@
 from math import radians, degrees, sqrt, cos, sin, tan, acos, asin, atan, atan2
 import functools
 
-from numpy import array, matrix
+from numpy import array, dot, einsum
 from scipy.linalg import norm
 
 from core import Process
@@ -36,27 +36,32 @@ def asind(x):return degrees(asin(x))
 @functools.wraps(atan)
 def atand(x):return degrees(atan(x))
 
-@Process(([], ["+0"], ["inf2equ"], 
+@Process(([], ["inf"], ["equ"],
           ["alpha_deg", "delta_deg"], ["r_hat"]))
 def inf2equ():
     alpha_deg, delta_deg = yield
-    
-    r_hat = matrix([cosd(delta_deg) * cosd(alpha_deg),
-                    cosd(delta_deg) * sind(alpha_deg),
-                    sind(delta_deg)]).T
-                    
+
+    cos_alpha = cosd(alpha_deg)
+    sin_alpha = sind(alpha_deg)
+    cos_delta = cosd(delta_deg)
+    sin_delta = sind(delta_deg)
+
+    r_hat = array([cos_alpha * cos_delta,
+                   sin_alpha * cos_delta,
+                   sin_delta])
+
     yield r_hat,
 
 @Process((["R_km", "f"], [], [], [], []),
-         ([], [], ["geo2fix"], 
-          ["lat_deg", "lon_deg", "alt_km"], ["r_fix"]))
+         ([], ["geo"], ["fix"],
+          ["lat_deg", "lon_deg", "alt_km"], ["r_bar"]))
 def geo2fix(R_km,f):
     r_fix = O
     
     while True:
         lat_deg, lon_deg, alt_km, = yield r_fix,
         
-        R_ph = R_km / sqrt(1 - (2 * f - f ** 2) * sind(lat_deg) ** 2)
+        R_ph = R_km / sqrt(1 - (2 - f) * f * sind(lat_deg) ** 2)
         R_cos = R_ph + alt_km
         R_sin = R_ph * (1 - f) ** 2 + alt_km
         
@@ -65,8 +70,8 @@ def geo2fix(R_km,f):
                        R_sin * sind(lat_deg)])
 
 @Process((["R_km", "f"], [], [], [], []),
-         ([], [], ["fix2geo"],
-          ["r_fix"], ["alt_km", "lat_deg", "lon_deg", "arc_km"]))
+         ([], ["fix"], ["geo"],
+          ["r_bar"], ["alt_km", "lat_deg", "lon_deg", "arc_km"]))
 def fix2geo(R_km, f):
     alt_km = 0
     lat_deg = 0
@@ -85,62 +90,82 @@ def fix2geo(R_km, f):
         
         arc_km = acosd(R_km / r)
 
-@Process(([], [], [], ["r_bar"], []),
-         ([], [], [], ["r_bar"], []),
-         ([], [], ["nrt2equ"],
-          [], ["rho_km", "alpha_deg", "delta_deg"]))
+@Process(([], ["geo"], ["enz"],
+          ["lat_deg", "lon_deg", "alt_km"], ["i", "j", "k"]))
+def geo2enz():
+    i, j, k = J, K, I
+
+    while True:
+        lat_deg, lon_deg, alt_km, = yield i, j, k,
+
+        cos_lat = cosd(lat_deg)
+        sin_lat = sind(lat_deg)
+        cos_lon = cosd(lon_deg)
+        sin_lon = sind(lon_deg)
+
+        i = - sin_lon * I + cos_lon * J
+        j = - sin_lat * (cos_lon * I + sin_lon * J) + cos_lat * K
+        k = cos_lat * (cos_lon * I + sin_lon * J) + sin_lat * K
+
+@Process(([], ["nrt"], [], ["r_bar"], []),
+         ([], ["nrt"], [], ["r_bar"], []),
+         ([], [], ["equ"], [], ["rho_km", "alpha_deg", "delta_deg"]))
 def nrt2equ():
     rho_km = 0
     alpha_deg = 0
     delta_deg = 0
 
     while True:
-        r1, r2, = yield rho_km, alpha_deg, delta_deg,
+        r_src, r_trg, = yield rho_km, alpha_deg, delta_deg,
 
-        rho_bar = r2 - r1
+        rho_bar = r_trg - r_src
         
         rho_km = norm(rho_bar)
         alpha_deg = degrees(atan2(rho_bar[1], rho_bar[0]))
         delta_deg = asind(rho_bar[2] / rho_km)
 
+        print rho_km,alpha_deg,delta_deg
+
 @Process(([], [], [], ["r_bar"], []),
-         ([], [], [], [], ["r_bar"]),
-         ([], [], ["equ2nrt"],
-          ["rho_km", "alpha_deg", "delta_deg"], []))
+         ([], [], ["nrt"], [], ["r_bar"]),
+         ([], ["equ"], [], ["rho_km", "alpha_deg", "delta_deg"], []))
 def equ2nrt():
-    r2 = O
+    r_trg = O
 
     while True:
-        r1, rho_km, alpha_deg, delta_deg, = yield r2,
+        r_src, rho_km, alpha_deg, delta_deg, = yield r_trg,
+
+        cos_alpha = cosd(alpha_deg)
+        sin_alpha = sind(alpha_deg)
+        cos_delta = cosd(delta_deg)
+        sin_delta = sind(delta_deg)
         
-        rho_bar = rho_km * array([cosd(alpha_deg) * cosd(delta_deg),
-                                  sind(alpha_deg) * cosd(delta_deg),
-                                  sind(delta_deg)])
+        rho_bar = rho_km * array([cos_alpha * cos_delta,
+                                  sin_alpha * cos_delta,
+                                  sin_delta])
 
-        r2 = rho_bar + r1
+        r_trg = rho_bar + r_src
 
-@Process(([], [], [], ["th_G"], []),
-         ([], [], [], ["r_bar"], []),
-         ([], [], ["nrt2fix"], [], ["r_fix"]))
+@Process(([], [], [], ["i", "j", "k"], []),
+         ([], ["nrt"], [], ["r_bar"], []),
+         ([], [], ["fix"], [], ["r_bar"]))
 def nrt2fix():
     r_fix = O
 
     while True:
-        th_G, r_bar, = yield r_fix,
+        i, j, k, r_bar, = yield r_fix,
 
-        r_fix = array([r_bar[0] * cosd(th_G) + r_bar[1] * sind(th_G),
-                       - r_bar[0] * sind(th_G) + r_bar[1] * cosd(th_G),
-                       r_bar[2]])
+        r_fix = array([dot(r_bar, i),
+                       dot(r_bar, j),
+                       dot(r_bar, k)])
 
-@Process(([], [], [], ["th_G"], []),
-         ([], [], [], [], ["r_bar"]),
-         ([], [], ["fix2nrt"], ["r_fix"], []))
+@Process(([], [], [], ["i", "j", "k"], []),
+         ([], [], ["nrt"], [], ["r_bar"]),
+         ([], ["fix"], [], ["r_bar"], []))
 def fix2nrt():
     r_bar = O
 
     while True:
-        th_G, r_fix, = yield r_bar,
+        i, j, k, r_fix, = yield r_bar,
 
-        r_bar = array([r_fix[0] * cosd(th_G) - r_fix[1] * sind(th_G),
-                       r_fix[0] * sind(th_G) + r_fix[1] * cosd(th_G),
-                       r_fix[2]])
+        r_bar = r_fix[0] * i + r_fix[1] * j + r_fix[2] * k

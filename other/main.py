@@ -33,21 +33,32 @@ def main():
                  dt_td=MINUTE)
     sys.init("earth",
              r_bar=O,
+             i=I, j=J, k=K,
              th_G=100.4606184,
              mu=EARTH_GRAVITATION,
              f=EARTH_FLATTENING,
              R_km=EARTH_RADIUS)
-    sys.init("gs",lat_deg=60,lon_deg=-60,alt_m=100)
+    sys.init("gs")
+    sys.init(("earth","gs"),lat_deg=60,lon_deg=-60,alt_km=0.1)
     sys.init("sc",r_bar=sqrt(2)*7000.0/2*(I+K),v_bar=7.4*J)
+    sys.init(("earth","sc"))
 
+    sys.at(0)
     sys.every(1,until=3600)
     sys.every(5,until=3600)
 
     clock(sys, None)
     earth(sys, None, "earth")
-    orbit(sys, None,"sc", "earth")
-    #nrt2fix(sys, "earth", "sc", ("earth", "sc"))
-    #fix2geo(sys, "earth", ("earth", "sc"))
+    orbit(sys, None, "earth", "sc")
+    station(sys, None, ("earth", "gs"))
+
+    geo2fix(sys, "earth", ("earth", "gs"))
+    fix2nrt(sys, "earth", "gs", ("earth", "gs"))
+
+    nrt2fix(sys, "earth", "sc", ("earth", "sc"))
+    fix2geo(sys, "earth", ("earth", "sc"))
+
+    nrt2equ(sys, "gs", "sc", ("gs", "sc"))
 
     sys.run()
     

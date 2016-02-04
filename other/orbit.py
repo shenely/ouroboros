@@ -1,4 +1,5 @@
-from math import sqrt, cos, sin
+from math import radians, degrees, sqrt, cos, sin
+import functools
 
 from numpy import array, cross, dot, matrix, hstack, hsplit
 from scipy.linalg import norm
@@ -6,7 +7,7 @@ from scipy.integrate import ode
 
 from core import Process
 
-__all__= ["clock", "earth", "orbit"]
+__all__= ["clock", "earth", "station", "orbit"]
 
 EARTH_RADIUS = 6378.1
 
@@ -29,6 +30,13 @@ KILO = 1000
 kepler_equ = lambda E,M,e:E - e * sin(E) - M
 kepler_diff = lambda E,M,e:1 - e * cos(E)
 
+#Wrapper functions for angles in degrees
+@functools.wraps(cos)
+def cosd(x):return cos(radians(x))
+
+@functools.wraps(sin)
+def sind(x):return sin(radians(x))
+
 @Process((["t", "t_dt", "dt_td"],
           ["+1*"], ["clock"],
           ["t"], ["t_dt"]))
@@ -42,12 +50,13 @@ def clock(t,t_dt,dt_td):
         t0 = t
 
 @Process(([], ["+1*"], [], ["t_dt"], []),
-         ([], [], ["earth"], [], ["th_G"]))
+         ([], [], ["nrt"], [], ["th_G", "i", "j", "k"]))
 def earth():
     th_G = 100.4606184
-    
+    i, j, k = I, J, K
+
     while True:
-        t_dt, = yield th_G,
+        t_dt, = yield th_G, i, j, k
         
         J0 = 367 * t_dt.year \
            - (7 * (t_dt.year + (t_dt.month + 9) / 12) / 4) \
@@ -72,10 +81,22 @@ def earth():
         
         th_G %= 360
 
+        cos_th = cosd(th_G)
+        sin_th = sind(th_G)
+
+        i = I * cos_th - J * sin_th
+        j = I * sin_th + J * cos_th
+        k = K
+
+@Process(([], ["@0"], [], [], []),
+         ([], [], ["geo"], [], []))
+def station():
+    yield
+
 @Process((["t_dt"], ["+1*"], [], ["t_dt"], []),
-         (["r_bar", "v_bar"], [], ["orbit"], [], ["r_bar", "v_bar"]),
-         (["mu"], [], [], [], []))
-def orbit(t0_dt,r0_bar,v0_bar,mu):
+         (["mu"], [], [], [], [])
+         (["r_bar", "v_bar"], [], ["nrt"], [], ["r_bar", "v_bar"]))
+def orbit(mu,t0_dt,r0_bar,v0_bar):
     def gravity(mu):
         def gravity(t,y):
             r_bar,v_bar = hsplit(y,2)

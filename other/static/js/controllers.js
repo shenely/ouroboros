@@ -277,6 +277,45 @@ function GraticuleControl( $scope, $element ) {
     $scope.setColor("rgba(0,0,0,1.0)");
 }
 
+function GroundSationControl( $scope, $element, ouroboros ) {
+    var color = d3.scale.category10();
+
+    var status = THREE.ImageUtils.loadTexture( "/static/img/status-sprite.png" ),
+        state = THREE.ImageUtils.loadTexture( "/static/img/state-sprite.png" ),
+    	material1 = new THREE.SpriteMaterial( { map: status, useScreenCoordinates: false, color: 0x070 } ),
+    	material2 = new THREE.SpriteMaterial( { map: state, useScreenCoordinates: false, color: 0x077 } );
+
+    var spacecraft = false;
+    ouroboros.data(function (data) {
+        d = data.find(function (d) { return angular.equals(d.key,["sc","r_bar"]); } );
+
+        if (d !== undefined) {
+            if (spacecraft == false) {
+                spacecraft = {
+                        status: new THREE.Sprite( material1.clone() ),
+                        state: new THREE.Sprite( material2.clone() ),
+                        object: new THREE.Object3D()
+                };
+
+                spacecraft.state.scale.set( 400, 400 );
+                spacecraft.state.material.color.setStyle("#077");
+
+                spacecraft.status.scale.set( 400, 400 );
+                spacecraft.status.material.color.setStyle("#070");
+
+                spacecraft.object.add(spacecraft.state);
+                spacecraft.object.add(spacecraft.status);
+                $scope.scene.add(spacecraft.object);
+
+            }
+
+            spacecraft.object.position.x = d.value.$array[0];
+            spacecraft.object.position.y = d.value.$array[2];
+            spacecraft.object.position.z = -d.value.$array[1];
+        }
+    });
+}
+
 function FootPrintControl( $scope, $element, ouroboros ) {
     var canvas = d3.select($element[0])
             .datum({ z: 20, visible: true })
@@ -307,9 +346,9 @@ function FootPrintControl( $scope, $element, ouroboros ) {
     };
     
     ouroboros.data(function (data) {
-        d_arc = data.find(function (d) { return angular.equals(d.key,["sc","arc_km"]); } );
-        d_lat = data.find(function (d) { return angular.equals(d.key,["sc","lat_deg"]); } );
-        d_lon = data.find(function (d) { return angular.equals(d.key,["sc","lon_deg"]); } );
+        d_lat = data.find(function (d) { return angular.equals(d.key,[["earth","sc"],"lat_deg"]); } );
+        d_lon = data.find(function (d) { return angular.equals(d.key,[["earth","sc"],"lon_deg"]); } );
+        d_arc = data.find(function (d) { return angular.equals(d.key,[["earth","sc"],"arc_km"]); } );
 
         if ((d_arc !== undefined) && (d_lat !== undefined) && (d_lon !== undefined)) {
             feet = {
@@ -355,8 +394,8 @@ function GroundTrackControl( $scope, $element, ouroboros) {
     };
     
     ouroboros.data(function (data) {
-        d_lat = data.find(function (d) { return angular.equals(d.key,["sc","lat_deg"]); } );
-        d_lon = data.find(function (d) { return angular.equals(d.key,["sc","lon_deg"]); } );
+        d_lat = data.find(function (d) { return angular.equals(d.key,[["earth","sc"],"lat_deg"]); } );
+        d_lon = data.find(function (d) { return angular.equals(d.key,[["earth","sc"],"lon_deg"]); } );
 
         if ((d_lat !== undefined) && (d_lon !== undefined)) {
             if (tracks == false) {

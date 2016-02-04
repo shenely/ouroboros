@@ -16,7 +16,8 @@ Config = namedtuple("Config", ["args", "ins", "outs", "reqs", "pros"])
 class System(object):
 
     def __init__(self,t=0,**kwargs):
-        self._env = simpy.RealtimeEnvironment()
+        #self._env = simpy.RealtimeEnvironment()
+        self._env = simpy.Environment()
         
         kwargs["t"] = t
 
@@ -59,7 +60,7 @@ class System(object):
                 
                 self._ctrl[(None,name)] = self._env.event()
                 
-                while self._data["t"] > t:
+                while self._data[(None,"t")] > t:
                     yield self._env.timeout(1)
                 else:
                     self._ctrl[(None,name)].succeed()
