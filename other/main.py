@@ -1,11 +1,13 @@
-from math import sqrt
+from math import sqrt, radians
 from datetime import datetime,timedelta
 
 from numpy import array
 
 from core import System
+from clock import *
 from orbit import *
-from coord import *
+from geo import *
+from vector import *
 import web
 
 EARTH_RADIUS = 6378.1
@@ -31,34 +33,36 @@ def main():
 
     sys = System(t_dt=J2000,
                  dt_td=MINUTE)
+
     sys.init("earth",
-             r_bar=O,
-             i=I, j=J, k=K,
-             th_G=100.4606184,
              mu=EARTH_GRAVITATION,
              f=EARTH_FLATTENING,
              R_km=EARTH_RADIUS)
-    sys.init("gs")
-    sys.init(("earth","gs"),lat_deg=60,lon_deg=-60,alt_km=0.1)
-    sys.init("sc",r_bar=sqrt(2)*7000.0/2*(I+K),v_bar=7.4*J)
-    sys.init(("earth","sc"))
+    sys.init(("gs", "geo"),
+             r=0.1, r_t=0,
+             az=radians(45), az_t=0,
+             el=radians(45), el_t=0)
+    sys.init(("gs", "e"),
+             _bar=sqrt(2)*(J-I)/2,
+             _t_bar=O)
+    sys.init(("sc", "orb"), _bar=sqrt(2)*7000.0*(I+K)/2, _t_bar=7.5*J)
 
     sys.at(0)
-    sys.every(1,until=3600)
-    sys.every(5,until=3600)
+    sys.every(1, until=3600)
 
     clock(sys, None)
-    earth(sys, None, "earth")
-    orbit(sys, None, "earth", "sc")
-    station(sys, None, ("earth", "gs"))
+    sidereal(sys, None, ("earth", "axis"))
+    
+    ground(sys, None, ("gs", "geo"))
+    sph2rec(sys, ("gs", "geo"))
+    geo2rec(sys, "earth", ("gs", "geo"), ("earth", "gs"))
 
-    geo2fix(sys, "earth", ("earth", "gs"))
-    fix2nrt(sys, "earth", "gs", ("earth", "gs"))
-
-    nrt2fix(sys, "earth", "sc", ("earth", "sc"))
-    fix2geo(sys, "earth", ("earth", "sc"))
-
-    nrt2equ(sys, "gs", "sc", ("gs", "sc"))
+    orbit(sys, None, ("sc", "orb"), "earth")
+    nrt2rot(sys, ("earth", "axis"), ("sc", "orb"), ("earth", "sc", "orb"))
+    
+    abs2rel(sys, ("earth", "gs"), ("earth", "sc", "orb"), ("gs", "sc"))
+    fun2obl(sys, ("gs", "e"), ("gs", "geo"), ("gs", "sc"), ("gs", "sc", "obs"))
+    rec2sph(sys, ("gs", "sc", "obs"))
 
     sys.run()
     

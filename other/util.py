@@ -4,15 +4,21 @@ import functools
 from datetime import timedelta
 
 from bson import json_util
-from numpy import ndarray,array
+from numpy import ndarray, array
 
 __all__ = ["coroutine",
            "Go", "All", "Many", "One", "No",
            "dumps", "loads"]
 
+#Unit vectors
+O = array([0,0,0])
+I = array([1,0,0])
+J = array([0,1,0])
+K = array([0,0,1])
+
 def coroutine(func):
-    def wrapper(*args,**kwargs):
-        gen = func(*args,**kwargs)
+    def wrapper(*args, **kwargs):
+        gen = func(*args, **kwargs)
         gen.next()
         return gen
     
@@ -28,12 +34,12 @@ class All(Go):pass
 
 class Many(Go):
 
-    def __init__(self,*outs):
+    def __init__(self, *outs):
         self.value = outs
 
 class One(Go):
 
-    def __init__(self,out):
+    def __init__(self, out):
         self.value = out
 
 class No(Go):pass
@@ -41,7 +47,7 @@ class No(Go):pass
 def object_hook(dct):
     dct = json_util.object_hook(dct)
 
-    if isinstance(dct,types.DictType):
+    if isinstance(dct, types.DictType):
         if "$elapse" in dct:
             dct = timedelta(dct["$elapse"])
         elif "$array" in dct:
@@ -50,14 +56,14 @@ def object_hook(dct):
     return dct
 
 def default(obj):
-    if isinstance(obj,timedelta):
+    if isinstance(obj, timedelta):
         obj = { "$elapse": obj.total_seconds() }
-    elif isinstance(obj,ndarray):
+    elif isinstance(obj, ndarray):
         obj = { "$array": obj.tolist() }
     else:
         obj = json_util.default(obj)
 
     return obj
 
-dumps = functools.partial(json.dumps,default=default)
-loads = functools.partial(json.loads,object_hook=object_hook)
+dumps = functools.partial(json.dumps, default=default)
+loads = functools.partial(json.loads, object_hook=object_hook)

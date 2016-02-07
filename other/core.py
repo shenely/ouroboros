@@ -16,8 +16,8 @@ Config = namedtuple("Config", ["args", "ins", "outs", "reqs", "pros"])
 class System(object):
 
     def __init__(self,t=0,**kwargs):
-        #self._env = simpy.RealtimeEnvironment()
-        self._env = simpy.Environment()
+        self._env = simpy.RealtimeEnvironment()
+        #self._env = simpy.Environment()
         
         kwargs["t"] = t
 
@@ -124,7 +124,8 @@ class System(object):
         self._ctrl.update({k: self._env.event() for k in keys})
 
     def stop(self,keys):
-        return reduce(operator.__or__,[self._ctrl[k] for k in keys])
+        return reduce(operator.__or__,
+                      [self._ctrl[k] for k in keys])
 
     def go(self,keys):
         map(simpy.Event.succeed,[self._ctrl[k] for k in keys])
@@ -179,9 +180,15 @@ class Process(object):
                                 for j,c in enumerate(self._conf) \
                                 for o in c.outs]
                     except Many as err:
-                        outs = err.value
+                        outs = [(j,o) \
+                                for j,c in enumerate(self._conf) \
+                                for o in c.outs
+                                if o in err.value]
                     except One as err:
-                        outs = [err.value]
+                        outs = [(j,o) \
+                                for j,c in enumerate(self._conf) \
+                                for o in c.outs
+                                if o == err.value]
                     except No:
                         outs = []
                     except:
