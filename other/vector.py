@@ -10,11 +10,29 @@ __all__= ["abs2rel", "rel2abs",
           "fun2obl", "obl2fun", 
           "rec2sph", "sph2rec"]
 
-@Process(([], [], [], ["_bar", "_t_bar"], []),
-         ([], ["rec"], [], ["_bar", "_t_bar"], []),
-         ([], [], ["rec"], [], ["_bar", "_t_bar"]))
+@Process(([], [], [], ["_bar", "_t_bar"], []),#source
+         ([], ["rec"], [], ["_bar", "_t_bar"], []),#target
+         ([], [], ["rec"], [], ["_bar", "_t_bar"]))#relative
 def abs2rel():
-    """Absolute to relative origin"""
+    """Absolute to relative origin
+    
+    Arguments:
+    - N/A
+    
+    Inputs:
+    - (Rectangular for source)
+    - Rectangular for target
+    
+    Outputs:
+    - Rectangular for target relative to source
+    
+    Requires:
+    - Position/velocity of source
+    - Position/velocity of target
+    
+    Provides:
+    - Position/velocity of target relative to source
+    """
     _bar = _t_bar = None
     
     while True:
@@ -23,11 +41,29 @@ def abs2rel():
         _bar = _2_bar - _1_bar
         _t_bar = _2_t_bar - _1_t_bar
     
-@Process(([], ["rec"], [], ["_bar", "_t_bar"], []),
-         ([], [], ["rec"], [], ["_bar", "_t_bar"]),
-         ([], ["rec"], [], ["_bar", "_t_bar"], []))
+@Process(([], [], [], ["_bar", "_t_bar"], []),#source
+         ([], [], ["rec"], [], ["_bar", "_t_bar"]),#target
+         ([], ["rec"], [], ["_bar", "_t_bar"], []))#relative
 def rel2abs():
-    """Relative to absolute origin"""
+    """Relative to absolute origin
+    
+    Arguments:
+    - N/A
+    
+    Inputs:
+    - (Rectangular for source)
+    - Rectangular for target relative to source
+    
+    Outputs:
+    - Rectangular for target
+    
+    Requires:
+    - Position/velocity of source
+    - Position/velocity of target relative to source
+    
+    Provides:
+    - Position/velocity of target
+    """
     _2_bar = _2_t_bar = None
     
     while True:
@@ -36,11 +72,29 @@ def rel2abs():
         _2_bar = _bar + _1_bar
         _2_t_bar = _t_bar + _1_t_bar
 
-@Process(([], ["rec"], [], ["_bar", "_t_bar"], []),
-         ([], ["rec"], [], ["_bar", "_t_bar"], []),
-         ([], [], ["rec"], [], ["_bar", "_t_bar"]))
+@Process(([], ["rec"], [], ["_bar", "_t_bar"], []),#axis
+         ([], ["rec"], [], ["_bar", "_t_bar"], []),#inertial
+         ([], [], ["rec"], [], ["_bar", "_t_bar"]))#rotating
 def nrt2rot():
-    """Inertial to rotating frame"""
+    """Inertial to rotating frame
+    
+    Arguments:
+    - N/A
+    
+    Inputs:
+    - Rectangular for axis
+    - Rectangular in inertial frame
+    
+    Outputs:
+    - Rectangular in rotating frame
+    
+    Requires:
+    - Angular position/velocity of axis
+    - Position/velocity in inertial frame
+    
+    Provides:
+    - Position/velocity in rotating frame
+    """
     _bar = _t_bar = None
     
     while True:
@@ -58,44 +112,7 @@ def nrt2rot():
         dot_th = dot(th_hat, _bar)
         cross_th = cross(th_hat, _bar)
 
-        _t_bar = cos_th * _t_bar +\
-                sin_th * cross(th_hat, _t_bar) +\
-                (1 - cos_th) * dot(th_hat, _t_bar) * th_hat - \
-                \
-                th_t * (sin_th * _bar -\
-                        cos_th * cross_th -\
-                        sin_th * dot_th * th_hat) +\
-                \
-                sin_th * cross(th_t_hat, _bar) +\
-                (1 - cos_th) * (dot(th_t_hat, _bar) * th_hat +\
-                                dot_th * th_t_hat)
-
-        _bar = cos_th * _bar +\
-               sin_th * cross_th +\
-               (1 - cos_th) * dot_th * th_hat
-            
-@Process(([], ["rec"], [], ["_bar", "_t_bar"], []),
-         ([], [], ["rec"], [], ["_bar", "_t_bar"]),
-         ([], ["rec"], [], ["_bar", "_t_bar"], []))
-def rot2nrt(th_bar, r_bar):
-    """Rotating to inertial frame"""
-    _bar = _t_bar = None
-    
-    while True:
-        th_bar, om_bar, _bar, _t_bar, = yield _bar, _t_bar,
-        
-        th = norm(th_bar)
-        th_hat = th_bar / th
-        
-        cos_th = cos(th)
-        sin_th = sin(th)
-        
-        th_t = dot(th_bar, om_bar) / th
-        th_t_hat = (th * om_bar - th_t * th_bar) / th ** 2
-        
-        dot_th = dot(th_hat, _bar)
-        cross_th = cross(th_hat, _bar)
-
+        #XXX there still might be a sign wrong here somewhere...
         _t_bar = cos_th * _t_bar -\
                 sin_th * cross(th_hat, _t_bar) +\
                 (1 - cos_th) * dot(th_hat, _t_bar) * th_hat - \
@@ -104,20 +121,97 @@ def rot2nrt(th_bar, r_bar):
                         cos_th * cross_th -\
                         sin_th * dot_th * th_hat) -\
                 \
-                sin_th * cross(th_t_hat, _bar) -\
-                (1 - cos_th) * (dot(th_t_hat, _bar) * th_hat -\
+                sin_th * cross(th_t_hat, _bar) +\
+                (1 - cos_th) * (dot(th_t_hat, _bar) * th_hat +\
                                 dot_th * th_t_hat)
 
         _bar = cos_th * _bar -\
                sin_th * cross_th +\
                (1 - cos_th) * dot_th * th_hat
+            
+@Process(([], ["rec"], [], ["_bar", "_t_bar"], []),#axis
+         ([], [], ["rec"], [], ["_bar", "_t_bar"]),#inertial
+         ([], ["rec"], [], ["_bar", "_t_bar"], []))#rotating
+def rot2nrt(th_bar, r_bar):
+    """Rotating to inertial frame
     
-@Process(([], [], [], ["_bar", "_t_bar"], []),
-         ([], [], [], ["_bar", "_t_bar"], []),
-         ([], ["rec"], [], ["_bar", "_t_bar"], []),
-         ([], [], ["rec"], [], ["_bar", "_t_bar"]))
+    Arguments:
+    - N/A
+    
+    Inputs:
+    - Rectangular for axis
+    - Rectangular in rotating frame
+    
+    Outputs:
+    - Rectangular in inertial frame
+    
+    Requires:
+    - Angular position/velocity of axis
+    - Position/velocity in rotating frame
+    
+    Provides:
+    - Position/velocity in inertial frame
+    """
+    _bar = _t_bar = None
+    
+    while True:
+        th_bar, om_bar, _bar, _t_bar, = yield _bar, _t_bar,
+        
+        th = norm(th_bar)
+        th_hat = th_bar / th
+        
+        cos_th = cos(th)
+        sin_th = sin(th)
+        
+        th_t = dot(th_bar, om_bar) / th
+        th_t_hat = (th * om_bar - th_t * th_bar) / th ** 2
+        
+        dot_th = dot(th_hat, _bar)
+        cross_th = cross(th_hat, _bar)
+
+        #XXX there still might be a sign wrong here somewhere...
+        _t_bar = cos_th * _t_bar +\
+                sin_th * cross(th_hat, _t_bar) +\
+                (1 - cos_th) * dot(th_hat, _t_bar) * th_hat - \
+                \
+                th_t * (sin_th * _bar -\
+                        cos_th * cross_th -\
+                        sin_th * dot_th * th_hat) +\
+                \
+                sin_th * cross(th_t_hat, _bar) -\
+                (1 - cos_th) * (dot(th_t_hat, _bar) * th_hat -\
+                                dot_th * th_t_hat)
+
+        _bar = cos_th * _bar +\
+               sin_th * cross_th +\
+               (1 - cos_th) * dot_th * th_hat
+    
+@Process(([], [], [], ["_bar", "_t_bar"], []),#zero
+         ([], [], [], ["_bar", "_t_bar"], []),#pole
+         ([], ["rec"], [], ["_bar", "_t_bar"], []),#fundamental
+         ([], [], ["rec"], [], ["_bar", "_t_bar"]))#oblique
 def fun2obl():
-    """Fundamental to oblique plane"""
+    """Fundamental to oblique plane
+    
+    Arguments:
+    - N/A
+    
+    Inputs:
+    - (Rectangular for reference of oblique plane)
+    - (Rectangular for pole of oblique plane)
+    - Rectangular in fundamental plane
+    
+    Outputs:
+    - Rectangular in oblique plane
+    
+    Requires:
+    - Position/velocity of reference of oblique plane
+    - Position/velocity of pole of oblique plane
+    - Position/velocity in fundamental plane
+    
+    Provides:
+    - Position/velocity in oblique plane
+    """
     _bar = _t_bar = None
     
     while True:
@@ -157,12 +251,32 @@ def fun2obl():
                       dot(_bar, j_hat),
                       dot(_bar, k_hat)])
     
-@Process(([], [], [], ["_bar", "_t_bar"], []),
-         ([], ["rec"], [], ["_bar", "_t_bar"], []),
-         ([], [], ["rec"], [], ["_bar", "_t_bar"]),
-         ([], ["rec"], [], ["_bar", "_t_bar"], []))
+@Process(([], [], [], ["_bar", "_t_bar"], []),#zero
+         ([], [], [], ["_bar", "_t_bar"], []),#pole
+         ([], [], ["rec"], [], ["_bar", "_t_bar"]),#fundamental
+         ([], ["rec"], [], ["_bar", "_t_bar"], []))#oblique
 def obl2fun():
-    """Oblique to fundamental plane"""
+    """Oblique to fundamental plane
+    
+    Arguments:
+    - N/A
+    
+    Inputs:
+    - (Rectangular for reference of oblique plane)
+    - (Rectangular for pole of oblique plane)
+    - Rectangular in oblique plane
+    
+    Outputs:
+    - Rectangular in fundamental plane
+    
+    Requires:
+    - Position/velocity of reference of oblique plane
+    - Position/velocity of pole of oblique plane
+    - Position/velocity in oblique plane
+    
+    Provides:
+    - Position/velocity in fundamental plane
+    """
     _bar = _t_bar = None
     
     while True:
@@ -194,7 +308,7 @@ def obl2fun():
                  _t_bar[1] * j_hat + \
                  _t_bar[2] * k_hat
     
-        _t_bar -= _bar[0] * i_t_hat + \
+        _t_bar += _bar[0] * i_t_hat + \
                   _bar[1] * j_t_hat + \
                   _bar[2] * k_t_hat
     
@@ -204,9 +318,27 @@ def obl2fun():
            
 @Process(([], ["rec"], ["sph"],
           ["_bar", "_t_bar"], 
-          ["r", "r_t", "az", "az_t", "el", "el_t"]))    
+          ["r", "r_t", "az", "az_t", "el", "el_t"]))#vector
 def rec2sph():
-    """Rectangular to spherical coordinates"""
+    """Rectangular to spherical coordinates
+    
+    Arguments:
+    - N/A
+    
+    Inputs:
+    - Rectangular
+    
+    Outputs:
+    - Spherical
+    
+    Requires:
+    - Position/velocity
+    
+    Provides:
+    - Radius/radial velocity
+    - Azimuth/azimuthal velocity
+    - Elevation/elevator (???) velocity
+    """
     r = r_t = az = az_t = el = el_t = None
     
     while True:
@@ -230,9 +362,27 @@ def rec2sph():
                
 @Process(([], ["sph"], ["rec"],
           ["r", "r_t", "az", "az_t", "el", "el_t"],
-          ["_bar", "_t_bar"]))   
+          ["_bar", "_t_bar"]))#vector
 def sph2rec():
-    """Spherical to rectangular coordinates"""
+    """Spherical to rectangular coordinates
+    
+    Arguments:
+    - N/A
+    
+    Inputs:
+    - Spherical
+    
+    Outputs:
+    - Rectangular
+    
+    Requires:
+    - Radius/radial velocity
+    - Azimuth/azimuthal velocity
+    - Elevation/elevator (???) velocity
+    
+    Provides:
+    - Position/velocity
+    """
     r_bar = v_bar = None
     
     while True:
@@ -251,11 +401,11 @@ def sph2rec():
         r_bar = array([x, y, z])
         
         x_t = r_t * cos_az * cos_el -\
-              r * az_t * sin_az * cos_el -\
-              r * el_t * cos_az * sin_el
+              r * (az_t * sin_az * cos_el +\
+                   el_t * cos_az * sin_el)
         y_t = r_t * sin_az * cos_el +\
-              r * az_t * cos_az * cos_el -\
-              r * el_t * sin_az * sin_el
+              r * (az_t * cos_az * cos_el -\
+                   el_t * sin_az * sin_el)
         z_t = r_t * sin_el +\
               r * el_t * cos_el
         

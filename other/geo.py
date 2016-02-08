@@ -53,8 +53,8 @@ def ground():
     cos_az = cos(az)
     sin_az = sin(az)
 
-    _hat = sin_az * I - cos_az * J
-    _t_hat = az * (cos_az * I + sin_az * J)
+    _hat = - sin_az * I + cos_az * J
+    _t_hat = - az_t * (cos_az * I + sin_az * J)
 
     yield _hat, _t_hat
 
@@ -90,7 +90,7 @@ def sidereal():
         
         th_G %= 360
 
-        th_bar = th_G * K
+        th_bar = radians(th_G) * K
 
 @Process((["R_km", "f"], [], [], [], []),
          ([], ["sph"], [], ["r", "r_t",
@@ -171,7 +171,7 @@ def geo2rec(R_km, f):
     r_bar = v_bar = None
     
     while True:
-        alt, alt_t, lat, lat_t, lon, lon_t = yield r_bar, v_bar
+        alt, alt_t, lon, lon_t, lat, lat_t = yield r_bar, v_bar
         
         cos_lat = cos(lat)
         sin_lat = sin(lat)

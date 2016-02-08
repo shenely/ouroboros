@@ -14,31 +14,35 @@ __all__ = ["Config", "System", "Process"]
 Config = namedtuple("Config", ["args", "ins", "outs", "reqs", "pros"])
 
 class System(object):
+    """Simulation system"""
 
-    def __init__(self,t=0,**kwargs):
-        #self._env = simpy.RealtimeEnvironment()
-        self._env = simpy.Environment()
+    def __init__(self, t=0, **kwargs):
+        self._env = simpy.RealtimeEnvironment()
+        #self._env = simpy.Environment()
         
         kwargs["t"] = t
 
-        self._data = {(None,kw):kwargs[kw] for kw in kwargs}
+        #System-level data and control
+        self._data = {(None, kw): kwargs[kw] for kw in kwargs}
         self._ctrl = dict()
         
-        self._clock = [self._data[(None,"t")]]
-        self.clock()
+        #All time must pass through here...
+        self._clock = [self._data[(None, "t")]]
+        self.clock()#...so it's an hour glass...
 
+        #Internal socket stuff
         context = zmq.Context.instance()
-
         self._zdata = context.socket(zmq.PAIR)
         self._zdata.connect("inproc://zdata")
-
         self._zctrl = context.socket(zmq.PAIR)
         self._zctrl.connect("inproc://zctrl")
         
-    def init(self,prefix,**kwargs):
-        self.set({(prefix,kw):kwargs[kw] for kw in kwargs})
+    def init(self, prefix, **kwargs):
+        """Initialize simulation data"""
+        self.set({(prefix, kw): kwargs[kw] for kw in kwargs})
 
     def run(self):
+        """Run!"""
         IOLoop.instance().add_callback(Thread(target=self._env.run).start)
         IOLoop.instance().start()
 
@@ -47,64 +51,68 @@ class System(object):
             while True:
                 yield self._env.timeout(1)
                 
-                self._data[(None,"t")] = heapq.heappop(self._clock)
+                #Jump to next time
+                self._data[(None, "t")] = heapq.heappop(self._clock)
                 
         self._env.process(wrapper())
         
-    def at(self,t):
+    def at(self, t):
+        """Trigger at a specific tick"""
         name = "@{0:d}".format(t)
         
         if name not in self._ctrl:
             def wrapper():
-                heapq.heappush(self._clock,t)
+                heapq.heappush(self._clock, t)
                 
-                self._ctrl[(None,name)] = self._env.event()
+                self._ctrl[(None, name)] = self._env.event()
                 
-                while self._data[(None,"t")] > t:
+                while self._data[(None, "t")] > t:
                     yield self._env.timeout(1)
                 else:
-                    self._ctrl[(None,name)].succeed()
+                    self._ctrl[(None, name)].succeed()
                 
         self._env.process(wrapper())
         
         return name
         
-    def after(self,dt):
+    def after(self, dt):
+        """Trigger after a number of ticks"""
         name = "+{0:d}".format(dt)
         
         if name not in self._ctrl:
             def wrapper():
-                t = self._data[(None,"t")] + dt
-                heapq.heappush(self._clock,t)
+                t = self._data[(None," t")] + dt
+                heapq.heappush(self._clock, t)
                 
-                self._ctrl[(None,name)] = self._env.event()
+                self._ctrl[(None, name)] = self._env.event()
             
-                while self._data[(None,"t")] != t:
+                while self._data[(None, "t")] != t:
                     yield self._env.timeout(1)
                 else:
-                    self._ctrl[(None,name)].succeed()
+                    self._ctrl[(None, name)].succeed()
                     
             self._env.process(wrapper())
         
         return name
         
-    def every(self,dt,until=None):
+    def every(self, dt, until=None):
+        """Trigger every number of ticks"""
         name = "+{0:d}*".format(dt)
         
         if name not in self._ctrl:
             def wrapper():
-                t = self._data[(None,"t")] + dt
+                t = self._data[(None, "t")] + dt
                 heapq.heappush(self._clock,t)
                 
-                self._ctrl[(None,name)] = self._env.event()
+                self._ctrl[(None, name)] = self._env.event()
             
                 while until is None or t < until:
-                    if self._data[(None,"t")] == t:
-                        t = self._data[(None,"t")] + dt
-                        heapq.heappush(self._clock,t)
+                    if self._data[(None, "t")] == t:
+                        t = self._data[(None, "t")] + dt
+                        heapq.heappush(self._clock, t)
                         
-                        self._ctrl[(None,name)].succeed()
-                        self._ctrl[(None,name)] = self._env.event()
+                        self._ctrl[(None, name)].succeed()
+                        self._ctrl[(None, name)] = self._env.event()
                         
                     yield self._env.timeout(1)
                     
@@ -112,55 +120,67 @@ class System(object):
         
         return name
 
-    def get(self,keys):
+    def get(self, keys):
+        """Get data values"""
         return [self._data[k] for k in keys]
 
-    def set(self,keys):
+    def set(self, keys):
+        """Set data values"""
         self._data.update(keys)
-        self._zdata.send(dumps([{"key":k,"value":keys[k]} \
-                                for k in keys]))
+        
+        self._zdata.send(dumps([{"key":k, "value":keys[k]} \
+                                for k in keys]))#JSON
 
-    def renew(self,keys):
+    def renew(self, keys):
+        """Renew control events"""
         self._ctrl.update({k: self._env.event() for k in keys})
 
-    def stop(self,keys):
-        return reduce(operator.__or__,
-                      [self._ctrl[k] for k in keys])
+    def stop(self, keys):
+        """Stop!"""
+        return reduce(operator.__or__, [self._ctrl[k] for k in keys])
 
-    def go(self,keys):
-        map(simpy.Event.succeed,[self._ctrl[k] for k in keys])
-        self._zctrl.send(dumps(keys))
-
+    def go(self, keys):
+        """Go!"""
+        map(simpy.Event.succeed, [self._ctrl[k] for k in keys])
         self.renew(keys)
+        
+        self._zctrl.send(dumps(keys))#JSON
 
-    def process(self,func):
+    def process(self, func):
+        """Inject process into system"""
         self._env.process(func())
 
 class Process(object):
+    """Simulation process"""
 
-    def __init__(self,*conf):
+    def __init__(self, *conf):
         self._conf = [Config(*c) for c in conf]
     
-    def __call__(self,func):
+    def __call__(self, func):
         self._func = coroutine(func)
               
         def caller(sys,*pres):
+            """Replace function with process"""
             def wrapper():
+                #Pull arguments from data values
                 f = self._func(*sys.get([(pres[j],a) \
                                          for j,c in enumerate(self._conf) \
                                          for a in c.args]))
 
+                #Create control events
                 sys.renew([(pres[j],o) \
                            for j,c in enumerate(self._conf) \
                            for o in c.outs])
 
                 while True:
+                    #Only trigger on certain control events
                     yield sys.stop([(pres[j],i) \
                                     for j,c in enumerate(self._conf) \
                                     for i in c.ins])
 
                     try:
                         try:
+                            #XXX this mess actually calls the function
                             sys.set((lambda d: \
                                      {(pres[j],p): d[k] \
                                       for k,(j,p) in enumerate([(j,p) \
@@ -170,6 +190,7 @@ class Process(object):
                                                      for j,c in enumerate(self._conf) \
                                                      for r in c.reqs]))))
                         except Go as err:
+                            #If using exceptions for control handling, restart function
                             f = self._func(*sys.get([(pres[j],a) \
                                                      for j,c in enumerate(self._conf) \
                                                      for a in c.args]))
@@ -178,28 +199,31 @@ class Process(object):
                     except All:
                         outs = [(j,o) \
                                 for j,c in enumerate(self._conf) \
-                                for o in c.outs]
+                                for o in c.outs]#all the things!
                     except Many as err:
                         outs = [(j,o) \
                                 for j,c in enumerate(self._conf) \
                                 for o in c.outs
-                                if o in err.value]
+                                if (j,o) in err.value]#some of the things.
                     except One as err:
                         outs = [(j,o) \
                                 for j,c in enumerate(self._conf) \
                                 for o in c.outs
-                                if o == err.value]
+                                if (j,o) == err.value]#one of the things...
                     except No:
-                        outs = []
+                        
+                        outs = []#nothing!
                     except:
-                        outs = []
+                        outs = []#uh oh...
+                        
                         raise
                     else:
                         outs = [(j,o) \
                                 for j,c in enumerate(self._conf) \
-                                for o in c.outs]
+                                for o in c.outs]#no exceptions used
                     finally:
-                        sys.go([(pres[j],o) for j,o in outs])
+                        
+                        sys.go([(pres[j],o) for j,o in outs])#no matter what
                     
             sys.process(wrapper)
             
