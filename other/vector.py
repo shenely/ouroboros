@@ -260,4 +260,3 @@ def sph2rec():
               r * el_t * cos_el
         
         v_bar = array([x_t, y_t, z_t])
-        

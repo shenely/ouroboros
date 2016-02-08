@@ -45,11 +45,18 @@ def geo(R_km, f):
     return fun, jac
 
 @Process(([], ["@0"], [], [], []),
-         ([], [], ["sph"], [], []))
+         ([], [], ["sph"], ["az", "az_t"], []),
+         ([], [], [], [], ["_bar", "_t_bar"]))
 def ground():
-    yield
-    
-    yield
+    az, az_t, = yield
+
+    cos_az = cos(az)
+    sin_az = sin(az)
+
+    _hat = sin_az * I - cos_az * J
+    _t_hat = az * (cos_az * I + sin_az * J)
+
+    yield _hat, _t_hat
 
 @Process(([], ["+1*"], [], ["t_dt"], []),
          ([], [], ["rec"], [], ["_bar", "_t_bar"]))
@@ -193,5 +200,3 @@ def geo2rec(R_km, f):
                 (sin_lon * I - cos_lon * J) +\
                 (R_s_t * sin_lat +\
                  R_s * lat_t * cos_lat) * K
-        
-        

@@ -16,8 +16,8 @@ Config = namedtuple("Config", ["args", "ins", "outs", "reqs", "pros"])
 class System(object):
 
     def __init__(self,t=0,**kwargs):
-        self._env = simpy.RealtimeEnvironment()
-        #self._env = simpy.Environment()
+        #self._env = simpy.RealtimeEnvironment()
+        self._env = simpy.Environment()
         
         kwargs["t"] = t
 

@@ -10,6 +10,7 @@ __all__= ["orbit", "att"]
 EARTH_RADIUS = 6378.1
                        
 KILO = 1000
+MICRO = 1e-6
 
 @Process((["t_dt"], ["+1*"], [], ["t_dt"], []),
          (["_bar", "_t_bar"], [], ["rec"], [], ["_bar", "_t_bar"]),
@@ -45,6 +46,22 @@ def orbit(t0_dt, r0_bar, v0_bar, mu):
         #Update state
         y = box.integrate((t_dt - t0_dt).total_seconds())
         r_bar, v_bar = hsplit(y, 2)
+
+@Process(([], ["+1*"], [], ["t_dt"], []),
+         (["line1", "line2"], [], ["rec"], [], ["_bar", "_t_bar"]))
+def sgp4(line1, line2):
+    r_bar = v_bar = None
+
+    sat = twoline2rv(line1, line2, wgs84)
+
+    while True:
+        #Input/output
+        t_dt, = yield r_bar, v_bar,#time/position,velocity
+
+        #Update state
+        r_bar, v_bar = sat.propagate(t_dt.year, t_dt.month, t_dt.day,
+                                     t_dt.hour, t_dt.minute,
+                                     t_dt.second + MICRO * t_dt.microsecond)
         
 @Process((["t_dt"], ["+1*"], [], ["t_dt"], []),
          (["_bar", "_t_bar"], [], ["rec"], [], ["_bar", "_t_bar"]))

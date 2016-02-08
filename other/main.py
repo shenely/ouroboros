@@ -10,9 +10,9 @@ from geo import *
 from vector import *
 import web
 
-EARTH_RADIUS = 6378.1
-EARTH_FLATTENING = 0.00335
-EARTH_GRAVITATION = 398600.4
+EARTH_RADIUS = 6378.1370
+EARTH_FLATTENING = 1 / 298.257223563
+EARTH_GRAVITATION = 398600.4418
 
 J2000 = datetime(2000,1,1,12)#Julian epoch (2000-01-01T12:00:00Z)
 
@@ -42,9 +42,6 @@ def main():
              r=0.1, r_t=0,
              az=radians(45), az_t=0,
              el=radians(45), el_t=0)
-    sys.init(("gs", "e"),
-             _bar=sqrt(2)*(J-I)/2,
-             _t_bar=O)
     sys.init(("sc", "orb"), _bar=sqrt(2)*7000.0*(I+K)/2, _t_bar=7.5*J)
 
     sys.at(0)
@@ -53,16 +50,16 @@ def main():
     clock(sys, None)
     sidereal(sys, None, ("earth", "axis"))
     
-    ground(sys, None, ("gs", "geo"))
-    sph2rec(sys, ("gs", "geo"))
-    geo2rec(sys, "earth", ("gs", "geo"), ("earth", "gs"))
+    ground(sys, None, ("geo", "gs"), ("gs", "east"))
+    sph2rec(sys, ("geo", "gs"))
+    geo2rec(sys, "earth", ("geo", "gs"), ("earth", "gs"))
 
     orbit(sys, None, ("sc", "orb"), "earth")
-    nrt2rot(sys, ("earth", "axis"), ("sc", "orb"), ("earth", "sc", "orb"))
+    nrt2rot(sys, ("earth", "axis"), ("sc", "orb"), ("earth", "sc"))
     
-    abs2rel(sys, ("earth", "gs"), ("earth", "sc", "orb"), ("gs", "sc"))
-    fun2obl(sys, ("gs", "e"), ("gs", "geo"), ("gs", "sc"), ("gs", "sc", "obs"))
-    rec2sph(sys, ("gs", "sc", "obs"))
+    abs2rel(sys, ("earth", "gs"), ("earth", "sc"), ("gnd", "sc"))
+    fun2obl(sys, ("gs", "east"), ("geo", "gs"), ("gnd", "sc"), ("gs", "sc"))
+    rec2sph(sys, ("gs", "sc"))
 
     sys.run()
     
