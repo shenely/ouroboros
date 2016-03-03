@@ -48,6 +48,7 @@ def geo(R_km, f):
          ([], [], ["sph"], ["az", "az_t"], []),
          ([], [], [], [], ["_bar", "_t_bar"]))
 def ground():
+    """Ground station"""
     az, az_t, = yield
 
     cos_az = cos(az)
@@ -61,6 +62,7 @@ def ground():
 @Process(([], ["+1*"], [], ["t_dt"], []),
          ([], [], ["rec"], [], ["_bar", "_t_bar"]))
 def sidereal():
+    """Sidereal time"""
     th_bar = 100.4606184 * K
     om_bar = radians(1.0 / 36525 + 360.98564724) / (24 * 60 * 60) * K
 

@@ -6,25 +6,7 @@ __all__= ["clock"]
           ["+1*"], ["clock"],
           ["t"], ["t_dt"]))
 def clock(t,t_dt,dt_td):
-    """Clock
-    
-    Arguments:
-    - Start tick
-    - Start date/time
-    - Time step
-    
-    Inputs:
-    - Every 1 tick
-    
-    Outputs:
-    - Clock
-    
-    Requires:
-    - Current tick
-    
-    Provides:
-    - Current date/time
-    """
+    """Clock"""
     t0 = t
     
     while True:

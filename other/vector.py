@@ -14,25 +14,7 @@ __all__= ["abs2rel", "rel2abs",
          ([], ["rec"], [], ["_bar", "_t_bar"], []),#target
          ([], [], ["rec"], [], ["_bar", "_t_bar"]))#relative
 def abs2rel():
-    """Absolute to relative origin
-    
-    Arguments:
-    - N/A
-    
-    Inputs:
-    - (Rectangular for source)
-    - Rectangular for target
-    
-    Outputs:
-    - Rectangular for target relative to source
-    
-    Requires:
-    - Position/velocity of source
-    - Position/velocity of target
-    
-    Provides:
-    - Position/velocity of target relative to source
-    """
+    """Absolute to relative origins"""
     _bar = _t_bar = None
     
     while True:
@@ -45,25 +27,7 @@ def abs2rel():
          ([], [], ["rec"], [], ["_bar", "_t_bar"]),#target
          ([], ["rec"], [], ["_bar", "_t_bar"], []))#relative
 def rel2abs():
-    """Relative to absolute origin
-    
-    Arguments:
-    - N/A
-    
-    Inputs:
-    - (Rectangular for source)
-    - Rectangular for target relative to source
-    
-    Outputs:
-    - Rectangular for target
-    
-    Requires:
-    - Position/velocity of source
-    - Position/velocity of target relative to source
-    
-    Provides:
-    - Position/velocity of target
-    """
+    """Relative to absolute origin"""
     _2_bar = _2_t_bar = None
     
     while True:
@@ -76,25 +40,7 @@ def rel2abs():
          ([], ["rec"], [], ["_bar", "_t_bar"], []),#inertial
          ([], [], ["rec"], [], ["_bar", "_t_bar"]))#rotating
 def nrt2rot():
-    """Inertial to rotating frame
-    
-    Arguments:
-    - N/A
-    
-    Inputs:
-    - Rectangular for axis
-    - Rectangular in inertial frame
-    
-    Outputs:
-    - Rectangular in rotating frame
-    
-    Requires:
-    - Angular position/velocity of axis
-    - Position/velocity in inertial frame
-    
-    Provides:
-    - Position/velocity in rotating frame
-    """
+    """Inertial to rotating frame"""
     _bar = _t_bar = None
     
     while True:
@@ -133,25 +79,7 @@ def nrt2rot():
          ([], [], ["rec"], [], ["_bar", "_t_bar"]),#inertial
          ([], ["rec"], [], ["_bar", "_t_bar"], []))#rotating
 def rot2nrt(th_bar, r_bar):
-    """Rotating to inertial frame
-    
-    Arguments:
-    - N/A
-    
-    Inputs:
-    - Rectangular for axis
-    - Rectangular in rotating frame
-    
-    Outputs:
-    - Rectangular in inertial frame
-    
-    Requires:
-    - Angular position/velocity of axis
-    - Position/velocity in rotating frame
-    
-    Provides:
-    - Position/velocity in inertial frame
-    """
+    """Rotating to inertial frame"""
     _bar = _t_bar = None
     
     while True:
@@ -191,27 +119,7 @@ def rot2nrt(th_bar, r_bar):
          ([], ["rec"], [], ["_bar", "_t_bar"], []),#fundamental
          ([], [], ["rec"], [], ["_bar", "_t_bar"]))#oblique
 def fun2obl():
-    """Fundamental to oblique plane
-    
-    Arguments:
-    - N/A
-    
-    Inputs:
-    - (Rectangular for reference of oblique plane)
-    - (Rectangular for pole of oblique plane)
-    - Rectangular in fundamental plane
-    
-    Outputs:
-    - Rectangular in oblique plane
-    
-    Requires:
-    - Position/velocity of reference of oblique plane
-    - Position/velocity of pole of oblique plane
-    - Position/velocity in fundamental plane
-    
-    Provides:
-    - Position/velocity in oblique plane
-    """
+    """Fundamental to oblique plane"""
     _bar = _t_bar = None
     
     while True:
@@ -256,27 +164,7 @@ def fun2obl():
          ([], [], ["rec"], [], ["_bar", "_t_bar"]),#fundamental
          ([], ["rec"], [], ["_bar", "_t_bar"], []))#oblique
 def obl2fun():
-    """Oblique to fundamental plane
-    
-    Arguments:
-    - N/A
-    
-    Inputs:
-    - (Rectangular for reference of oblique plane)
-    - (Rectangular for pole of oblique plane)
-    - Rectangular in oblique plane
-    
-    Outputs:
-    - Rectangular in fundamental plane
-    
-    Requires:
-    - Position/velocity of reference of oblique plane
-    - Position/velocity of pole of oblique plane
-    - Position/velocity in oblique plane
-    
-    Provides:
-    - Position/velocity in fundamental plane
-    """
+    """Oblique to fundamental plane"""
     _bar = _t_bar = None
     
     while True:
@@ -320,25 +208,7 @@ def obl2fun():
           ["_bar", "_t_bar"], 
           ["r", "r_t", "az", "az_t", "el", "el_t"]))#vector
 def rec2sph():
-    """Rectangular to spherical coordinates
-    
-    Arguments:
-    - N/A
-    
-    Inputs:
-    - Rectangular
-    
-    Outputs:
-    - Spherical
-    
-    Requires:
-    - Position/velocity
-    
-    Provides:
-    - Radius/radial velocity
-    - Azimuth/azimuthal velocity
-    - Elevation/elevator (???) velocity
-    """
+    """Rectangular to spherical coordinates"""
     r = r_t = az = az_t = el = el_t = None
     
     while True:
@@ -364,25 +234,7 @@ def rec2sph():
           ["r", "r_t", "az", "az_t", "el", "el_t"],
           ["_bar", "_t_bar"]))#vector
 def sph2rec():
-    """Spherical to rectangular coordinates
-    
-    Arguments:
-    - N/A
-    
-    Inputs:
-    - Spherical
-    
-    Outputs:
-    - Rectangular
-    
-    Requires:
-    - Radius/radial velocity
-    - Azimuth/azimuthal velocity
-    - Elevation/elevator (???) velocity
-    
-    Provides:
-    - Position/velocity
-    """
+    """Spherical to rectangular coordinates"""
     r_bar = v_bar = None
     
     while True:

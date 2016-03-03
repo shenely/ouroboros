@@ -14,25 +14,7 @@ MICRO = 1e-6
 @Process(([], ["+1*"], [], ["t_dt"], []),#system
          (["line1", "line2"], [], ["rec"], [], ["_bar", "_t_bar"]))#TLE
 def orbit(line1, line2):
-    """Propagate orbit
-    
-    Arguments:
-    - (Zeroth line of TLE)
-    - First line of TLE
-    - Second line of TLE
-    
-    Inputs:
-    - Every 1 tick
-    
-    Outputs:
-    - Rectangular
-    
-    Requires:
-    - Current date/time
-    
-    Provides:
-    - Position/velocity
-    """
+    """Propagate orbit"""
     r_bar = v_bar = None
 
     sat = twoline2rv(line1, line2, wgs84)
