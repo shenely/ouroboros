@@ -5,9 +5,9 @@ from numpy import array
 
 from core import System
 from clock import *
-from orbit import *
+from orb import *
 from geo import *
-from vector import *
+from vec import *
 import web
 
 EARTH_RADIUS = 6378.1370

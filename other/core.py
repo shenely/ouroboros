@@ -81,7 +81,7 @@ class System(object):
         
         if name not in self._ctrl:
             def wrapper():
-                t = self._data[(None," t")] + dt
+                t = self._data[(None, "t")] + dt
                 heapq.heappush(self._clock, t)
                 
                 self._ctrl[(None, name)] = self._env.event()
@@ -128,7 +128,7 @@ class System(object):
         """Set data values"""
         self._data.update(keys)
         
-        self._zdata.send(dumps([{"key":k, "value":keys[k]} \
+        self._zdata.send(dumps([{"key": k, "value": keys[k]} \
                                 for k in keys]))#JSON
 
     def renew(self, keys):

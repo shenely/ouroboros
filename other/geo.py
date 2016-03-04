@@ -7,6 +7,7 @@ from core import Process
 from util import I, J, K
 
 __all__= ["ground", "sidereal",
+          "model",
           "sph2geo", "geo2rec"]
 
 def geo(R_km, f):
@@ -93,6 +94,8 @@ def sidereal():
         th_G %= 360
 
         th_bar = radians(th_G) * K
+
+def model():pass
 
 @Process((["R_km", "f"], [], [], [], []),
          ([], ["sph"], [], ["r", "r_t",
