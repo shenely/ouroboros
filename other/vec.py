@@ -114,7 +114,7 @@ def rot2nrt(th_bar, r_bar):
                sin_th * cross_th +\
                (1 - cos_th) * dot_th * th_hat
     
-@Process(([], [], [], ["_bar", "_t_bar"], []),#zero
+@Process(([], [], [], ["_bar", "_t_bar"], []),#node
          ([], [], [], ["_bar", "_t_bar"], []),#pole
          ([], ["rec"], [], ["_bar", "_t_bar"], []),#fundamental
          ([], [], ["rec"], [], ["_bar", "_t_bar"]))#oblique
@@ -222,7 +222,7 @@ def rec2sph():
         
         xy__2 = r ** 2 - z ** 2
         
-        az = atan2(y,  x)
+        az = atan2(y, x)
         az_t = (x * y_t - y * x_t) / xy__2
         
         el = asin(z / r)
