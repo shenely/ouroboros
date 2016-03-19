@@ -25,10 +25,6 @@ class System(object):
         #System-level data and control
         self._data = {(None, kw): kwargs[kw] for kw in kwargs}
         self._ctrl = dict()
-        
-        #All time must pass through here...
-        self._clock = [self._data[(None, "t")]]
-        self.clock()#...so it's an hour glass...
 
         #Internal socket stuff
         context = zmq.Context.instance()
@@ -45,16 +41,6 @@ class System(object):
         """Run!"""
         IOLoop.instance().add_callback(Thread(target=self._env.run).start)
         IOLoop.instance().start()
-
-    def clock(self):
-        def wrapper():
-            while True:
-                yield self._env.timeout(1)
-                
-                #Jump to next time
-                self._data[(None, "t")] = heapq.heappop(self._clock)
-                
-        self._env.process(wrapper())
         
     def at(self, t):
         """Trigger at a specific tick"""
@@ -62,14 +48,10 @@ class System(object):
         
         if name not in self._ctrl:
             def wrapper():
-                heapq.heappush(self._clock, t)
-                
                 self._ctrl[(None, name)] = self._env.event()
-                
-                while self._data[(None, "t")] > t:
-                    yield self._env.timeout(1)
-                else:
-                    self._ctrl[(None, name)].succeed()
+                yield self._env.timeout(t - self._env.now)
+                self._data[(None, "t")] = self._env.now
+                self._ctrl[(None, name)].succeed()
                 
         self._env.process(wrapper())
         
@@ -81,15 +63,10 @@ class System(object):
         
         if name not in self._ctrl:
             def wrapper():
-                t = self._data[(None, "t")] + dt
-                heapq.heappush(self._clock, t)
-                
                 self._ctrl[(None, name)] = self._env.event()
-            
-                while self._data[(None, "t")] != t:
-                    yield self._env.timeout(1)
-                else:
-                    self._ctrl[(None, name)].succeed()
+                yield self._env.timeout(dt)
+                self._data[(None, "t")] = self._env.now
+                self._ctrl[(None, name)].succeed()
                     
             self._env.process(wrapper())
         
@@ -101,20 +78,11 @@ class System(object):
         
         if name not in self._ctrl:
             def wrapper():
-                t = self._data[(None, "t")] + dt
-                heapq.heappush(self._clock,t)
-                
-                self._ctrl[(None, name)] = self._env.event()
-            
-                while until is None or t < until:
-                    if self._data[(None, "t")] == t:
-                        t = self._data[(None, "t")] + dt
-                        heapq.heappush(self._clock, t)
-                        
-                        self._ctrl[(None, name)].succeed()
-                        self._ctrl[(None, name)] = self._env.event()
-                        
-                    yield self._env.timeout(1)
+                while until is None or self._env.now < until:
+                    self._ctrl[(None, name)] = self._env.event()
+                    yield self._env.timeout(dt)
+                    self._data[(None, "t")] = self._env.now
+                    self._ctrl[(None, name)].succeed()
                     
             self._env.process(wrapper())
         

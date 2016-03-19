@@ -4,11 +4,7 @@ from datetime import datetime, timedelta
 from numpy import array
 
 from core import System
-from clock import *
-from orb import *
-from geo import *
-from vec import *
-import web
+import clock, vec, geo, orb, web
 
 EARTH_RADIUS = 6378.1370
 EARTH_FLATTENING = 1 / 298.257223563
@@ -43,25 +39,27 @@ def main():
              az=radians(-122-(4.0-55.0/60)/60), az_t=0,
              el=radians(37+(23.0+22.0/60)/60), el_t=0)
     sys.init(("orb", "iss"),
-             line1="1 25544U 98067A   16038.90574315  .00010255  00000-0  15975-3 0  9995",
-             line2="2 25544  51.6448 347.7333 0006934  92.9813   9.9319 15.54494719984713")
+             line1="1 40482U 15011A   16078.74527355 -.00000136  00000-0  00000+0 0  9996",
+             line2="2 40482  28.6853 349.9385 8156087 187.0745 174.6813  1.00496442  3732")
+    sys.init(("iss", "apse"), _t_bar=O)
+    sys.init(("iss", "pole"), _t_bar=O)
 
     sys.at(0)
     sys.every(1, until=3600)
 
-    clock(sys, None)
-    sidereal(sys, None, ("earth", "axis"))
-    
-    ground(sys, None, ("geo", "mtv"), ("mtv", "east"))
-    sph2rec(sys, ("geo", "mtv"))
-    geo2rec(sys, "earth", ("geo", "mtv"), ("earth", "mtv"))
+    clock.clock(sys, None)
+    geo.sidereal(sys, None, ("earth", "axis"))
 
-    orbit(sys, None, ("orb", "iss"))
-    nrt2rot(sys, ("earth", "axis"), ("orb", "iss"), ("earth", "iss"))
-    
-    abs2rel(sys, ("earth", "mtv"), ("earth", "iss"), ("gnd", "iss"))
-    fun2obl(sys, ("mtv", "east"), ("geo", "mtv"), ("gnd", "iss"), ("mtv", "iss"))
-    rec2sph(sys, ("mtv", "iss"))
+    orb.model(sys, None, ("orb", "iss"))
+
+    orb.rec2orb(sys, "earth", ("orb", "iss"), ("iss", "apse"), ("iss", "pole"))
+    vec.fun2obl(sys, ("iss", "apse"), ("iss", "pole"), ("orb", "iss"), ("iss", "pqw"))
+
+    vec.rec2sph(sys, ("iss", "pqw"))
+    vec.rec2sph(sys, ("iss", "apse"))
+    vec.rec2sph(sys, ("iss", "pole"))
+
+    orb.sph2kep(sys, ("iss", "pqw"), ("iss", "apse"), ("iss", "pole"), ("iss", "kep"))
 
     sys.run()
     

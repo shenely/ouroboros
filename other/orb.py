@@ -1,4 +1,4 @@
-from math import pi, sqrt, cos, sin, tan, acos, atan
+from math import degrees, pi, sqrt, cos, sin, tan, asin, acos, atan
 
 from numpy import array, dot, cross
 from scipy.linalg import norm
@@ -10,7 +10,7 @@ from core import Process
 from util import K
 
 __all__= ["model",
-          "rec2kep", "kep2rec"]
+          "rec2orb", "sph2kep"]
 
 KILO = 1000
 MICRO = 1e-6
@@ -59,7 +59,7 @@ def model(line1, line2):
 
 @Process((["mu"], [], [], [], []),#earth
          ([], ["rec"], [], ["_bar", "_t_bar"], []),#orbit
-         ([], [], ["rec"], [], ["_bar"]),#node
+         ([], [], ["rec"], [], ["_bar"]),#apse
          ([], [], ["rec"], [], ["_bar"]))#pole
 def rec2orb(mu):
     e_bar = h_bar = None
@@ -71,13 +71,31 @@ def rec2orb(mu):
         r = norm(r_bar)
         r_hat = r_bar / r
         
-        h_bar = cross(r_bar, v_bar)
-        e_bar = cross(v_bar, h_bar) / mu - r_hat
-   
-def sph2sma():pass
-    #a = r * (1 + e * cos(th_rad)) / (1 + e ** 2)
-def sph2ma():pass
-def sph2ecc():pass
-def sph2aop():pass
-def sph2inc():pass
-def sph2raan():pass
+        h_bar = cross(r_bar, v_bar)#angular momentum
+        e_bar = cross(v_bar, h_bar) / mu - r_hat#eccentricity
+
+@Process(([], ["sph"], [], ["r", "az", ], []),#pqw
+         ([], [], [], ["r", "az", "el"], []),#apse
+         ([], [], [], ["az", "el"], []),#pole
+         ([], [], ["kep"], [], ["a", "M", "e", "om", "i", "OM"]))#elements
+def sph2kep():
+    a = M = e = om = i = OM = None
+
+    while True:
+        r, th, e, az, el, OM, i = yield a, M, e, om, i, OM,
+
+        a = r * (1 + e * cos(th)) / (1 - e ** 2)
+
+        E = true2ecc(th, e)
+        M = ecc2mean(E, e)
+
+        print degrees(el), degrees(pi/2-i), sin(el), cos(i)
+
+        om = asin(sin(el) / cos(i))
+        #om = (2 * pi - om) if el < 0 else om
+
+        i = pi / 2 - i
+
+        OM += pi / 2
+
+        print a, degrees(M), e, degrees(om), degrees(i), degrees(OM)
