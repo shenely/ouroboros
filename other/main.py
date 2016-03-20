@@ -39,8 +39,8 @@ def main():
              az=radians(-122-(4.0-55.0/60)/60), az_t=0,
              el=radians(37+(23.0+22.0/60)/60), el_t=0)
     sys.init(("orb", "iss"),
-             line1="1 40482U 15011A   16078.74527355 -.00000136  00000-0  00000+0 0  9996",
-             line2="2 40482  28.6853 349.9385 8156087 187.0745 174.6813  1.00496442  3732")
+             line1="1 25544U 98067A   16079.67549635  .00009878  00000-0  15582-3 0  9994",
+             line2="2 25544  51.6436 144.4524 0001845 329.9530 167.3838 15.54205650991053")
     sys.init(("iss", "apse"), _t_bar=O)
     sys.init(("iss", "pole"), _t_bar=O)
 
@@ -50,7 +50,7 @@ def main():
     clock.clock(sys, None)
     geo.sidereal(sys, None, ("earth", "axis"))
 
-    orb.model(sys, None, ("orb", "iss"))
+    orb.simple(sys, None, ("orb", "iss"))
 
     orb.rec2orb(sys, "earth", ("orb", "iss"), ("iss", "apse"), ("iss", "pole"))
     vec.fun2obl(sys, ("iss", "apse"), ("iss", "pole"), ("orb", "iss"), ("iss", "pqw"))

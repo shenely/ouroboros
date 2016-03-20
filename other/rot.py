@@ -1,4 +1,5 @@
-from numpy import hstack, hsplit
+from numpy import dot, cross, hstack, hsplit
+from scipy.linalg import inv
 from scipy.integrate import ode
 
 from core import Process
@@ -13,12 +14,15 @@ KILO = 1000
 MICRO = 1e-6
 
 @Process((["t_dt"], ["+1*"], [], ["t_dt"], []),
-         (["_bar", "_t_bar"], [], ["rec"], [], ["_bar", "_t_bar"]))
-def model(t0_dt, th0_bar, om0_bar):
-    def rigid(t,y):
+         (["_bar", "_t_bar"], [], ["rec"], [], ["_bar", "_t_bar"]),
+         (["_mat"], [], [], [], []))
+def model(t0_dt, th0_bar, om0_bar, I_mat):
+    I_inv = inv(I_mat)
+
+    def rigid(t, y):
         th_bar, om_bar = hsplit(y, 2)
         
-        dy = hstack((om_bar, O))
+        dy = hstack((om_bar, - dot(I_inv, cross(om_bar, dot(I_mat, om_bar)))))
         
         return dy
     

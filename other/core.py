@@ -127,7 +127,7 @@ class Process(object):
     def __call__(self, func):
         self._func = coroutine(func)
               
-        def caller(sys,*pres):
+        def caller(sys, *pres):
             """Replace function with process"""
             def wrapper():
                 #Pull arguments from data values
@@ -179,7 +179,6 @@ class Process(object):
                                 for o in c.outs
                                 if (j,o) == err.value]#one of the things...
                     except No:
-                        
                         outs = []#nothing!
                     except:
                         outs = []#uh oh...
@@ -190,7 +189,6 @@ class Process(object):
                                 for j,c in enumerate(self._conf) \
                                 for o in c.outs]#no exceptions used
                     finally:
-                        
                         sys.go([(pres[j],o) for j,o in outs])#no matter what
                     
             sys.process(wrapper)

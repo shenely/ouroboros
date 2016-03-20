@@ -6,8 +6,8 @@ from scipy.optimize import root
 from core import Process
 from util import I, J, K
 
-__all__= ["ground", "sidereal",
-          "model",
+__all__= ["model",
+          "sidereal",
           "sph2geo", "geo2rec"]
 
 def geo(R_km, f):
@@ -48,7 +48,7 @@ def geo(R_km, f):
 @Process(([], ["@0"], [], [], []),
          ([], [], ["sph"], ["az", "az_t"], []),
          ([], [], [], [], ["_bar", "_t_bar"]))
-def ground():
+def model():
     """Ground station"""
     az, az_t, = yield
 
@@ -94,8 +94,6 @@ def sidereal():
         th_G %= 360
 
         th_bar = radians(th_G) * K
-
-def model():pass
 
 @Process((["R_km", "f"], [], [], [], []),
          ([], ["sph"], [], ["r", "r_t",
