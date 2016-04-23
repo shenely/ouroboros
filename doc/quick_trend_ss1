@@ -1,0 +1,5 @@
+#!/bin/bash
+
+python tps_auto_trend.py -z --sat-name=SkySat-1 01-Library.ipynb
+
+./nbd
