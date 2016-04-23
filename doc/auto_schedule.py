@@ -7,27 +7,23 @@ import types
 import numpy
 from scipy.optimize import linprog
 
-start_date = datetime.date(2016,5,2)
-time_frame = 14
+time_frame = 28
 flight_ops = [
-    "Alice",
-    "Bob",
-    "Craig",
-    "Eve",
-    "Faythe",
-    "Grace",
-    "Mallory",
-    "Oscar",
-    "Peggy",
-    "Sybil",
-    "Victor",
-    "Walter",
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
 ]
-
 flight_ops = {flight_ops[i]: set((i,)) \
               for i in range(len(flight_ops))}
-
-DAY = datetime.timedelta(days=1)
 
 """
 0: Off-console
@@ -49,61 +45,61 @@ ON_CONSOLE = DAY_SHIFT | NIGHT_SHIFT
 
 ALL_SHIFTS = OFF_CONSOLE | ON_CONSOLE
 
-ALL_OPS_ENGS = flight_ops["Alice"] | \
-                 flight_ops["Bob"] | \
-                 flight_ops["Craig"] | \
-                 flight_ops["Eve"]
+ALL_OPS_ENGS = flight_ops["A"] | \
+               flight_ops["B"] | \
+               flight_ops["C"] | \
+               flight_ops["D"]
 
-ALL_SHIFT_LEADS = flight_ops["Faythe"] | \
-                  flight_ops["Grace"] | \
-                  flight_ops["Mallory"] | \
-                  flight_ops["Oscar"]
+ALL_SHIFT_LEADS = flight_ops["E"] | \
+                  flight_ops["F"] | \
+                  flight_ops["G"] | \
+                  flight_ops["H"]
 
-ALL_SATCONS = flight_ops["Peggy"] | \
-              flight_ops["Sybil"] | \
-              flight_ops["Victor"] | \
-              flight_ops["Walter"]
+ALL_SATCONS = flight_ops["I"] | \
+              flight_ops["J"] | \
+              flight_ops["K"] | \
+              flight_ops["L"]
 
 EVERYBODY = ALL_OPS_ENGS | ALL_SHIFT_LEADS | ALL_SATCONS
 
-start_date -= DAY * start_date.weekday()
-date_range = [start_date + i * DAY \
-              for i in range(time_frame)]
+date_range = range(time_frame)
 
-MONDAY = set([i for i in range(len(date_range)) \
-              if date_range[i].weekday() == 0])
-TUESDAY = set([i for i in range(len(date_range)) \
-               if date_range[i].weekday() == 1])
-WEDNESDAY = set([i for i in range(len(date_range)) \
-                 if date_range[i].weekday() == 2])
-THURSDAY = set([i for i in range(len(date_range)) \
-                if date_range[i].weekday() == 3])
-FRIDAY = set([i for i in range(len(date_range)) \
-              if date_range[i].weekday() == 4])
-SATURDAY = set([i for i in range(len(date_range)) \
-                if date_range[i].weekday() == 5])
-SUNDAY = set([i for i in range(len(date_range)) \
-              if date_range[i].weekday() == 6])
+MONDAY = set([i for i in date_range
+              if i % 7 == 0])
+TUESDAY = set([i for i in date_range
+               if i % 7 == 1])
+WEDNESDAY = set([i for i in date_range
+                 if i % 7 == 2])
+THURSDAY = set([i for i in date_range
+                if i % 7 == 3])
+FRIDAY = set([i for i in date_range
+              if i % 7 == 4])
+SATURDAY = set([i for i in date_range
+                if i % 7 == 5])
+SUNDAY = set([i for i in date_range
+              if i % 7 == 6])
 
 WEEKDAY = MONDAY | TUESDAY | WEDNESDAY | THURSDAY | FRIDAY
 WEEKEND = SATURDAY | SUNDAY
 
 EVERYDAY = WEEKDAY | WEEKEND
 
-WEEK = [set(range(7*i,min(7*(i+1),len(date_range)))) \
-        for i in range(len(date_range)/7)]
+WEEK = [set(range(7*i, min(7*(i+1), len(date_range))))
+        for i in range(time_frame/7)]
 
 def set_of_who(who):
     return flight_ops[who] \
-           if isinstance(who,types.StringTypes) and \
-              who in flight_ops else\
+           if isinstance(who, types.StringTypes) and \
+              who in flight_ops else \
+           set((who,)) \
+           if isinstance(who, types.IntType) else \
            reduce(lambda a,b:a|b,
-                  [flight_ops[me] \
-                   for me in who \
+                  [flight_ops[me]
+                   for me in who
                    if me in flight_ops]) \
-           if isinstance(who,types.ListType) else \
+           if isinstance(who, types.ListType) else \
            who \
-           if isinstance(who,set) else \
+           if isinstance(who, set) else \
            set()
 
 def set_of_what(what):
@@ -111,14 +107,14 @@ def set_of_what(what):
 
 def set_of_when(when):
     return [date_range.index(when)] \
-           if isinstance(when,datetime.date) and \
+           if isinstance(when, types.IntType) and \
               when in date_range else \
-           set([date_range.index(now) \
-                for now in when \
+           set([date_range.index(now)
+                for now in when
                 if now in date_range]) \
-           if isinstance(when,types.ListType) else \
+           if isinstance(when, types.ListType) else \
            when \
-           if isinstance(when,set) else \
+           if isinstance(when, set) else \
            set()
 
 def match_indices(self,other):
@@ -132,41 +128,41 @@ def singular_shift(what):
 
     what = list(what)
 
-    def function(c,A_ub,b_ub,A_eq,b_eq):
+    def function(c, A_ub, b_ub, A_eq, b_eq):
         for i in range(c.shape[0]):
             for j in range(c.shape[2]):
                 a = numpy.zeros_like(c)
                 a[i,what,j] = 1
 
-                A_ub = numpy.append(A_ub,[a],0)
-                b_ub = numpy.append(b_ub,[1],0)
+                A_ub = numpy.append(A_ub, [a], 0)
+                b_ub = numpy.append(b_ub, [1], 0)
         else:
-            return A_ub,b_ub,A_eq,b_eq
+            return A_ub, b_ub, A_eq, b_eq
 
     return function
 
-def transition_shift(start,end,off=1):
+def transition_shift(start, end, off=1):
     start = set_of_what(start)
     end = set_of_what(end)
 
     start = list(start)
     end = list(end)
 
-    def function(c,A_ub,b_ub,A_eq,b_eq):
+    def function(c, A_ub, b_ub, A_eq, b_eq):
         for i in range(c.shape[0]):
             for j in range(c.shape[2]-off):
                 a = numpy.zeros_like(c)
                 a[i,start,j] = 1
                 a[i,end,j+off] = 1
 
-                A_ub = numpy.append(A_ub,[a],0)
-                b_ub = numpy.append(b_ub,[1],0)
+                A_ub = numpy.append(A_ub, [a], 0)
+                b_ub = numpy.append(b_ub, [1], 0)
         else:
-            return A_ub,b_ub,A_eq,b_eq
+            return A_ub, b_ub, A_eq, b_eq
 
     return function
 
-def consecutive_shifts(what,value):
+def consecutive_shifts(what, value):
     what = set_of_what(what)
 
     what = list(what)
@@ -177,44 +173,44 @@ def consecutive_shifts(what,value):
                 a = numpy.zeros_like(c)
                 a[i,what,j:(j+value+1)] = 1
 
-                A_ub = numpy.append(A_ub,[a],0)
-                b_ub = numpy.append(b_ub,[value],0)
+                A_ub = numpy.append(A_ub, [a], 0)
+                b_ub = numpy.append(b_ub, [value], 0)
         else:
-            return A_ub,b_ub,A_eq,b_eq
+            return A_ub, b_ub, A_eq, b_eq
 
     return function
 
-def personnel_count(what,when,req,opt=None):
+def personnel_count(what, when, req, opt=None):
     what = set_of_what(what)
     when = set_of_when(when)
 
     what = list(what)
     when = list(when)
 
-    what,when = match_indices(what,when)
+    what,when = match_indices(what, when)
 
-    def function(c,A_ub,b_ub,A_eq,b_eq):
+    def function(c, A_ub, b_ub, A_eq, b_eq):
         for now in when:
             a = numpy.zeros_like(c)
             a[:,what,now] = 1
 
             if opt is not None:
                 if req > 0:
-                    A_ub = numpy.append(A_ub,[-a],0)
-                    b_ub = numpy.append(b_ub,[-req],0)
+                    A_ub = numpy.append(A_ub, [-a], 0)
+                    b_ub = numpy.append(b_ub, [-req], 0)
 
                 if opt > req:
-                    A_ub = numpy.append(A_ub,[a],0)
-                    b_ub = numpy.append(b_ub,[opt],0)
+                    A_ub = numpy.append(A_ub, [a], 0)
+                    b_ub = numpy.append(b_ub, [opt], 0)
             else:
-                A_eq = numpy.append(A_eq,[-a],0)
-                b_eq = numpy.append(b_eq,[-req],0)
+                A_eq = numpy.append(A_eq, [-a], 0)
+                b_eq = numpy.append(b_eq, [-req], 0)
         else:
-            return A_ub,b_ub,A_eq,b_eq
+            return A_ub, b_ub, A_eq, b_eq
 
     return function
 
-def total_hours(who,when,min,max):
+def total_hours(who, when, min, max):
     who = set_of_who(who)
     when = set_of_when(when)
 
@@ -224,26 +220,26 @@ def total_hours(who,when,min,max):
     off = list(OFF_CONSOLE)
     on = list(ON_CONSOLE)
 
-    when_off,off = match_indices(when,off)
-    when_on,on = match_indices(when,on)
+    when_off,off = match_indices(when, off)
+    when_on,on = match_indices(when, on)
 
-    def function(c,A_ub,b_ub,A_eq,b_eq):
+    def function(c, A_ub, b_ub, A_eq, b_eq):
         for me in who:
             a = numpy.zeros_like(c)
             a[me,off,when_off] = 8
             a[me,on,when_on] = 12
 
-            A_ub = numpy.append(A_ub,[a],0)
-            b_ub = numpy.append(b_ub,[max],0)
+            A_ub = numpy.append(A_ub, [a], 0)
+            b_ub = numpy.append(b_ub, [max], 0)
 
-            A_ub = numpy.append(A_ub,[-a],0)
-            b_ub = numpy.append(b_ub,[-min],0)
+            A_ub = numpy.append(A_ub, [-a], 0)
+            b_ub = numpy.append(b_ub, [-min], 0)
         else:
-            return A_ub,b_ub,A_eq,b_eq
+            return A_ub, b_ub, A_eq, b_eq
 
     return function
 
-def exclude_shift(who,what,when):
+def exclude_shift(who, what, when):
     who = set_of_who(who)
     what = set_of_what(what)
     when = set_of_when(when)
@@ -252,23 +248,23 @@ def exclude_shift(who,what,when):
     when = list(when)
     what = list(what)
 
-    what,who = match_indices(what,who)
+    what,who = match_indices(what, who)
 
     who = who * len(when)
-    when,what = match_indices(when,what)
+    when,what = match_indices(when, what)
 
-    def function(c,A_ub,b_ub,A_eq,b_eq):
+    def function(c, A_ub, b_ub, A_eq, b_eq):
         a = numpy.zeros_like(c)
         a[who,what,when] = 1
 
-        A_eq = numpy.append(A_eq,[a],0)
-        b_eq = numpy.append(b_eq,[0],0)
+        A_eq = numpy.append(A_eq, [a], 0)
+        b_eq = numpy.append(b_eq, [0], 0)
 
-        return A_ub,b_ub,A_eq,b_eq
+        return A_ub, b_ub, A_eq, b_eq
 
     return function
 
-def reserve_shift(who,what,when):
+def reserve_shift(who, what, when):
     who = set_of_who(who)
     what = set_of_what(what)
     when = set_of_when(when)
@@ -277,76 +273,73 @@ def reserve_shift(who,what,when):
     when = list(when)
     what = list(what)
 
-    what,who = match_indices(what,who)
+    what,who = match_indices(what, who)
 
     who *= len(when)
-    when,what = match_indices(when,what)
+    when,what = match_indices(when, what)
 
-    def function(c,A_ub,b_ub,A_eq,b_eq):
+    def function(c, A_ub, b_ub, A_eq, b_eq):
         a = numpy.zeros_like(c)
         a[who,what,when] = 1
 
-        A_eq = numpy.append(A_eq,[a],0)
-        b_eq = numpy.append(b_eq,[len(when)],0)
+        A_eq = numpy.append(A_eq, [a], 0)
+        b_eq = numpy.append(b_eq, [len(when)], 0)
 
-        return A_ub,b_ub,A_eq,b_eq
+        return A_ub, b_ub, A_eq, b_eq
 
     return function
 
 constraints = [
     singular_shift(ALL_SHIFTS),#Pauli exclusion principle
 
-    #From On-Orbit Policy
+    #from On-Orbit Policy
     transition_shift(NIGHT_SHIFT, DAY_SHIFT | OFF_CONSOLE),#no back-to-backs
     consecutive_shifts(ON_CONSOLE, 7),#no more than 7 consecutive shifts
-    personnel_count(DAY_SHIFT, WEEKDAY, 1),#a minimum of two certified
-    personnel_count(DAY_SHIFT, WEEKEND, 2),#a minimum of two certified
-    personnel_count(NIGHT_SHIFT, EVERYDAY, 2),#satellite controllers
+    personnel_count(DAY_SHIFT, WEEKDAY, 1),#one on weekday day shifts
+    personnel_count(DAY_SHIFT, WEEKEND, 2),#two on weekend day shifts
+    personnel_count(NIGHT_SHIFT, EVERYDAY, 2),#two on night shifts
 
-    #From Two Person Ops Requirements
+    #from Two Person Ops Requirements
     personnel_count(SHIFT_LEAD & DAY_SHIFT, EVERYDAY, 1),
     personnel_count(SHIFT_LEAD & NIGHT_SHIFT, EVERYDAY, 1),
 
-    #maximum of 5 off-console satellite controllers per weekday
+    #maximum of 5 off-consoles per weekday
     personnel_count(OFF_CONSOLE, WEEKDAY, 0, 5),
     personnel_count(OFF_CONSOLE, WEEKEND, 0),
 
-    #Repetition planning
-    reserve_shift("Alice", DAY_SHIFT & SHIFT_LEAD, datetime.date(2016,5,2)),
-    #reserve_shift("Bob", DAY_SHIFT & SHIFT_LEAD, datetime.date(2016,5,3)),
-    reserve_shift("Craig", DAY_SHIFT & SHIFT_LEAD, datetime.date(2016,5,4)),
-    #reserve_shift("Eve", DAY_SHIFT & SHIFT_LEAD, datetime.date(2016,5,5)),
-
-    #reserve_shift("Alice", DAY_SHIFT & SHIFT_LEAD, datetime.date(2016,5,9)),
-    reserve_shift("Bob", DAY_SHIFT & SHIFT_LEAD, datetime.date(2016,5,10)),
-    #reserve_shift("Craig", DAY_SHIFT & SHIFT_LEAD, datetime.date(2016,5,11)),
-    reserve_shift("Eve", DAY_SHIFT & SHIFT_LEAD, datetime.date(2016,5,12)),
-
-    #Operations engineers
+    #cerfication restrictions
     exclude_shift(ALL_OPS_ENGS, OFF_CONSOLE | NIGHT_SHIFT, WEEKDAY),
     exclude_shift(ALL_OPS_ENGS, ALL_SHIFTS, WEEKEND),
-    total_hours("Alice", WEEK[0], 12, 12), total_hours("Alice", WEEK[1], 0, 0),
-    total_hours("Bob", WEEK[0], 0, 0), total_hours("Bob", WEEK[1], 12, 12),
-    total_hours("Craig", WEEK[0], 12, 12), total_hours("Craig", WEEK[1], 0, 0),
-    total_hours("Eve", WEEK[0], 0, 0), total_hours("Eve", WEEK[1], 12, 12),
+    exclude_shift(ALL_SATCONS, SHIFT_LEAD, EVERYDAY),
+]
 
-    #Shift leads
-    total_hours("Faythe", WEEK[0], 36, 48), total_hours("Faythe", WEEK[1], 36, 48),
-    total_hours("Grace", WEEK[0], 36, 48), total_hours("Grace", WEEK[1], 36, 48),
-    total_hours("Mallory", WEEK[0], 36, 48), total_hours("Mallory", WEEK[1], 36, 48),
-    total_hours("Oscar", WEEK[0], 36, 48), total_hours("Oscar", WEEK[1], 36, 48),
+#Repetition planning
+constraints += [
+    reserve_shift("A", DAY_SHIFT & SHIFT_LEAD, MONDAY & (WEEK[0] | WEEK[2])),
+    reserve_shift("B", DAY_SHIFT & SHIFT_LEAD, TUESDAY & (WEEK[1] | WEEK[3])),
+    reserve_shift("C", DAY_SHIFT & SHIFT_LEAD, WEDNESDAY & (WEEK[0] | WEEK[2])),
+    reserve_shift("D", DAY_SHIFT & SHIFT_LEAD, THURSDAY & (WEEK[1] | WEEK[3]))
+]
 
-    #Satellite controllers
-    exclude_shift(ALL_SATCONS,SHIFT_LEAD,EVERYDAY),
-    total_hours("Peggy", WEEK[0], 36, 48), total_hours("Peggy", WEEK[1], 36, 48),
-    total_hours("Sybil", WEEK[0], 36, 48), total_hours("Sybil", WEEK[1], 36, 48),
-    total_hours("Victor", WEEK[0], 36, 48), total_hours("Victor", WEEK[1], 36, 48),
-    total_hours("Walter", WEEK[0], 36, 48), total_hours("Walter", WEEK[1], 36, 48),
+#Operations engineers
+constraints += [
+    total_hours(name, week, 12, 12)
+    if i % 2 == j % 2 else
+    total_hours(name, week, 0, 0)
+    for i, name in enumerate(ALL_OPS_ENGS)
+    for j, week in enumerate(WEEK)
+]
+
+#Satellite controllers
+constraints += [
+    total_hours(name, week, 0, 48)
+    for name in ALL_SHIFT_LEADS | ALL_SATCONS
+    for week in WEEK
 ]
 
 def main():
-    c = numpy.zeros((len(flight_ops),len(ALL_SHIFTS),time_frame))
-    c = numpy.zeros_like(c,dtype=int)
+    c = numpy.zeros((len(flight_ops), len(ALL_SHIFTS), time_frame))
+    c = numpy.zeros_like(c, dtype=int)
 
     A_ub = numpy.zeros((0,)+c.shape)
     b_ub = numpy.zeros((0,))
@@ -361,27 +354,34 @@ def main():
     c[:,on,:] = 12
 
     for constraint in constraints:
-        A_ub,b_ub,A_eq,b_eq = constraint(c,A_ub,b_ub,A_eq,b_eq)
+        A_ub, b_ub, A_eq, b_eq = constraint(c, A_ub, b_ub, A_eq, b_eq)
 
-    print A_ub.shape,A_eq.shape
+    print A_ub.shape, A_eq.shape
 
     result = linprog(c.reshape((c.shape[0]*c.shape[1]*c.shape[2],)),
-                     A_ub.reshape((A_ub.shape[0],A_ub.shape[1]*A_ub.shape[2]*A_ub.shape[3],)),b_ub,
-                     A_eq.reshape((A_eq.shape[0],A_eq.shape[1]*A_eq.shape[2]*A_eq.shape[3],)),b_eq,
-                     bounds=(0,1),options={"disp":True,"maxiter":4000,"tol":0.1})
+                     A_ub.reshape((A_ub.shape[0],
+                                   A_ub.shape[1]*A_ub.shape[2]*A_ub.shape[3],)),
+                     b_ub,
+                     A_eq.reshape((A_eq.shape[0],
+                                   A_eq.shape[1]*A_eq.shape[2]*A_eq.shape[3],)),
+                     b_eq,
+                     bounds=(0,1),
+                     options={"disp":True,
+                              "maxiter":4000,
+                              "tol":0.1})
 
-    x = numpy.round(result.x,0)\
+    x = numpy.round(result.x, 0)\
              .reshape(c.shape)\
              .astype(int)
 
-    with open('2016-05-02.csv', 'wb') as spreadsheet:
+    with open('test.csv', 'wb') as spreadsheet:
         writer = csv.writer(spreadsheet)
 
         o = list(OFF_CONSOLE)
         D = list(DAY_SHIFT)
         N = list(NIGHT_SHIFT)
 
-        writer.writerow(["Name"] + [date.isoformat() for date in date_range])
+        writer.writerow(["Name"] + date_range)
         for i in list(EVERYBODY):
             for name in flight_ops:
                 if i in flight_ops[name]:
