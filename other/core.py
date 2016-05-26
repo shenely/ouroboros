@@ -17,8 +17,8 @@ class System(object):
     """Simulation system"""
 
     def __init__(self, t=0, **kwargs):
-        self._env = simpy.RealtimeEnvironment()
-        #self._env = simpy.Environment()
+        #self._env = simpy.RealtimeEnvironment()
+        self._env = simpy.Environment()
         
         kwargs["t"] = t
 
@@ -164,32 +164,31 @@ class Process(object):
                                                      for a in c.args]))
 
                             raise err
-                    except All:
+                    except All:#all the things!
                         outs = [(j,o) \
                                 for j,c in enumerate(self._conf) \
-                                for o in c.outs]#all the things!
-                    except Many as err:
-                        outs = [(j,o) \
-                                for j,c in enumerate(self._conf) \
-                                for o in c.outs
-                                if (j,o) in err.value]#some of the things.
-                    except One as err:
+                                for o in c.outs]
+                    except Many as err:#some of the things.
                         outs = [(j,o) \
                                 for j,c in enumerate(self._conf) \
                                 for o in c.outs
-                                if (j,o) == err.value]#one of the things...
-                    except No:
-                        outs = []#nothing!
-                    except:
-                        outs = []#uh oh...
-                        
+                                if (j,o) in err.value]
+                    except One as err:#one of the things...
+                        outs = [(j,o) \
+                                for j,c in enumerate(self._conf) \
+                                for o in c.outs
+                                if (j,o) == err.value]
+                    except No:#nothing!
+                        outs = []
+                    except:#uh oh...
+                        outs = []
                         raise
-                    else:
+                    else:#no exceptions used
                         outs = [(j,o) \
                                 for j,c in enumerate(self._conf) \
-                                for o in c.outs]#no exceptions used
-                    finally:
-                        sys.go([(pres[j],o) for j,o in outs])#no matter what
+                                for o in c.outs if c.outs[o]]
+                    finally:#no matter what
+                        sys.go([(pres[j],o) for j,o in outs])
                     
             sys.process(wrapper)
             

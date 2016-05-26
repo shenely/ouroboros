@@ -39,7 +39,7 @@ def mean2ecc(M_rad, e):
     return E_rad
 
 @Process((["t_dt"], ["+1*"], [], ["t_dt"], []),#system
-         (["_bar", "_t_bar"], [], ["rec"], [], ["_bar", "_t_bar"]),#sat
+         (["_bar", "_t_bar"], [], {"rec":True}, [], ["_bar", "_t_bar"]),#sat
          (["mu"], [], [], [], []))#earth
 def model(t0_dt, r0_bar, v0_bar, mu):
     """Propagate orbit"""
@@ -70,7 +70,7 @@ def model(t0_dt, r0_bar, v0_bar, mu):
         r_bar, v_bar = hsplit(y, 2)
 
 @Process(([], ["+1*"], [], ["t_dt"], []),#system
-         (["line1", "line2"], [], ["rec"], [], ["_bar", "_t_bar"]))#TLE
+         (["line1", "line2"], [], {"rec":True}, [], ["_bar", "_t_bar"]))#TLE
 def simple(line1, line2):
     """Propagate orbit"""
     r_bar = v_bar = None
@@ -91,8 +91,8 @@ def simple(line1, line2):
 
 @Process((["mu"], [], [], [], []),#earth
          ([], ["rec"], [], ["_bar", "_t_bar"], []),#orbit
-         ([], [], ["rec"], [], ["_bar"]),#apse
-         ([], [], ["rec"], [], ["_bar"]))#pole
+         ([], [], {"rec":True}, [], ["_bar"]),#apse
+         ([], [], {"rec":True}, [], ["_bar"]))#pole
 def rec2orb(mu):
     e_bar = h_bar = None
     
@@ -109,7 +109,7 @@ def rec2orb(mu):
 @Process(([], ["sph"], [], ["r", "az", ], []),#pqw
          ([], [], [], ["r", "az", "el"], []),#apse
          ([], [], [], ["az", "el"], []),#pole
-         ([], [], ["kep"], [], ["a", "M", "e", "om", "i", "OM"]))#elements
+         ([], [], {"kep":True}, [], ["a", "M", "e", "om", "i", "OM"]))#elements
 def sph2kep():
     a = M = e = om = i = OM = None
 

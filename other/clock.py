@@ -3,7 +3,7 @@ from core import Process
 __all__= ["clock"]
 
 @Process((["t", "t_dt", "dt_td"],
-          ["+1*"], ["clock"],
+          ["+1*"], {"clock":True},
           ["t"], ["t_dt"]))
 def clock(t,t_dt,dt_td):
     """Clock"""

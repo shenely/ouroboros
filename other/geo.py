@@ -46,7 +46,7 @@ def geo(R_km, f):
     return fun, jac
 
 @Process(([], ["@0"], [], [], []),
-         ([], [], ["sph"], ["az", "az_t"], []),
+         ([], [], {"sph": True}, ["az", "az_t"], []),
          ([], [], [], [], ["_bar", "_t_bar"]))
 def model():
     """Ground station"""
@@ -61,7 +61,7 @@ def model():
     yield _hat, _t_hat
 
 @Process(([], ["+1*"], [], ["t_dt"], []),
-         ([], [], ["rec"], [], ["_bar", "_t_bar"]))
+         ([], [], {"rec":True}, [], ["_bar", "_t_bar"]))
 def sidereal():
     """Sidereal time"""
     th_bar = 100.4606184 * K
@@ -99,11 +99,11 @@ def sidereal():
          ([], ["sph"], [], ["r", "r_t",
                             "az", "az_t",
                             "el", "el_t"], []),
-         ([], [], ["rec"], [], ["_bar", "_t_bar"]),
+         ([], [], {"rec":True}, [], ["_bar", "_t_bar"]),
          ([], [], [], [], ["_bar", "_t_bar"]),
-         ([], [], ["sph"], [], ["r", "r_t",
-                                "az", "az_t",
-                                "el", "el_t"]))
+         ([], [], {"sph":True}, [], ["r", "r_t",
+                                     "az", "az_t",
+                                     "el", "el_t"]))
 def sph2geo(R_km, f):
     """Spherical to geodetic coordinates"""
     r_bar = v_bar = _1_hat = _1_t_hat = alt = alt_t = lon = lon_t = lat = lat_t = None
@@ -168,7 +168,7 @@ def sph2geo(R_km, f):
          ([], ["sph"], [], ["r", "r_t",
                             "az", "az_t",
                             "el", "el_t"], []),
-         ([], [], ["rec"], [], ["_bar", "_t_bar"]))
+         ([], [], {"rec":True}, [], ["_bar", "_t_bar"]))
 def geo2rec(R_km, f):
     """Geodetic to rectangular coordinates"""
     r_bar = v_bar = None

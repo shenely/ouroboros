@@ -12,7 +12,7 @@ __all__= ["abs2rel", "rel2abs",
 
 @Process(([], [], [], ["_bar", "_t_bar"], []),#source
          ([], ["rec"], [], ["_bar", "_t_bar"], []),#target
-         ([], [], ["rec"], [], ["_bar", "_t_bar"]))#relative
+         ([], [], {"rec":True}, [], ["_bar", "_t_bar"]))#relative
 def abs2rel():
     """Absolute to relative origins"""
     _bar = _t_bar = None
@@ -24,7 +24,7 @@ def abs2rel():
         _t_bar = _2_t_bar - _1_t_bar
     
 @Process(([], [], [], ["_bar", "_t_bar"], []),#source
-         ([], [], ["rec"], [], ["_bar", "_t_bar"]),#target
+         ([], [], {"rec":True}, [], ["_bar", "_t_bar"]),#target
          ([], ["rec"], [], ["_bar", "_t_bar"], []))#relative
 def rel2abs():
     """Relative to absolute origin"""
@@ -38,7 +38,7 @@ def rel2abs():
 
 @Process(([], ["rec"], [], ["_bar", "_t_bar"], []),#axis
          ([], ["rec"], [], ["_bar", "_t_bar"], []),#inertial
-         ([], [], ["rec"], [], ["_bar", "_t_bar"]))#rotating
+         ([], [], {"rec":True}, [], ["_bar", "_t_bar"]))#rotating
 def nrt2rot():
     """Inertial to rotating frame"""
     _bar = _t_bar = None
@@ -76,7 +76,7 @@ def nrt2rot():
                (1 - cos_th) * dot_th * th_hat
             
 @Process(([], ["rec"], [], ["_bar", "_t_bar"], []),#axis
-         ([], [], ["rec"], [], ["_bar", "_t_bar"]),#inertial
+         ([], [], {"rec":True}, [], ["_bar", "_t_bar"]),#inertial
          ([], ["rec"], [], ["_bar", "_t_bar"], []))#rotating
 def rot2nrt(th_bar, r_bar):
     """Rotating to inertial frame"""
@@ -117,7 +117,7 @@ def rot2nrt(th_bar, r_bar):
 @Process(([], [], [], ["_bar", "_t_bar"], []),#node
          ([], [], [], ["_bar", "_t_bar"], []),#pole
          ([], ["rec"], [], ["_bar", "_t_bar"], []),#fundamental
-         ([], [], ["rec"], [], ["_bar", "_t_bar"]))#oblique
+         ([], [], {"rec":True}, [], ["_bar", "_t_bar"]))#oblique
 def fun2obl():
     """Fundamental to oblique plane"""
     _bar = _t_bar = None
@@ -161,7 +161,7 @@ def fun2obl():
     
 @Process(([], [], [], ["_bar", "_t_bar"], []),#zero
          ([], [], [], ["_bar", "_t_bar"], []),#pole
-         ([], [], ["rec"], [], ["_bar", "_t_bar"]),#fundamental
+         ([], [], {"rec":True}, [], ["_bar", "_t_bar"]),#fundamental
          ([], ["rec"], [], ["_bar", "_t_bar"], []))#oblique
 def obl2fun():
     """Oblique to fundamental plane"""
@@ -204,7 +204,7 @@ def obl2fun():
                _bar[1] * j_hat + \
                _bar[2] * k_hat
            
-@Process(([], ["rec"], ["sph"],
+@Process(([], ["rec"], {"sph":True},
           ["_bar", "_t_bar"], 
           ["r", "r_t", "az", "az_t", "el", "el_t"]))#vector
 def rec2sph():
@@ -228,7 +228,7 @@ def rec2sph():
         el = asin(z / r)
         el_t = (z_t - (r_t / r) * z) / sqrt(xy__2)
                
-@Process(([], ["sph"], ["rec"],
+@Process(([], ["sph"], {"rec":True},
           ["r", "r_t", "az", "az_t", "el", "el_t"],
           ["_bar", "_t_bar"]))#vector
 def sph2rec():
