@@ -26,3 +26,18 @@ rot
 	rpy2quat
 	quat2mat
 	mat2quat
+	
+
+[
+  {
+    name: String,
+    time: {
+	    at: [ Number, ...],
+	    after: [ Number, ...]
+	    every: [ Number, ...]
+    },
+    data: [ { name: String, args: [ { key: String, value: Object }, ... ] }, ... ],
+    ctrl: [ { name: String, args: [ String, ... ] }, ... ]
+  },
+  ...
+]

@@ -1,7 +1,7 @@
 import pickle
 
 from ouroboros.behavior import CompositeBehavior
-from ouroboros.srv.persist import PersistenceService
+from ouroboros.service.persist import PersistenceService
 
 service = PersistenceService()
 

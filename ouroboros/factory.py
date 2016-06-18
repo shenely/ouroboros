@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   24 July 2015
+Modified:   18 June 2016
 
 TBD.
 
@@ -30,6 +30,7 @@ Date          Author          Version     Description
 2015-04-20    shenely         2.0         Complete rewrite
 2015-06-04    shenely         2.1         Passes args down to node
 2015-07-24    shenely         2.2         Pass process instead of executive
+2016-06-18    shenely         2.3         General code cleanup
 
 
 """
@@ -42,12 +43,12 @@ Date          Author          Version     Description
 import pickle
 
 #External libraries
-from networkx import union,relabel_nodes
+from networkx import union, relabel_nodes
 
 #Internal libraries
-from ouroboros.behavior import PrimitiveBehavior
-from ouroboros.lib.watch import WatcherPrimitive
-from ouroboros.lib.listen import ListenerPrimitive
+from .behavior import PrimitiveBehavior
+from .library.watch import WatcherPrimitive
+from .library.listen import ListenerPrimitive
 #
 ##################=
 
@@ -63,15 +64,15 @@ __all__ = ["BehaviorFactory"]
 ####################
 # Constant section #
 #
-__version__ = "2.2"#current version [major.minor]
+__version__ = "2.3"#current version [major.minor]
 #
 ####################
 
 class BehaviorFactory(type):
     """Behavior factory"""
     
-    def __new__(cls,app,name):        
-        doc = app._database.get({ "name": name })# from database
+    def __new__(cls, app, name):        
+        doc = app._database.get({"name": name})# from database
         #doc = app._database.get(name=name)#TODO:  Do it this way
         
         #Check if behavior has been memoized
@@ -81,53 +82,53 @@ class BehaviorFactory(type):
             obj = pickle.loads(doc.path)# import path for behavior
             
             #All behaviors are pushed through factory
-            obj = super(BehaviorFactory,cls).__new__(cls,str(doc.name),(obj,),
-                                                     dict(app=app,doc=doc))
+            obj = super(BehaviorFactory,cls).__new__(cls, str(doc.name), (obj,),
+                                                     {"app": app, "doc": doc})
             
             #Memoize behavior in application
             app._memoized_classes[name] = obj
                   
         return obj
     
-    def __init__(self,app,name):
+    def __init__(self, app, name):
         #Data interfaces store the behavior classes only
-        self._required_data = {data.name: BehaviorFactory(app,data.type) \
+        self._required_data = {data.name: BehaviorFactory(app, data.type)
                                for data in self.doc.faces.data.require}
-        self._provided_data = {data.name: BehaviorFactory(app,data.type) \
+        self._provided_data = {data.name: BehaviorFactory(app, data.type)
                                for data in self.doc.faces.data.provide}
             
         #Control interfaces do not have associated behaviors
         self._input_control = self.doc.faces.control.input
         self._output_control = self.doc.faces.control.output
         
-    def __call__(self,name,top=True,*args,**kwargs):
+    def __call__(self, name, top=True, *args, **kwargs):
         #Instantiate behaviors (should this really do anything?)
-        obj = super(BehaviorFactory,self).__call__(name,*args,**kwargs)
+        obj = super(BehaviorFactory, self).__call__(name, *args, **kwargs)
         
         #Interfaces are defined via behavior classes, not instances
         for face in self._required_data:# required data interfaces
-            obj._data_graph.add_node((obj.__class__.__name__,face),
+            obj._data_graph.add_node((obj.__class__.__name__, face),
                                      obj=self._required_data[face])
         for face in self._provided_data:# provided data interfaces
-            obj._data_graph.add_node((obj.__class__.__name__,face),
+            obj._data_graph.add_node((obj.__class__.__name__, face),
                                      obj=self._provided_data[face])
         for face in self._input_control:# input control interfaces
-            obj._control_graph.add_node((obj.__class__.__name__,face),
+            obj._control_graph.add_node((obj.__class__.__name__, face),
                                         obj=None)
         for face in self._output_control:# output control interfaces
-            obj._control_graph.add_node((obj.__class__.__name__,face),
+            obj._control_graph.add_node((obj.__class__.__name__, face),
                                         obj=None)
         
         for node in self.doc.nodes:
             #Create each contained behaviors
-            behavior = BehaviorFactory(self.app,node.type)\
-                                      (node.name,False,
-                                       **{arg.name: arg.value \
+            behavior = BehaviorFactory(self.app, node.type)\
+                                      (node.name, False,
+                                       **{arg.name: arg.value
                                           for arg in node.args})
             
             #Add contained behavior to current graphs (both data and control)
-            obj._data_graph.add_node((node.name,),obj=behavior)
-            obj._control_graph.add_node((node.name,),obj=behavior)
+            obj._data_graph.add_node((node.name,), obj=behavior)
+            obj._control_graph.add_node((node.name,), obj=behavior)
             
             #Add a depth of context to the contained behavior's graphs
             data_subgraph = relabel_nodes(behavior._data_graph,
@@ -136,8 +137,8 @@ class BehaviorFactory(type):
                                              lambda x: (node.name,)+x)
             
             #Add the subgraphs to their respective graphs
-            obj._data_graph = union(obj._data_graph,data_subgraph)
-            obj._control_graph = union(obj._control_graph,control_subgraph)
+            obj._data_graph = union(obj._data_graph, data_subgraph)
+            obj._control_graph = union(obj._control_graph, control_subgraph)
             
             #Remove all interfaces inherited from the subgraphs
             for face in behavior._required_data:# required data interfaces
@@ -158,21 +159,21 @@ class BehaviorFactory(type):
                                                 face))
                 
         #XXX:  Initialize variables *after* object creation
-        obj._update(*args,**kwargs)
+        obj.init(*args, **kwargs)
         
         if top:
             #Add watchers to the event loop
             for node,data in obj._data_graph.nodes_iter(data=True):
                 if isinstance(data["obj"],WatcherPrimitive):
-                    data["obj"].watch(self.app._process,obj,node,
+                    data["obj"].watch(self.app._process, obj,node,
                                       *data["obj"]._provided_data)
-                    data["obj"].watch(self.app._process,obj,node,
+                    data["obj"].watch(self.app._process, obj,node,
                                       *data["obj"]._required_data)
             
             #Add listeners to the event loop
             for node,data in obj._control_graph.nodes_iter(data=True):
-                if isinstance(data["obj"],ListenerPrimitive):
-                    data["obj"].listen(self.app._process,obj,node)
+                if isinstance(data["obj"], ListenerPrimitive):
+                    data["obj"].listen(self.app._process, obj,node)
             
         #Create new edges in data graph
         for edge in self.doc.edges.data:
@@ -234,7 +235,7 @@ class BehaviorFactory(type):
             for source_name in source_iter:
                 #Extract source for some checks
                 source = obj._data_graph.node\
-                             [(edge.source.node,)+source_name]["obj"]
+                             [(edge.source.node,) + source_name]["obj"]
                     
                 if isinstance(source,BehaviorFactory):
                     pass# an interface is being referenced
@@ -246,11 +247,11 @@ class BehaviorFactory(type):
                 for target_name in target_iter:
                     #Extract target for some checks
                     target = obj._data_graph.node\
-                                 [(edge.target.node,)+target_name]["obj"]
+                                 [(edge.target.node,) + target_name]["obj"]
                     
-                    if isinstance(target,BehaviorFactory):
+                    if isinstance(target, BehaviorFactory):
                         pass# an interface is being referenced
-                    elif isinstance(target,PrimitiveBehavior):
+                    elif isinstance(target, PrimitiveBehavior):
                         target = target.__class__# checks are made on classes
                     else:
                         raise#cannot require/provide composite behaviors
@@ -263,8 +264,8 @@ class BehaviorFactory(type):
                                       target.__mro__[1])
                     
                     #Create data edge between source and target
-                    obj._data_graph.add_edge((edge.source.node,)+source_name,
-                                             (edge.target.node,)+target_name)
+                    obj._data_graph.add_edge((edge.source.node,) + source_name,
+                                             (edge.target.node,) + target_name)
         
         #Create new edges in control graph
         for edge in self.doc.edges.control:
@@ -294,10 +295,10 @@ class BehaviorFactory(type):
                                         .predecessors((source.__class__.__name__,
                                                        edge.source.face))
                                         
-                    mode_iter = iter([source._control_graph.edge[node]\
+                    mode_iter = iter([source._control_graph.edge[node]
                                                                 [(source.__class__.__name__,
-                                                                  edge.source.face)]\
-                                                                ["mode"] \
+                                                                  edge.source.face)]
+                                                                ["mode"]
                                       for node in source_iter])
             
             if edge.target.node == obj.__class__.__name__:
@@ -328,8 +329,8 @@ class BehaviorFactory(type):
                 mode = mode_iter.next()
                 for target_name in target_iter:
                     #Create control edge between source and target
-                    obj._control_graph.add_edge((edge.source.node,)+source_name,
-                                                (edge.target.node,)+target_name,
+                    obj._control_graph.add_edge((edge.source.node,) + source_name,
+                                                (edge.target.node,) + target_name,
                                                 mode=mode)
         
         return obj

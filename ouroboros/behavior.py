@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   01 July 2015
+Modified:   18 June 2016
 
 TBD.
 
@@ -40,6 +40,7 @@ Date          Author          Version     Description
                                              tree traversal steps
 2015-02-08    shenely         2.0         Complete rewrite
 2015-07-01    shenely         2.1         Added uninstall method
+2016-06-18    shenely         2.2         General code cleanup
 """
 
 
@@ -54,7 +55,7 @@ from networkx import DiGraph
 from bson import json_util
 
 #Internal libraries
-from ouroboros.common import *
+from .common import *
 #
 ##################=
 
@@ -73,15 +74,15 @@ __all__ = ["behavior",
 ####################
 # Constant section #
 #
-__version__ = "2.1"#current version [major.minor]
+__version__ = "2.2"#current version [major.minor]
 
-DEFAULT_DOCUMENT = dict(story=dict(),
-                        faces=dict(data=dict(require=list(),
-                                             provide=list()),
-                                   control=dict(input=list(),
-                                                output=list())),
-                        nodes=[ ],
-                        edges=dict(data=list(),control=list()))
+DEFAULT_DOCUMENT = {"story": {},
+                    "faces": {"data":{"require":[],
+                                      "provide":[]},
+                              "control":{"input":[],
+                                         "output":[]}},
+                    "nodes":[],
+                    "edges":{"data":[],"control":[]}}
 #
 ####################
 
@@ -108,58 +109,52 @@ class BehaviorObject(BaseObject):
     """Generic behavior object"""
     
     @classmethod
-    def install(cls,service):
+    def install(cls, service):
         cls.doc["path"] = pickle.dumps(cls)
         
-        service.set({ "name": cls.doc["name"] },cls.doc)
+        service.set({ "name": cls.doc["name"] }, cls.doc)
     
     @classmethod
-    def uninstall(cls,service):
+    def uninstall(cls, service):
         cls.doc["path"] = pickle.dumps(cls)
         
         service.delete({ "name": cls.doc["name"] })
     
     @classmethod
-    def reinstall(cls,service):
+    def reinstall(cls, service):
         cls.uninstall(service)
         cls.install(service)
     
-    def __init__(self,name,*arg,**kwargs):
+    def __init__(self, name, *arg, **kwargs):
         self.name = name
         
         self._data_graph = DiGraph()
         self._control_graph = DiGraph()
         
-    def _update(self,*args,**kwargs):
+    def init(self, *args, **kwargs):
         for key in kwargs:
             value = kwargs[key]
             
             self._data_graph.node[(key,)]["obj"].value = value
-    
-    def set_required_data(self,process,):pass
-    def get_provided_data(self):pass
-    
-    def recv_input_control(self):pass
-    def send_output_control(self):pass
 
 @behavior(name="PrimitiveBehavior",
           type="BehaviorObject")
 class PrimitiveBehavior(BehaviorObject):
     """Primitive (simple) behavior"""
     
-    def __call__(self,face):
+    def __call__(self, face):
         return self._process(face)
     
     def __enter__(self):
         return self
     
-    def __exit__(self,type,value,traceback):
+    def __exit__(self, type, value, traceback):
         pass
     
-    def default(self,obj):
+    def default(self, obj):
         return json_util.default(obj)
     
-    def object_hook(self,dct):
+    def object_hook(self, dct):
         return json_util.object_hook(dct)
 
 @behavior(name="CompositeBehavior",
@@ -168,7 +163,7 @@ class CompositeBehavior(BehaviorObject):
     """Composite (complex) behavior"""
     
 def install():
-    from ouroboros.srv.persist import PersistenceService
+    from .service.persist import PersistenceService
     
     service = PersistenceService()
     service.start()
