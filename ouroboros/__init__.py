@@ -1,12 +1,12 @@
 def install():
-    from ouroboros.srv.persist import PersistenceService
+    from .service.persist import PersistenceService
     
     service = PersistenceService()
     
     service.start()
     service.run()
     
-    from . import lib as _
+    from . import library as _
     _.install(service)
     
     #from . import ext as _
