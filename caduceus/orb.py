@@ -132,6 +132,10 @@ def sph2kep():
         i = pi / 2 - i#from angular momentum elevation
 
         #Right ascension of the ascending node
+<<<<<<< HEAD
         OM += pi / 2#from angular momentum azimuth
         
         print a, M, e, om, i, OM
+=======
+        OM += pi / 2#from angular momentum azimuth
+>>>>>>> branch 'master' of https://github.com/shenely/ouroboros.git
