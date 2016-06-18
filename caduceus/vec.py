@@ -14,11 +14,7 @@ __all__= ["abs2rel", "rel2abs",
          ([], ["rec"], [], ["_bar", "_t_bar"], []),#target
          ([], [], {"rec":True}, [], ["_bar", "_t_bar"]))#relative
 def abs2rel():
-<<<<<<< HEAD
     """Absolute to relative origin"""
-=======
-    """Absolute to relative origins"""
->>>>>>> branch 'master' of https://github.com/shenely/ouroboros.git
     _bar = _t_bar = None
     
     while True:
