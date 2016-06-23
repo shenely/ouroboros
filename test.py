@@ -1,7 +1,7 @@
 import pickle
 
 from ouroboros.behavior import CompositeBehavior
-from ouroboros.service.persist import PersistenceService
+from ouroboros.srv.persist import PersistenceService
 
 service = PersistenceService()
 
@@ -33,7 +33,8 @@ clock = {
             "control":[{"source":{"node":"clock","face":"output"},
                         "target":{"node":"put","face":"input"}},
                        {"source":{"node":"put","face":"output"},
-                        "target":{"node":"Clock","face":"output"}}]}}
+                        "target":{"node":"Clock","face":"output"},
+                        "default":True}]}}
 service.set({ "name": clock["name"] },clock)
 
 transmitter = {

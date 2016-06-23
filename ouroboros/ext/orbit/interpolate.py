@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   18 June 2016
+Modified:   22 June 2016
 
 TBD.
 
@@ -18,6 +18,7 @@ Date          Author          Version     Description
 2015-07-07    shenely         1.0         Initial revision
 2015-07-25    shenely         1.1         Added new (Hermite) interpolators
 2016-06-18    shenely         1.2         General code cleanup
+2016-06-22    shenely         1.3         Refactoring directories
 
 """
 
@@ -34,7 +35,7 @@ import numpy.polynomial
 
 #Internal libraries
 from ...behavior import behavior, PrimitiveBehavior
-from ...library.watch import WatcherPrimitive
+from ...lib.watch import WatcherPrimitive
 #
 ##################=
 
@@ -53,7 +54,7 @@ __all__ = ["InterpolatorPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.2"#current version [major.minor]
+__version__ = "1.3"#current version [major.minor]
 # 
 ####################
 

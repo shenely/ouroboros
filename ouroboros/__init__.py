@@ -1,12 +1,12 @@
 def install():
-    from .service.persist import PersistenceService
+    from .srv.persist import PersistenceService
     
     service = PersistenceService()
     
     service.start()
     service.run()
     
-    from . import library as _
+    from . import lib as _
     _.install(service)
     
     #from . import ext as _

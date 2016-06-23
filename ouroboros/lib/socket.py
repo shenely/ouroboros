@@ -25,7 +25,7 @@ Date          Author          Version     Description
 2015-06-04    shenely         1.7         Graph access by tuple
 2015-07-01    shenely         1.8         Added install function
 2015-07-02    shenely         1.9         Cleaned up behavior definitions
-2016-06-18    shenely         1.10         General code cleanup
+2016-06-18    shenely         1.10        General code cleanup
 
 """
 
@@ -42,8 +42,8 @@ import zmq
 
 #Internal libraries
 from ..behavior import behavior, PrimitiveBehavior
-from . import SourcePrimitive,TargetPrimitive
-from .listen import HandlerListener
+from . import SourcePrimitive, TargetPrimitive
+from .listen import HandleListener
 from .watch import WatcherPrimitive
 #
 ##################=
@@ -85,7 +85,7 @@ class SocketPrimitive(PrimitiveBehavior):
            address is not None:
             context = zmq.Context.instance()
             
-            self.value = context.socket(getattr(zmq,type))
+            self.value = context.socket(getattr(zmq, type))
             self.value.connect(address)
         else:
             self.value = None
@@ -113,7 +113,7 @@ class SocketPrimitive(PrimitiveBehavior):
                          {"source":{"node":"message","face":None},
                           "target":{"node":"SocketSubscribe","face":"message"}}],
                  "control":[]})
-class SocketSubscribe(SourcePrimitive, HandlerListener, WatcherPrimitive):
+class SocketSubscribe(SourcePrimitive, HandleListener, WatcherPrimitive):
     
     @property
     def handle(self):

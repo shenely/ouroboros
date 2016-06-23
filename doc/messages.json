@@ -31,12 +31,15 @@
           source: { node: String, face: [String|Null] },
           target: { node: String, face: [String|Null] }
         },
+        ...
       ],
       control: [
         { 
           source: { node: String, face: [String|Number|Boolean] },
-          target: { node: String, face: [String|Number|Boolean]] }
+          target: { node: String, face: [String|Number|Boolean]] },
+          default: Boolean
         },
+        ...
       ]
     }
   },

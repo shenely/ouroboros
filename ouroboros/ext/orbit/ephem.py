@@ -2,8 +2,8 @@ import math
 import logging
 
 from ...behavior import behavior
-from ...library import ActionPrimitive
-from ...library.watch import WatcherPrimitive
+from ...lib import ActionPrimitive
+from ...lib.watch import WatcherPrimitive
 
 @behavior(name="EphemerisPrimitive",
           type="ActionPrimitive")

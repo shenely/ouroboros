@@ -36,8 +36,10 @@ rot
 	    after: [ Number, ...]
 	    every: [ Number, ...]
     },
-    data: [ { name: String, args: [ { key: String, value: Object }, ... ] }, ... ],
-    ctrl: [ { name: String, args: [ String, ... ] }, ... ]
+    data: [ { name: String,
+              args: [ { key: String, value: Object }, ... ] }, ... ],
+    ctrl: [ { name: String,
+              args: [ String, ... ] }, ... ]
   },
   ...
 ]

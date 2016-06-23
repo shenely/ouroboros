@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   24 July 2015
+Modified:   22 June 2016
 
 TBD.
 
@@ -33,6 +33,7 @@ Date          Author          Version     Description
 2015-04-20    shenely         1.8         Support for factory rewrite
 2015-06-04    shenely         1.9         Added examine native method
 2015-07-24    shenely         1.10        Removed socket support
+2016-06-22    shenely         1.11        Control flow via exception
 
 """
 
@@ -41,13 +42,14 @@ Date          Author          Version     Description
 # Import section #
 #
 #Built-in libraries
-from datetime import timedelta
+import datetime
 import logging
 
 #External libraries
-import simpy
+import tornado.ioloop
 
 #Internal libraries
+from ..common import All, Many, One, No
 from . import ServiceObject
 #
 ##################
@@ -64,9 +66,9 @@ __all__ = ["ProcessorService"]
 ####################
 # Constant section #
 #
-__version__ = "1.10"#current version [major.minor]
+__version__ = "1.11"#current version [major.minor]
 
-TIMEOUT = timedelta(0,0,0,100)#time between running
+TIMEOUT = datetime.timedelta(0, 0, 0, 100)#time between running
 
 #Priority/severity (log) scale
 CRITICAL = 1
@@ -79,13 +81,11 @@ TRIVIAL =  10000
 
 
 class ProcessorService(ServiceObject):
-    _env = simpy.RealtimeEnvironment()
-    #_env = simpy.Environment()
+    _loop = tornado.ioloop.IOLoop.current()
                 
     def start(self):
         """Start the event loop."""
-        if super(ProcessorService,self).start():
-            self._start = self._env.event()
+        if super(ProcessorService, self).start():
             self.resume()
             
             return True
@@ -94,7 +94,7 @@ class ProcessorService(ServiceObject):
         
     def stop(self):
         """Stop the event loop."""
-        if super(ProcessorService,self).stop():
+        if super(ProcessorService, self).stop():
             self.pause()
             
             return True
@@ -103,8 +103,9 @@ class ProcessorService(ServiceObject):
             
     def pause(self):
         """Remove main function from event loop."""
-        if super(ProcessorService,self).pause():
-            self._pause.succeed()
+        if super(ProcessorService, self).pause():
+            if self._running:
+                self._loop.stop()
             
             return True
         else:
@@ -112,10 +113,7 @@ class ProcessorService(ServiceObject):
                         
     def resume(self):
         """Inject main function into event loop."""
-        if super(ProcessorService,self).resume():
-            self._pause = self._env.event()
-            self._start.succeed()
-            
+        if super(ProcessorService, self).resume():
             self.run()
             
             return True
@@ -125,41 +123,45 @@ class ProcessorService(ServiceObject):
     def run(self):
         """"""
         if self._running:
-            self._env.run(self._pause)
+            self._loop.start()
         else:
             self.resume()
             
-    def schedule(self,root,path,trigger):
-        def process():
-            try:
-                yield trigger
-            except:
-                return
+    def schedule(self, root, path):
+        def process():            
+            node, face = (path, None) \
+                         if root._control_graph.has_node(path) else \
+                         (path[:-1], path[-1])
             
-            node,face = (path,None) \
-                  if root._control_graph.has_node(path) else \
-                  (path[:-1],path[-1])
+            with root._control_graph.node[node].get("obj") as behavior:                
+                behavior.watch(self, root, node, *behavior._required_data)
+                
+                try:
+                    behavior(face)
+                except All:#all the things!
+                    targets = [target for source, target, data
+                               in root._control_graph.out_edges_iter(node, data=True)
+                               if root._control_graph.node[target]["obj"] is not None]
+                except Many as signal:#some of the things.
+                    targets = [target for source, target, data
+                               in root._control_graph.out_edges_iter(node, data=True)
+                               if data["mode"] in signal.values
+                               and root._control_graph.node[target]["obj"] is not None]
+                except One as signal:#one of the things...
+                    targets = [target for source, target, data
+                               in root._control_graph.out_edges_iter(node, data=True)
+                               if data["mode"] == signal.value
+                               and root._control_graph.node[target]["obj"] is not None]
+                except No:#nothing!
+                    targets = []
+                except:#uh oh...
+                    targets = []
+                    raise
+                else:#no exceptions used
+                    targets = []
+                finally:#no matter what
+                    for target in targets:self.schedule(root, target)
+                
+                behavior.watch(self, root, node, *behavior._provided_data)
             
-            with root._control_graph.node[node].get("obj") as behavior:
-                events = {mode:self._env.event() \
-                          for mode in behavior._output_control}
-                
-                for source,target,data in root._control_graph.out_edges_iter(node,data=True):
-                    if source == node and \
-                       root._control_graph.node[target]["obj"] is not None:
-                        self.schedule(root,target,events[data["mode"]])
-                
-                yield behavior.watch(self,root,node,*behavior._required_data)
-                
-                face = behavior(face)
-                
-                yield behavior.watch(self,root,node,*behavior._provided_data)
-                
-                for key in events.keys():
-                    if key != face:
-                        events[key].fail(Exception)
-                else:
-                    if face is not None:
-                        events[face].succeed()
-            
-        return self._env.process(process())
+        return self._loop.add_callback(process)

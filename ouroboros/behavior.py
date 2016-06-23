@@ -151,6 +151,9 @@ class PrimitiveBehavior(BehaviorObject):
     def __exit__(self, type, value, traceback):
         pass
     
+    def _process(self, face):
+        return NotImplemented
+    
     def default(self, obj):
         return json_util.default(obj)
     
@@ -163,7 +166,7 @@ class CompositeBehavior(BehaviorObject):
     """Composite (complex) behavior"""
     
 def install():
-    from .service.persist import PersistenceService
+    from .srv.persist import PersistenceService
     
     service = PersistenceService()
     service.start()

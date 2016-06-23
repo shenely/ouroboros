@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   01 July 2015
+Modified:   22 June 2016
 
 TBD.
 
@@ -20,6 +20,7 @@ Date          Author          Version     Description
 2014-06-26    shenely         1.1         Moved database to device
 2014-09-10    shenely         1.2         Added a run method
 2015-07-01    shenely         1.3         Added delete method
+2016-06-22    shenely         1.4         Refactoring directories
 
 """
 
@@ -28,12 +29,11 @@ Date          Author          Version     Description
 # Import section #
 #
 #Built-in libraries
-import types
 
 #External libraries
 
 #Internal libraries
-from ..device.database import DatabaseDevice
+from ..dev.database import DatabaseDevice
 from . import ServiceObject
 #
 ##################
@@ -50,7 +50,7 @@ __all__ = ["PersistenceService"]
 ####################
 # Constant section #
 #
-__version__ = "1.3"#current version [major.minor]
+__version__ = "1.4"#current version [major.minor]
 
 BEHAVIOR_COLLECTION = "behaviors"
 #
@@ -59,7 +59,7 @@ BEHAVIOR_COLLECTION = "behaviors"
 
 class PersistenceService(ServiceObject):                
     def start(self):
-        if super(PersistenceService,self).start():
+        if super(PersistenceService, self).start():
             self._database = DatabaseDevice()
             
             return True
@@ -67,7 +67,7 @@ class PersistenceService(ServiceObject):
             return False
         
     def stop(self):
-        if super(PersistenceService,self).stop():
+        if super(PersistenceService, self).stop():
             del self._database
             
             return True
@@ -75,7 +75,7 @@ class PersistenceService(ServiceObject):
             return False
             
     def pause(self):
-        if super(PersistenceService,self).pause():
+        if super(PersistenceService, self).pause():
             #XXX:  I don't know what to do here. (shenely, 2014-06-16)
             self._database.close()
             
@@ -84,7 +84,7 @@ class PersistenceService(ServiceObject):
             return False
                         
     def resume(self):
-        if super(PersistenceService,self).resume():
+        if super(PersistenceService, self).resume():
             self._database.open()
             
             self.run()
@@ -98,7 +98,7 @@ class PersistenceService(ServiceObject):
             
     def get(self,query):
         if self._running:
-            document = self._database.find(BEHAVIOR_COLLECTION,query)# from database
+            document = self._database.find(BEHAVIOR_COLLECTION, query)# from database
             
             return document
         else:
@@ -107,14 +107,14 @@ class PersistenceService(ServiceObject):
             
     def set(self,query,document):
         if self._running:
-            self._database.save(BEHAVIOR_COLLECTION,query,document)# to database
+            self._database.save(BEHAVIOR_COLLECTION, query, document)# to database
         else:
             #TODO:  Persistence running exception (shenely, 2014-06-12)
             raise Exception# is not running
             
     def delete(self,query):
         if self._running:
-            self._database.remove(BEHAVIOR_COLLECTION,query)# to database
+            self._database.remove(BEHAVIOR_COLLECTION, query)# to database
         else:
             #TODO:  Persistence running exception (shenely, 2014-06-12)
             raise Exception# is not running

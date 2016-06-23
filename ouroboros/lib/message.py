@@ -91,8 +91,8 @@ class MessageParse(EventPrimitive, WatcherPrimitive):
         object.value = json.loads(message.value,
                                   object_hook=object.object_hook)
         
-        logging.info("{0}:  Parsed".\
-                     format(self.name))
+        logging.info("{0}:  Parsed to {1!s}".\
+                     format(self.name, object.value))
         
         return "output"
 
@@ -119,8 +119,8 @@ class MessageFormat(ActionPrimitive, WatcherPrimitive):
         object = self._data_graph.node[("object",)]["obj"]
         message = self._data_graph.node[("message",)]["obj"]
         
-        logging.info("{0}:  Formatting".\
-                     format(self.name))
+        logging.info("{0}:  Formatting from {1!s}".\
+                     format(self.name, object.value))
         
         message.value = json.dumps(object.value,
                                    default=object.default)

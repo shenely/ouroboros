@@ -1,5 +1,5 @@
 from ...behavior import behavior
-from ...library import EventPrimitive
+from ...lib import EventPrimitive
             
 class OrbitEvent(EventPrimitive):pass
 class PeriapsisEvent(OrbitEvent):pass

@@ -27,8 +27,8 @@ Date          Author          Version     Description
 # Import section #
 #
 #Built-in libraries
-from threading import Thread
-from multiprocessing import Process
+import threading
+import multiprocessing
 
 #External libraries
 import zmq
@@ -67,20 +67,20 @@ class RouterDevice(object):
         
         self.daemon = True
     
-    def bind(self,addr):
+    def bind(self, addr):
         self._socket.bind(addr)
 
-    def connect(self,addr):
+    def connect(self, addr):
         self._socket.connect(addr)
 
-    def join(self,timeout=None):
+    def join(self, timeout=None):
         self._poller.unregister(self._socket)
 
-    def setsockopt(self,opt,value):
+    def setsockopt(self, opt, value):
         self._socket.setsocketopt(opt,value)
 
     def start(self):
-        self._poller.register(self._socket,zmq.POLLIN)
+        self._poller.register(self._socket, zmq.POLLIN)
         
         self.run()
     
@@ -89,25 +89,25 @@ class RouterDevice(object):
             sockets = dict(self._poller.poll())
             
             if (self._socket in sockets and sockets[self._socket] == zmq.POLLIN):
-                source,target,message = self._socket.recv_multipart()
+                source, target, message = self._socket.recv_multipart()
                 
-                self._socket.send_multipart((target,source,message))
+                self._socket.send_multipart((target, source,message))
 
 class ThreadRouter(RouterDevice):
     context_factory = zmq.Context.instance
     
     def __init__(self):
-        super(ThreadRouter,self).__init__()
+        super(ThreadRouter, self).__init__()
         
-        self._thread = Thread(target=self.run)
+        self._thread = threading.Thread(target=self.run)
         
-    def join(self,timeout=None):
+    def join(self, timeout=None):
         super(ThreadRouter,self).join(timeout)
         
         self._thread.join(timeout)
         
     def start(self):
-        self._poller.register(self._socket,zmq.POLLIN)
+        self._poller.register(self._socket, zmq.POLLIN)
         
         self._thread.daemon = self.daemon
         
@@ -117,17 +117,17 @@ class ProcessRouter(RouterDevice):
     context_factory = zmq.Context
     
     def __init__(self):
-        super(ProcessRouter,self).__init__()
+        super(ProcessRouter, self).__init__()
         
-        self._process = Process(target=self.run)
+        self._process = multiprocessing.Process(target=self.run)
         
-    def join(self,timeout=None):
-        super(ProcessRouter,self).join(timeout)
+    def join(self, timeout=None):
+        super(ProcessRouter, self).join(timeout)
         
         self._process.join(timeout)
         
     def start(self):
-        self._poller.register(self._socket,zmq.POLLIN)
+        self._poller.register(self._socket, zmq.POLLIN)
         
         self._process.daemon = self.daemon
         

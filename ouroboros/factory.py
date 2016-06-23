@@ -47,8 +47,8 @@ from networkx import union, relabel_nodes
 
 #Internal libraries
 from .behavior import PrimitiveBehavior
-from .library.watch import WatcherPrimitive
-from .library.listen import ListenerPrimitive
+from .lib.watch import WatcherPrimitive
+from .lib.listen import ListenerPrimitive
 #
 ##################=
 
@@ -72,18 +72,18 @@ class BehaviorFactory(type):
     """Behavior factory"""
     
     def __new__(cls, app, name):        
-        doc = app._database.get({"name": name})# from database
+        doc = app._database.get({"name": name})#from database
         #doc = app._database.get(name=name)#TODO:  Do it this way
         
         #Check if behavior has been memoized
         if name in app._memoized_classes:
             obj = app._memoized_classes[name]
         else:            
-            obj = pickle.loads(doc.path)# import path for behavior
+            obj = pickle.loads(doc.path)#import path for behavior
             
             #All behaviors are pushed through factory
-            obj = super(BehaviorFactory,cls).__new__(cls, str(doc.name), (obj,),
-                                                     {"app": app, "doc": doc})
+            obj = super(BehaviorFactory, cls).__new__(cls, str(doc.name), (obj,),
+                                                      {"app": app, "doc": doc})
             
             #Memoize behavior in application
             app._memoized_classes[name] = obj
@@ -106,16 +106,16 @@ class BehaviorFactory(type):
         obj = super(BehaviorFactory, self).__call__(name, *args, **kwargs)
         
         #Interfaces are defined via behavior classes, not instances
-        for face in self._required_data:# required data interfaces
+        for face in self._required_data:#required data interfaces
             obj._data_graph.add_node((obj.__class__.__name__, face),
                                      obj=self._required_data[face])
-        for face in self._provided_data:# provided data interfaces
+        for face in self._provided_data:#provided data interfaces
             obj._data_graph.add_node((obj.__class__.__name__, face),
                                      obj=self._provided_data[face])
-        for face in self._input_control:# input control interfaces
+        for face in self._input_control:#input control interfaces
             obj._control_graph.add_node((obj.__class__.__name__, face),
                                         obj=None)
-        for face in self._output_control:# output control interfaces
+        for face in self._output_control:#output control interfaces
             obj._control_graph.add_node((obj.__class__.__name__, face),
                                         obj=None)
         
@@ -141,19 +141,19 @@ class BehaviorFactory(type):
             obj._control_graph = union(obj._control_graph, control_subgraph)
             
             #Remove all interfaces inherited from the subgraphs
-            for face in behavior._required_data:# required data interfaces
+            for face in behavior._required_data:#required data interfaces
                 obj._data_graph.remove_node((node.name,
                                              behavior.__class__.__name__,
                                              face))
-            for face in behavior._provided_data:# provided data interfaces
+            for face in behavior._provided_data:#provided data interfaces
                 obj._data_graph.remove_node((node.name,
                                              behavior.__class__.__name__,
                                              face))
-            for face in behavior._input_control:# input control interfaces
+            for face in behavior._input_control:#input control interfaces
                 obj._control_graph.remove_node((node.name,
                                                 behavior.__class__.__name__,
                                                 face))
-            for face in behavior._output_control:# output control interfaces
+            for face in behavior._output_control:#output control interfaces
                 obj._control_graph.remove_node((node.name,
                                                 behavior.__class__.__name__,
                                                 face))
@@ -163,15 +163,15 @@ class BehaviorFactory(type):
         
         if top:
             #Add watchers to the event loop
-            for node,data in obj._data_graph.nodes_iter(data=True):
-                if isinstance(data["obj"],WatcherPrimitive):
-                    data["obj"].watch(self.app._process, obj,node,
+            for node, data in obj._data_graph.nodes_iter(data=True):
+                if isinstance(data["obj"], WatcherPrimitive):
+                    data["obj"].watch(self.app._process, obj, node,
                                       *data["obj"]._provided_data)
-                    data["obj"].watch(self.app._process, obj,node,
+                    data["obj"].watch(self.app._process, obj, node,
                                       *data["obj"]._required_data)
             
             #Add listeners to the event loop
-            for node,data in obj._control_graph.nodes_iter(data=True):
+            for node, data in obj._control_graph.nodes_iter(data=True):
                 if isinstance(data["obj"], ListenerPrimitive):
                     data["obj"].listen(self.app._process, obj,node)
             
@@ -179,13 +179,13 @@ class BehaviorFactory(type):
         for edge in self.doc.edges.data:
             
             #Is source of the edge...
-            if edge.source.node == obj.__class__.__name__:# ...self?
+            if edge.source.node == obj.__class__.__name__:#...self?
                 source_iter = iter([(edge.source.face,)])
             else:
                 #Referenced nodes must exist in data graph
                 assert obj._data_graph.has_node((edge.source.node,))
             
-                if edge.source.face is not None:# ...deep?
+                if edge.source.face is not None:#...deep?
                     
                     #Get the 'shallow' node to the deep source
                     source_node = obj._data_graph.node[(edge.source.node,)]
@@ -198,21 +198,21 @@ class BehaviorFactory(type):
                     source_iter = source._data_graph\
                                         .predecessors_iter((source.__class__.__name__,
                                                             edge.source.face))
-                else:# ...shallow?
+                else:#...shallow?
                     #XXX:  Shallow edge reference hack (shenely, 2015-03-11)
-                    # This is only valid because the empty tuple created will be
-                    #   concatenated with a tuple that references the context of
-                    #   the shallow node.
+                    #  This is only valid because the empty tuple created will be
+                    #    concatenated with a tuple that references the context of
+                    #    the shallow node.
                     source_iter = iter([()])
             
             #Is target of the edge...
-            if edge.target.node == obj.__class__.__name__:# ...self?
+            if edge.target.node == obj.__class__.__name__:#...self?
                 target_iter = iter([(edge.target.face,)])
             else:
                 #Referenced nodes must exist in data graph
                 assert obj._data_graph.has_node((edge.target.node,))
             
-                if edge.target.face is not None:# ...deep?
+                if edge.target.face is not None:#...deep?
                 
                     #Get the 'shallow' node to the deep target
                     target_node = obj._data_graph.node[(edge.target.node,)]
@@ -225,11 +225,11 @@ class BehaviorFactory(type):
                     target_iter = target._data_graph\
                                         .successors_iter((target.__class__.__name__,
                                                           edge.target.face))
-                else:# ...shallow?
+                else:#...shallow?
                     #XXX:  Shallow edge reference hack (shenely, 2015-03-11)
-                    # This is only valid because the empty tuple created will be
-                    #   concatenated with a tuple that references the context of
-                    #   the shallow node.
+                    #  This is only valid because the empty tuple created will be
+                    #    concatenated with a tuple that references the context of
+                    #    the shallow node.
                     target_iter = iter([()])
                 
             for source_name in source_iter:
@@ -237,10 +237,10 @@ class BehaviorFactory(type):
                 source = obj._data_graph.node\
                              [(edge.source.node,) + source_name]["obj"]
                     
-                if isinstance(source,BehaviorFactory):
-                    pass# an interface is being referenced
-                elif isinstance(source,PrimitiveBehavior):
-                    source = source.__class__# checks are made on classes
+                if isinstance(source, BehaviorFactory):
+                    pass#an interface is being referenced
+                elif isinstance(source, PrimitiveBehavior):
+                    source = source.__class__#checks are made on classes
                 else:
                     raise#cannot require/provide composite behaviors
                 
@@ -250,7 +250,7 @@ class BehaviorFactory(type):
                                  [(edge.target.node,) + target_name]["obj"]
                     
                     if isinstance(target, BehaviorFactory):
-                        pass# an interface is being referenced
+                        pass#an interface is being referenced
                     elif isinstance(target, PrimitiveBehavior):
                         target = target.__class__# checks are made on classes
                     else:
@@ -324,7 +324,7 @@ class BehaviorFactory(type):
                                     
             
             #TODO:  Mode origin (shenely, 2015-05-23)
-            # The mode must come from the source edge
+            #  The mode must come from the source edge
             for source_name in source_iter:
                 mode = mode_iter.next()
                 for target_name in target_iter:

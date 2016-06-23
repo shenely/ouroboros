@@ -42,7 +42,8 @@ import copy
 # Export section #
 #
 __all__ = ["ObjectDict",
-           "BaseObject"]
+           "BaseObject",
+           "Go", "All", "Many", "One", "No"]
 #
 ##################
 
@@ -81,3 +82,19 @@ class ObjectDict(dict):
 
 class BaseObject(object):
     """Ouroboros base object"""
+    
+class Go(Exception):pass
+
+class All(Go):pass
+
+class Many(Go):
+
+    def __init__(self, *outs):
+        self.value = outs
+
+class One(Go):
+
+    def __init__(self, out):
+        self.value = out
+
+class No(Go):pass

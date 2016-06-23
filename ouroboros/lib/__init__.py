@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   18 June 2016
+Modified:   22 June 2016
 
 TBD.
 
@@ -24,6 +24,7 @@ Date          Author          Version     Description
 2015-07-01    shenely         1.6         Added install function
 2015-07-24    shenely         1.7         Removed socket support
 2016-06-18    shenely         1.8         General code cleanup
+2015-06-22    shenely         1.9         Control flow via exceptions
 
 """
 
@@ -38,7 +39,7 @@ import logging
 #External libraries
 
 #Internal libraries
-from ..common import ObjectDict
+from ..common import ObjectDict, All, Many, One, No
 from ..behavior import *
 #
 ##################=
@@ -61,7 +62,7 @@ __all__ = ["NumberPrimitive",
 ####################
 # Constant section #
 #
-__version__ = "1.8"#current version [major.minor]
+__version__ = "1.9"#current version [major.minor]
 # 
 ####################
 
@@ -120,10 +121,10 @@ class SourcePrimitive(PrimitiveBehavior):
         logging.debug("{0}:  Received".\
                       format(self.name))
         
-        return "output"
+        raise One("output")
     
     def _receive(self):
-        raise NotImplemented
+        return NotImplemented
     
 @behavior(name="TargetPrimitive",
           type="PrimitiveBehavior",
@@ -142,10 +143,10 @@ class TargetPrimitive(PrimitiveBehavior):
         logging.debug("{0}:  Sent".\
                       format(self.name))
         
-        return None
+        return No()
     
     def _send(self):
-        raise NotImplemented
+        return NotImplemented
 
 
 @behavior(name="ConditionPrimitive",
@@ -169,10 +170,10 @@ class ConditionPrimitive(PrimitiveBehavior):
             logging.warning("{0}:  Not satisfied".\
                          format(self.name))
             
-        return state
+        raise One(state)
     
     def _satisfy(self):
-        raise NotImplemented
+        return NotImplemented
 
 @behavior(name="EventPrimitive",
           type="PrimitiveBehavior",
@@ -191,14 +192,14 @@ class EventPrimitive(PrimitiveBehavior):
         if state is not None:
             logging.debug("{0}:  Occurred".\
                          format(self.name))
+            raise One(state)
         else:
             logging.warn("{0}:  False alarm".\
                          format(self.name))
-            
-        return state
+            raise No()
     
     def _occur(self):
-        raise NotImplemented
+        return NotImplemented
 
 @behavior(name="ActionPrimitive",
           type="PrimitiveBehavior",
@@ -217,10 +218,10 @@ class ActionPrimitive(PrimitiveBehavior):
         logging.debug("{0}:  Executed".\
                      format(self.name))
             
-        return "output"
+        raise One("output")
     
     def _execute(self):
-        raise NotImplemented
+        return NotImplemented
     
 def install(service):
     NumberPrimitive.install(service)

@@ -5,7 +5,7 @@ import scipy.optimize
 import sgp4.ext
 
 from ...behavior import behavior
-from ...library import ActionPrimitive
+from ...lib import ActionPrimitive
 
 KEPLER_EQUATION = lambda E,M,e:E - e * math.sin(E) - M#Kepler equation
 KEPLER_DERIVATIVE = lambda E,M,e:1 - e * math.cos(E)#Derivative of Kepler equation

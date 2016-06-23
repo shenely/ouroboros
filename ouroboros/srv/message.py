@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   15 September 2014
+Modified:   22 June 2016
 
 TBD.
 
@@ -18,6 +18,7 @@ Date          Author          Version     Description
 ----------    ------------    --------    -----------------------------
 2014-06-20    shenely         1.0         Initial revision
 2014-09-15    shenely         1.1         No idea what a proxy is
+2016-06-22    shenely         1.2         Refactoring directories
 
 """
 
@@ -30,10 +31,10 @@ import logging
 
 #External libraries
 import zmq
-from zmq.devices import ThreadDevice
+import zmq.devices
 
 #Internal libraries
-from ..device.router import ThreadRouter
+from ..dev.router import ThreadRouter
 from . import ServiceObject
 #
 ##################
@@ -50,7 +51,7 @@ __all__ = ["MessagingService"]
 ####################
 # Constant section #
 #
-__version__ = "1.1"#current version [major.minor]
+__version__ = "1.2"#current version [major.minor]
 #
 ####################
 
@@ -58,11 +59,12 @@ __version__ = "1.1"#current version [major.minor]
 class MessagingService(ServiceObject):
     
     def __init__(self):
-        super(MessagingService,self).__init__()
+        super(MessagingService, self).__init__()
                 
     def start(self):
         if super(MessagingService,self).start():
-            self.proxy = ThreadDevice(zmq.FORWARDER, zmq.SUB, zmq.PUB)
+            self.proxy = zmq.devices.ThreadDevice(zmq.FORWARDER,
+                                                  zmq.SUB, zmq.PUB)
             self.router = ThreadRouter()
             
             return True
@@ -70,7 +72,7 @@ class MessagingService(ServiceObject):
             return False
         
     def stop(self):
-        if super(MessagingService,self).stop():
+        if super(MessagingService, self).stop():
             self.proxy.join()
             self.router.join()
             
@@ -79,19 +81,19 @@ class MessagingService(ServiceObject):
             return False
             
     def pause(self):
-        if super(MessagingService,self).pause():
+        if super(MessagingService, self).pause():
             #XXX:  Can devices really be paused? (shenely, 2014-06-16)
             return True
         else:
             return False
                         
     def resume(self):
-        if super(MessagingService,self).resume():
+        if super(MessagingService, self).resume():
             self.proxy.bind_in("tcp://127.0.0.1:5555")
             self.proxy.bind_out("tcp://127.0.0.1:5556")
             self.router.bind("tcp://127.0.0.1:5560")
             
-            self.proxy.setsockopt_in(zmq.SUBSCRIBE,"")
+            self.proxy.setsockopt_in(zmq.SUBSCRIBE, "")
     
             self.run()
             

@@ -32,9 +32,11 @@ Date          Author          Version     Description
 #
 #Built-in libraries
 import types
+import functools
 import logging
 
 #External libraries
+import tornado.ioloop
 
 #Internal libraries
 from ..behavior import PrimitiveBehavior
@@ -56,6 +58,9 @@ __all__ = ["ListenerPrimitive",
 # Constant section #
 #
 __version__ = "1.6"#current version [major.minor]
+
+MILLI = 1e-3
+KILO = 1e3
 #
 ####################
 
@@ -76,14 +81,10 @@ class PeriodicListener(ListenerPrimitive):
         
         super(PeriodicListener, self).__init__(*args, **kwargs)
     
-    def listen(self, app, thing, node):
-        def callback():
-            while True:
-                yield app.schedule(thing, node, app._start)
-                                
-                yield app._env.timeout(self._timeout)
-        
-        app._env.process(callback())
+    def listen(self, app, graph, node):
+        callback = functools.partial(app.schedule, graph, node)
+        tornado.ioloop.PeriodicCallback(callback,
+                                        KILO * self._timeout).start()
 
 class DelayedListener(ListenerPrimitive):
     
@@ -96,12 +97,8 @@ class DelayedListener(ListenerPrimitive):
         
         super(DelayedListener, self).__init__(*args, **kwargs)
     
-    def listen(self, app, thing, node):
-        def callback():
-            yield app._env.timeout(self._timeout)
-            
-            yield app.schedule(thing, node, app._start)
-            
-        return app._env.process(callback())
+    def listen(self, app, graph, node):
+        callback = functools.partial(app.schedule, graph, node)
+        app._loop.call_later(self._timeout, callback)
             
         

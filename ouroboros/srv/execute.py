@@ -72,8 +72,8 @@ class ExecutionService(ServiceObject):
     
     _memoized_classes = dict()
     
-    def __init__(self,name):
-        super(ExecutionService,self).__init__()
+    def __init__(self, name):
+        super(ExecutionService, self).__init__()
         
         self.name = name
         
@@ -82,7 +82,7 @@ class ExecutionService(ServiceObject):
     
     def start(self):
         """Connect to behavior database."""
-        if super(ExecutionService,self).start():
+        if super(ExecutionService, self).start():
             self._database.start()
             
             return True
@@ -91,7 +91,7 @@ class ExecutionService(ServiceObject):
             
     def stop(self):
         """Disconnect from behavior database."""
-        if super(ExecutionService,self).stop():
+        if super(ExecutionService, self).stop():
             self._database.stop()
             
             return True
@@ -100,7 +100,7 @@ class ExecutionService(ServiceObject):
             
     def pause(self):
         """Pause the processing service."""
-        if super(ExecutionService,self).pause():
+        if super(ExecutionService, self).pause():
             self._database.pause()
             
             self._process.stop()
@@ -111,7 +111,7 @@ class ExecutionService(ServiceObject):
             
     def resume(self):
         """Resume the processing service."""
-        if super(ExecutionService,self).resume():
+        if super(ExecutionService,self). resume():
             self._database.resume()
             
             self.run()
@@ -125,6 +125,6 @@ class ExecutionService(ServiceObject):
     def run(self):
         """Initialize main behavior."""
         if self._running:
-            self._main = BehaviorFactory(self,self.name)(MAIN_NAME)
+            self._main = BehaviorFactory(self, self.name)(MAIN_NAME)
         else:
             self.resume()

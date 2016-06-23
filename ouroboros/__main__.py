@@ -1,7 +1,7 @@
 import logging
 
 import ouroboros
-from ouroboros.service.execute import ExecutionService
+from ouroboros.srv.execute import ExecutionService
 
 ouroboros.install()
 
