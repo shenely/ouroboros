@@ -60,7 +60,7 @@ def model():
 
     yield _hat, _t_hat
 
-@Process(([], ["+1*"], [], ["t_dt"], []),
+@Process(([], ["clock"], [], ["t_dt"], []),
          ([], [], {"rec":True}, [], ["_bar", "_t_bar"]))
 def sidereal():
     """Sidereal time"""

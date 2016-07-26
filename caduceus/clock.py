@@ -2,10 +2,9 @@ from core import Process
 
 __all__= ["clock"]
 
-@Process((["t", "t_dt", "dt_td"],
-          ["+1*"], {"clock":True},
-          ["t"], ["t_dt"]))
-def clock(t,t_dt,dt_td):
+@Process((["t"], ["+1*"], {}, ["t"], []),
+         (["t_dt", "dt_td"], [], {"clock":True}, [], ["t_dt"]))
+def clock(t, t_dt, dt_td):
     """Clock"""
     t0 = t
     
@@ -16,4 +15,4 @@ def clock(t,t_dt,dt_td):
         
         t0 = t
         
-        print t_dt
+        print t, t_dt

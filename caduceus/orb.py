@@ -8,7 +8,6 @@ from sgp4.earth_gravity import wgs84
 from sgp4.io import twoline2rv 
 
 from core import Process
-from util import K
 
 __all__= ["model", "simple",
           "rec2orb", "sph2kep"]
@@ -69,7 +68,7 @@ def model(t0_dt, r0_bar, v0_bar, mu):
         y = box.integrate((t_dt - t0_dt).total_seconds())
         r_bar, v_bar = hsplit(y, 2)
 
-@Process(([], ["+1*"], [], ["t_dt"], []),#system
+@Process(([], ["clock"], [], ["t_dt"], []),#clock
          (["line1", "line2"], [], {"rec":True}, [], ["_bar", "_t_bar"]))#TLE
 def simple(line1, line2):
     """Propagate orbit"""

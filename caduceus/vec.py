@@ -226,7 +226,7 @@ def rec2sph():
         az_t = (x * y_t - y * x_t) / xy__2
         
         el = asin(z / r)
-        el_t = (z_t - (r_t / r) * z) / sqrt(xy__2)
+        el_t = (z_t - z * (r_t / r)) / xy__2
                
 @Process(([], ["sph"], {"rec":True},
           ["r", "r_t", "az", "az_t", "el", "el_t"],

@@ -1,17 +1,20 @@
 import math
+import time
 import httplib
 import datetime
+import logging
 
 import numpy
+import simpy
 import simpy.core
 import tornado.web
 import tornado.websocket
 import tornado.ioloop
-import tornado.concurrent
 
-from core import System, Process
-from util import loads, dumps
-import clock, vec, geo, orb
+from caduceus import Caduceus, TornadoEnvironment
+from util import loads, dumps, default
+
+logging.basicConfig()
 
 EARTH_RADIUS = 6378.1370
 EARTH_FLATTENING = 1 / 298.257223563
@@ -36,24 +39,41 @@ GET /caduceus.py -> CaduceusHandler.get
 GET /caduceus.py?name=<name> -> CaduceusHandler.get
 POST /caduceus.py (config) -> CaduceusHandler.post
 DELETE /caduceus.py?name=<name> -> CaduceusHandler.delete
-WS /caduceus.py/system/<name> -> CaduceusWebSocket.open
+WS /caduceus.py/<name> -> CaduceusWebSocket.open
 """
 
 configs = [
     {
-        "name": "test",
+        "name": "main-clock",
         "time": {
             "at": [ ],
-            "after": [ 0 ],
+            "after": [ ],
             "every": [ 1 ]
         },
         "data": [
             {
-                "name": None,
+                "name": True,
                 "args": [
                     { "key": "t_dt", "value": J2000 },
                     { "key": "dt_td", "value": SECOND }
                 ]
+            },
+        ],
+        "ctrl": [
+            { "name": "clock.clock", "args": [ None, True ] }
+        ]
+    },
+    {
+        "name": "test",
+        "time": {
+            "at": [ ],
+            "after": [ ],
+            "every": [ ]
+        },
+        "data": [
+            {
+                "name": "main-clock",
+                "args": [ ]
             },
             {
                 "name": "earth",
@@ -85,9 +105,8 @@ configs = [
             { "name": "iss.pole", "args": [{ "key": "_t_bar", "value": O } ] }
         ],
         "ctrl": [
-            { "name": "clock.clock", "args": [ None ] },
-            { "name": "geo.sidereal", "args": [ None, "orb.iss" ] },
-            { "name": "orb.simple", "args": [ None, "orb.iss" ] },
+            { "name": "geo.sidereal", "args": [ "main-clock", "orb.iss" ] },
+            { "name": "orb.simple", "args": [ "main-clock", "orb.iss" ] },
             { "name": "orb.rec2orb", "args": [ "earth", "orb.iss", "iss.apse", "iss.pole" ] },
             { "name": "vec.fun2obl", "args": [ "iss.apse", "iss.pole", "orb.iss", "iss.pqw" ] },
             { "name": "vec.rec2sph", "args": [ "iss.pqw" ] },
@@ -97,7 +116,7 @@ configs = [
         ]
     },
     {
-        "name": "slow-clock",
+        "name": "in-clock",
         "time": {
             "at": [ ],
             "after": [ ],
@@ -105,36 +124,34 @@ configs = [
         },
         "data": [
             {
-                "name": None,
+                "name": True,
                 "args": [
                     { "key": "t_dt", "value": J2000 },
-                    { "key": "dt_td", "value": MINUTE }
+                    { "key": "dt_td", "value": SECOND }
                 ]
             },
         ],
         "ctrl": [
-            { "name": "clock.clock", "args": [ None ] }
+            { "name": "clock.clock", "args": [ None, True ] }
         ]
     },
     {
-        "name": "fast-clock",
+        "name": "out-clock",
         "time": {
             "at": [ ],
             "after": [ ],
-            "every": [ 1 ]
+            "every": [ ]
         },
         "data": [
             {
-                "name": None,
+                "name": "in-clock",
                 "args": [
                     { "key": "t_dt", "value": J2000 },
                     { "key": "dt_td", "value": HOUR }
                 ]
             },
         ],
-        "ctrl": [
-            { "name": "clock.clock", "args": [ None ] }
-        ]
+        "ctrl": [ ]
     }
 ]
 message = dumps(configs)
@@ -144,25 +161,20 @@ class CaduceusHandler(tornado.web.RequestHandler):
     def initialize(self, _):
         self._ = _
         
-    def get(self, which):
+    def get(self):
         try:
             name = self.get_query_argument("name")
-            data = System[name]._config
+            result = self._.System[name]._config
             status = httplib.OK
         except tornado.web.MissingArgumentError:
-            data = {"system":[{"name":name,
-                               "config":System[name]._config}
-                              for name in System],
-                    "process":[{"name":name,
-                                "config":[config._asdict()
-                                          for config in Process[name]]}
-                               for name in Process]}
+            result = {"system": sorted([name for name in self._.System]),
+                      "process": sorted([name for name in self._.Process])}
             status = httplib.OK
-        else:
-            data = None
+        except IndexError:
+            result = None
             status = httplib.NOT_FOUND
         finally:
-            self.write(dumps(data))
+            self.write(dumps({"result": result}))
             self.set_status(status)
         
     def post(self):
@@ -171,94 +183,79 @@ class CaduceusHandler(tornado.web.RequestHandler):
             status = httplib.OK
         except tornado.web.MissingArgumentError:
             status = httplib.BAD_REQUEST
-        else:
+        except IndexError:
             status = httplib.NOT_FOUND
         finally:
             self.set_status(status)
         
-    def delete(self, which):
+    def delete(self):
         try:
             self._.stop(self.get_query_argument("name"))
             status = httplib.OK
         except tornado.web.MissingArgumentError:
             status = httplib.BAD_REQUEST
-        else:
+        except IndexError:
             status = httplib.NOT_FOUND
         finally:
             self.set_status(status)
 
 class CaduceusWebSocket(tornado.websocket.WebSocketHandler):
     
-    def open(self, which, name):
-        self._sys = System[name]
-        
-        self._sys.on_set(self._on_data)
-        self._sys.on_go(self._on_ctrl)
+    def initialize(self, _):
+        self._ = _
+    
+    def open(self):
+        for name in self._.System:
+            self._.System[name].watch(self._on_data)
+            self._.System[name].listen(self._on_ctrl)
 
     def on_close(self):
-        self._sys.unwatch(self._on_data)
-        self._sys.unlisten(self._on_ctrl)
+        for name in self._.System:
+            self._.System[name].unwatch(self._on_data)
+            self._.System[name].unlisten(self._on_ctrl)
 
     def on_message(self, message):
         packet = loads(message)
         
+        name = packet["name"]
         if "data" in packet:
-            self._sys.set(packet["data"])
+            packet["data"] = {d["key"]: d["value"]
+                              for d in packet["data"]}
+            self._.System[name].set(packet["data"])
         if "ctrl" in packet:
-            self._sys.go(packet["ctrl"])
+            self._.System[name].go(packet["ctrl"])
 
-    def _on_data(self, packet):        
-        self.write_message(dumps({"data": packet}))
+    def _on_data(self, name, packet):
+        packet = [{"key": default(key), "value":packet[key]}
+                  for key in packet]
+        self.write_message(dumps({"name": name,
+                                  "data": packet}))
 
-    def _on_ctrl(self, packet):
-        self.write_message(dumps({"ctrl": packet}))
-        
-class Caduceus(object):
-    
-    def __init__(self):
-        self._env = simpy.RealtimeEnvironment(strict=False)
-        self._loop = tornado.ioloop.IOLoop.current()
-        
-        def wrapper(future):
-            def caller():
-                try:
-                    self._env.step()
-                    self._loop.add_callback(caller)
-                except simpy.core.EmptySchedule:
-                    return
-            self._loop.add_callback(caller)
-        
-        self._future = tornado.concurrent.Future()
-        self._future.add_done_callback(wrapper)
-        
-    def start(self, config):
-        self._loop.add_callback(System, self._env, config)
-        if not self._future.done():self._future.set_result(True)
-        
-    def stop(self, name):
-        self._loop.add_callback(System[name].halt)
-
-    def run(self):
-        self._loop.start()
+    def _on_ctrl(self, name, packet):
+        self.write_message(dumps({"name": name,
+                                  "ctrl": packet}))
 
 def main():
+    loop = tornado.ioloop.IOLoop.current()
+    env = TornadoEnvironment(loop, strict=False)
+        
     configs = loads(message)
 
-    _ = Caduceus()
+    _ = Caduceus(env, loop)
     
     _.start(configs[0])
     _.start(configs[1])
     _.start(configs[2])
-    
-    _.run()
-        
+    _.start(configs[3])
     
     app = tornado.web.Application([(r"/caduceus.py", CaduceusHandler, {"_": _}),
-                                   (r"/caduceus.py/(.*)", CaduceusWebSocket),
+                                   (r"/caduceus-stream", CaduceusWebSocket, {"_": _}),
                                    (r'/(.*)', tornado.web.StaticFileHandler,
                                     {"path": "static",
-                                     "default_filename": "inde(\w*)/(\w*)x.html"})])
+                                     "default_filename": "index.html"})])
     app.listen(8000)
+    
+    loop.start()
 
 if __name__ == '__main__':
     main()
