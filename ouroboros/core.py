@@ -1,10 +1,9 @@
-import types
 import operator
 import collections
 
 import simpy
 
-from util import *
+from .util import *
 
 __all__ = ["Config", "System", "Process"]
 
@@ -34,9 +33,11 @@ class System(object):
                            for data in config["data"]
                            for arg in data["args"]})
         for name in System:
+            #Copy data to child systems
             System[name]._data.update({((True,) + key[1:]): self._data[key]
                                        for key in self._data
                                        if key[0] == name})
+            #Copy data from parent systems
             self._data.update({((name,) + key[1:]): System[name]._data[key]
                                for key in System[name]._data
                                if key[0] == True})
@@ -46,11 +47,13 @@ class System(object):
                            for out in Process[ctrl["name"]]
                            (self, *ctrl["args"])})
         for name in System:
+            #Copy controls to child systems
             System[name]._ctrl.update({((True,) + key[1:]):
                                        System[name]._ctrl.get((True,) + key[1:],
                                                               self._env.event())
                                        for key in self._ctrl
                                        if key[0] == name})
+            #Copy controls from parent systems
             self._ctrl.update({((name,) + key[1:]):
                                self._ctrl.get((name,) + key[1:],
                                               self._env.event())
@@ -119,48 +122,48 @@ class System(object):
 
     def get(self, keys):
         """Get some values"""
-        for name in System:
-            if name != self._name:
-                mapping = {key: System[name]._data[(True,) + key[1:]]
-                           for key in keys
-                           if key[0] == name}
-                mapping.update({((True,) + key[1:]): System[name]._data[key]
-                                for key in System[name]._data
-                                if key[0] == self._name
-                                and (True,) + key[1:] in keys})
-                if mapping:
-                    self._data.update(mapping)
-        return [self._data[key] for key in keys]
+        return [self._data[key]
+                for key in keys]
 
     def set(self, dct):
         """Set some values"""
         self._data.update(dct)
+        [eye(self._name, dct) for eye in self._eyes]
         for name in System:
             if name != self._name:
-                mapping = {((True,) + key[1:]): dct[key]
+                #Set some data if...
+                mapping = {((True,) + key[1:]): dct[key]#...child
                            for key in dct
                            if key[0] == name}
-                mapping.update({key: dct[(True,) + key[1:]]
+                mapping.update({key: dct[(True,) + key[1:]]#...parent
                                 for key in System[name]._data
                                 if key[0] == self._name
                                 and (True,) + key[1:] in dct})
                 if mapping:
-                    self._data.update(mapping)
-                    [eye(name, mapping) for eye in System[name]._eyes]
-        [eye(self._name, dct) for eye in self._eyes]
+                    System[name]._data.update(mapping)
+                    [eye(name, mapping)
+                     for eye in System[name]._eyes]
 
     def stop(self, keys):
         """Stop!"""
-        return reduce(operator.__or__, [self._ctrl[key] for key in keys])
+        return reduce(operator.__or__, [self._ctrl[key]
+                                        for key in keys])
 
     def go(self, keys):
         """Go!"""
+        map(simpy.Event.succeed, [self._ctrl[key]
+                                  for key in keys])
+        [ear(self._name, keys)
+         for ear in self._ears]
+        self._ctrl.update({key: self._env.event()
+                           for key in keys})
         for name in System:
             if name != self._name:
-                mapping = (set([(True,) + key[1:]
+                #Fire some controls if...
+                mapping = (set([(True,) + key[1:]#...child
                                 for key in keys
                                 if key[0] == name]) |
-                           set([key
+                           set([key#...parent
                                 for key in System[name]._ctrl
                                 if key[0] == self._name
                                 and (True,) + key[1:] in keys]))
@@ -171,9 +174,6 @@ class System(object):
                      for ear in System[name]._ears]
                     System[name]._ctrl.update({key: self._env.event()
                                                for key in mapping})
-        map(simpy.Event.succeed, [self._ctrl[key] for key in keys])
-        [ear(self._name, keys) for ear in self._ears]
-        self._ctrl.update({key: self._env.event() for key in keys})
 
     def spawn(self, func):
         """Spawn new process"""
@@ -194,7 +194,8 @@ class System(object):
         self._ears.remove(callback)
         
     def halt(self):
-        [process.interrupt() for process in self._active]
+        [process.interrupt()
+         for process in self._active]
 
 class Process(object):
     __metaclass__ = Memoize
@@ -275,6 +276,7 @@ class Process(object):
                     for o in c.outs]
         
         print ".".join([func.__module__, func.__name__])
-        Process[".".join(func.__module__.split(".")[1:] + [func.__name__])] = caller
+        Process[".".join([func.__module__.replace("ouroboros", "ob"),
+                          func.__name__])] = caller
             
         return caller

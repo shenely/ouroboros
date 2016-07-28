@@ -1,9 +1,9 @@
-from math import sqrt, cos, sin, asin, atan2
+from math import cos, sin, asin, atan2
 
 from numpy import array, dot, cross
 from scipy.linalg import norm
 
-from core import Process
+from .core import Process
 
 __all__= ["abs2rel", "rel2abs", 
           "nrt2rot", "rot2nrt", 

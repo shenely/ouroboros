@@ -1,4 +1,4 @@
-from core import Process
+from .core import Process
 
 __all__= ["clock"]
 

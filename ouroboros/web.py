@@ -1,18 +1,16 @@
+import os.path
 import math
-import time
 import httplib
 import datetime
 import logging
 
 import numpy
-import simpy
-import simpy.core
 import tornado.web
 import tornado.websocket
 import tornado.ioloop
 
-from caduceus import Caduceus, TornadoEnvironment
-from util import loads, dumps, default
+from . import Ouroboros
+from .util import loads, dumps, default, TornadoEnvironment
 
 logging.basicConfig()
 
@@ -35,11 +33,23 @@ J = numpy.array([0,1,0])
 K = numpy.array([0,0,1])
 
 """
-GET /caduceus.py -> CaduceusHandler.get
-GET /caduceus.py?name=<name> -> CaduceusHandler.get
-POST /caduceus.py (config) -> CaduceusHandler.post
-DELETE /caduceus.py?name=<name> -> CaduceusHandler.delete
-WS /caduceus.py/<name> -> CaduceusWebSocket.open
+/ob-rest-api/
+
+system/ -> SystemHandler
+GET -> SystemHandler.get {data: [String, ...]}
+{data: [Object, ...]}
+GET ?name=<name> -> SystemHandler.get {data: Object}
+POST {data: Object} -> SystemHandler.post
+DELETE ?name=<name> -> SystemHandler.delete
+
+process/ -> ProcessHandler
+GET -> ProcessHandler.get {data: [String, ...]}
+GET name=<name> -> ProcessHandler.get {data: Object}
+
+stream -> WebSocket
+WS -> WebSocket.open
+SEND -> WebSocket.on_message
+RECV -> WebSocket.write_message
 """
 
 configs = [
@@ -60,7 +70,7 @@ configs = [
             },
         ],
         "ctrl": [
-            { "name": "clock.clock", "args": [ None, True ] }
+            { "name": "ob.clock.clock", "args": [ None, True ] }
         ]
     },
     {
@@ -105,81 +115,46 @@ configs = [
             { "name": "iss.pole", "args": [{ "key": "_t_bar", "value": O } ] }
         ],
         "ctrl": [
-            { "name": "geo.sidereal", "args": [ "main-clock", "orb.iss" ] },
-            { "name": "orb.simple", "args": [ "main-clock", "orb.iss" ] },
-            { "name": "orb.rec2orb", "args": [ "earth", "orb.iss", "iss.apse", "iss.pole" ] },
-            { "name": "vec.fun2obl", "args": [ "iss.apse", "iss.pole", "orb.iss", "iss.pqw" ] },
-            { "name": "vec.rec2sph", "args": [ "iss.pqw" ] },
-            { "name": "vec.rec2sph", "args": [ "iss.apse" ] },
-            { "name": "vec.rec2sph", "args": [ "iss.pole" ] },
-            { "name": "orb.sph2kep", "args": [ "iss.pqw", "iss.apse", "iss.pole", "iss.kep" ] },
+            { "name": "ob.geo.sidereal", "args": [ "main-clock", "orb.iss" ] },
+            { "name": "ob.orb.simple", "args": [ "main-clock", "orb.iss" ] },
+            { "name": "ob.orb.rec2orb", "args": [ "earth", "orb.iss", "iss.apse", "iss.pole" ] },
+            { "name": "ob.vec.fun2obl", "args": [ "iss.apse", "iss.pole", "orb.iss", "iss.pqw" ] },
+            { "name": "ob.vec.rec2sph", "args": [ "iss.pqw" ] },
+            { "name": "ob.vec.rec2sph", "args": [ "iss.apse" ] },
+            { "name": "ob.vec.rec2sph", "args": [ "iss.pole" ] },
+            { "name": "ob.orb.sph2kep", "args": [ "iss.pqw", "iss.apse", "iss.pole", "iss.kep" ] },
         ]
-    },
-    {
-        "name": "in-clock",
-        "time": {
-            "at": [ ],
-            "after": [ ],
-            "every": [ 1 ]
-        },
-        "data": [
-            {
-                "name": True,
-                "args": [
-                    { "key": "t_dt", "value": J2000 },
-                    { "key": "dt_td", "value": SECOND }
-                ]
-            },
-        ],
-        "ctrl": [
-            { "name": "clock.clock", "args": [ None, True ] }
-        ]
-    },
-    {
-        "name": "out-clock",
-        "time": {
-            "at": [ ],
-            "after": [ ],
-            "every": [ ]
-        },
-        "data": [
-            {
-                "name": "in-clock",
-                "args": [
-                    { "key": "t_dt", "value": J2000 },
-                    { "key": "dt_td", "value": HOUR }
-                ]
-            },
-        ],
-        "ctrl": [ ]
     }
 ]
 message = dumps(configs)
 
-class CaduceusHandler(tornado.web.RequestHandler):
+class ObBaseHandler(tornado.web.RequestHandler):
     
-    def initialize(self, _):
-        self._ = _
+    def initialize(self, ob):
+        self._ = ob
+
+class ObSystemHandler(ObBaseHandler):
         
     def get(self):
         try:
             name = self.get_query_argument("name")
-            result = self._.System[name]._config
+            data = self._.System[name]._config
             status = httplib.OK
         except tornado.web.MissingArgumentError:
-            result = {"system": sorted([name for name in self._.System]),
-                      "process": sorted([name for name in self._.Process])}
+            data = sorted([name for name in self._.System])
             status = httplib.OK
         except IndexError:
-            result = None
+            data = None
             status = httplib.NOT_FOUND
         finally:
-            self.write(dumps({"result": result}))
+            self.add_header("Content-Type", "application/json")
+            self.write(dumps({"data": data}))
             self.set_status(status)
         
     def post(self):
         try:
-            self._.start(loads(self.get_body_argument("config")))
+            data = loads(self.request.body)["data"]
+            self._.start(data)
             status = httplib.OK
         except tornado.web.MissingArgumentError:
             status = httplib.BAD_REQUEST
@@ -199,10 +174,25 @@ class CaduceusHandler(tornado.web.RequestHandler):
         finally:
             self.set_status(status)
 
-class CaduceusWebSocket(tornado.websocket.WebSocketHandler):
-    
-    def initialize(self, _):
-        self._ = _
+class ObProcessHandler(ObBaseHandler):
+        
+    def get(self):
+        try:
+            name = self.get_query_argument("name")
+            data = self._.Process[name]._config._asdict()
+            status = httplib.OK
+        except tornado.web.MissingArgumentError:
+            data = sorted([name for name in self._.Process])
+            status = httplib.OK
+        except IndexError:
+            data = None
+            status = httplib.NOT_FOUND
+        finally:
+            self.add_header("Content-Type", "application/json")
+            self.write(dumps({"data": data}))
+            self.set_status(status)
+
+class ObWebSocket(tornado.websocket.WebSocketHandler, ObBaseHandler):
     
     def open(self):
         for name in self._.System:
@@ -241,17 +231,20 @@ def main():
         
     configs = loads(message)
 
-    _ = Caduceus(env, loop)
+    ob = Ouroboros(env, loop)
     
-    _.start(configs[0])
-    _.start(configs[1])
-    _.start(configs[2])
-    _.start(configs[3])
+    ob.start(configs[0])
+    ob.start(configs[1])
     
-    app = tornado.web.Application([(r"/caduceus.py", CaduceusHandler, {"_": _}),
-                                   (r"/caduceus-stream", CaduceusWebSocket, {"_": _}),
+    app = tornado.web.Application([(r"/ob-rest-api/system",
+                                    ObSystemHandler, {"ob": ob}),
+                                   (r"/ob-rest-api/process",
+                                    ObProcessHandler, {"ob": ob}),
+                                   (r"/ob-rest-api/stream",
+                                    ObWebSocket, {"ob": ob}),
                                    (r'/(.*)', tornado.web.StaticFileHandler,
-                                    {"path": "static",
+                                    {"path": os.path.join(os.path.dirname(__file__),
+                                                          "static"),
                                      "default_filename": "index.html"})])
     app.listen(8000)
     

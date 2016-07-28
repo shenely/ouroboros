@@ -1,9 +1,11 @@
-var app = angular.module('caduceus', ['angular-websocket']);
+var app = angular.module('obApp', ['angular-websocket']);
 
-app.factory("model", function ($location, $http, $websocket) {
+app.factory("obRestApi", function ($location, $http, $websocket) {
   var location = $location.host() + ":" + $location.port(),
-      caduceus =  location + "/caduceus.py",
-      socket = $websocket("ws://" + location + "/caduceus-stream");
+      restApi =  location + "/ob-rest-api",
+      systemRest = "http://" + restApi + "/system",
+      processRest = "http://" + restApi + "/proess",
+      socket = $websocket("ws://" + restApi + "/stream");
   
   var handlers = {},
       callers = {},
@@ -19,9 +21,9 @@ app.factory("model", function ($location, $http, $websocket) {
   return {
     "all": function () { return $http.get("http://" + caduceus) },
     "system": {
-      "get": function (name) { return $http.get("http://" + caduceus + "?name=" + name) },
-      "post": function (config) { return $http.post("http://" + caduceus, {"config":config}) },
-      "delete": function (config) { return $http.delete("http://" + caduceus + "/" + name) },
+      "get": function (name) { return $http.get(systemRest + "?name=" + name) },
+      "post": function (config) { return $http.post(systemRest, {"data": config}) },
+      "delete": function (config) { return $http.delete(systemRest + "?name=" + name) },
       "ws": function (name) {
         handlers[name] = handlers[name] || [];
         callers[name] = callers[name] || { "data": [], "ctrl": [] };
@@ -75,16 +77,16 @@ app.factory("model", function ($location, $http, $websocket) {
     }
   };
 })
-.directive('caduceusTime', function (model) {
+.directive('obTime', function (obRestApi) {
   return {
     restrict: 'E',
     scope: {
       "name": "@",
       "field": "@?",
     },
-    templateUrl: 'html/caduceus-time.html',
+    templateUrl: 'html/ob-time.html',
     controller: function ($scope) {
-      var ws = model.system.ws($scope.name);
+      var ws = obRestApi.system.ws($scope.name);
       ws.sub.data(function () {
         var item = ws.data.find(function (d, i) {
           return angular.equals(d.key.$tuple, [$scope.field || true, "t_dt"]);
@@ -92,37 +94,6 @@ app.factory("model", function ($location, $http, $websocket) {
         $scope.date = new Date(item ? item.value.$date : 0);
       });
       ws.open();
-    }
-  };
-})
-.directive('caduceus', function() {
-  return {
-    restrict: 'E',
-    scope: {},
-    templateUrl: 'html/caduceus.html',
-    controller: function ($scope, model) {
-      var ws;
-      
-      $scope.index = {"system":0, "process":0};
-      $scope.all = {"system":[], "process":[]};
-      
-      model.all().then(function (response) {
-        $scope.all.system = response.data.result.system;
-        $scope.all.process = response.data.result.process;
-      });
-
-      $scope.onChange = function () {
-        if (ws !== undefined) { ws.close(); }
-        
-        model.system.get($scope.all.system[$scope.index.system])
-        .then(function (response) {
-          $scope.system = response.data.result;
-          
-          ws = model.system.ws($scope.system.name);
-          $scope.data = ws.data;
-          ws.open();
-        });
-      };
     }
   };
 });

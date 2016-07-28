@@ -6,9 +6,9 @@ import numpy
 import simpy
 import tornado.ioloop
 
-from core import System
-from util import dumps, loads
-import clock, vec, geo, orb, web
+from .core import System
+from .util import dumps, loads
+from . import clock, vec, geo, orb, web
 
 EARTH_RADIUS = 6378.1370
 EARTH_FLATTENING = 1 / 298.257223563

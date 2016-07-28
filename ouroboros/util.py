@@ -1,15 +1,24 @@
-import json
 import types
+import time
+import json
 import functools
 import datetime
 
 import numpy
-import bson.json_util
+import simpy.core
+import simpy.rt
+import tornado.concurrent
 
 __all__ = ["coroutine",
            "Memoize",
+           "TornadoEnvironment",
            "Go", "All", "Many", "One", "No",
            "dumps", "loads"]
+
+KILO = 1e+3
+MILLI = 1e-3
+
+UNIX = datetime.datetime(1970, 1, 1)
 
 #Unit vectors
 O = numpy.array([0,0,0])
@@ -48,6 +57,49 @@ class Memoize(type):
         
     def __iter__(self):
         return iter(self._cache)
+        
+class TornadoEnvironment(simpy.rt.RealtimeEnvironment):
+    
+    def __init__(self, loop, *args, **kwargs):
+        super(TornadoEnvironment, self).__init__(*args, **kwargs)
+        self._loop = loop
+
+    def step(self):
+        """Process the next event after enough real-time has passed for the
+        event to happen.
+
+        The delay is scaled according to the real-time :attr:`factor`. With
+        :attr:`strict` mode enabled, a :exc:`RuntimeError` will be raised, if
+        the event is processed too slowly.
+
+        """
+        evt_time = self.peek()
+
+        if evt_time is simpy.core.Infinity:
+            raise simpy.core.EmptySchedule()
+
+        real_time = self.real_start + (evt_time - self.env_start) * self.factor
+
+        if self.strict and time.time() - real_time > self.factor:
+            # Events scheduled for time *t* may take just up to *t+1*
+            # for their computation, before an error is raised.
+            raise RuntimeError('Simulation too slow for real time (%.3fs).' % (
+                time.time() - real_time))
+
+        future = tornado.concurrent.Future()
+        @coroutine
+        def wrapper():
+            while True:
+                yield
+                delta = real_time - time.time()
+                if delta > 0:
+                    self._loop.call_later(delta, routine.next)
+                else:
+                    simpy.Environment.step(self)
+                    future.set_result(True)
+        routine = wrapper()
+        routine.next()
+        return future
 
 class Go(Exception):pass
 
@@ -66,27 +118,28 @@ class One(Go):
 class No(Go):pass
 
 def object_hook(dct):
-    dct = bson.json_util.object_hook(dct)
-
-    if isinstance(dct, types.DictType):
-        if "$tuple" in dct:
-            dct = tuple(dct["$tuple"])
-        elif "$elapse" in dct:
-            dct = datetime.timedelta(seconds=dct["$elapse"])
-        elif "$array" in dct:
-            dct = numpy.array(dct["$array"])
+    if "$tuple" in dct:
+        dct = tuple(dct["$tuple"])
+    elif "$date" in dct:
+        dct = UNIX + datetime.timedelta(milliseconds=dct["$date"])
+    elif "$elapse" in dct:
+        dct = datetime.timedelta(milliseconds=dct["$elapse"])
+    elif "$array" in dct:
+        dct = numpy.array(dct["$array"])
 
     return dct
 
 def default(obj):
     if isinstance(obj, types.TupleType):
         obj = { "$tuple": list(obj) }
+    elif isinstance(obj, datetime.datetime):
+        obj = { "$date": int(KILO * (obj - UNIX).total_seconds()) }
     elif isinstance(obj, datetime.timedelta):
-        obj = { "$elapse": obj.total_seconds() }
+        obj = { "$elapse": int(KILO * obj.total_seconds()) }
     elif isinstance(obj, numpy.ndarray):
         obj = { "$array": obj.tolist() }
     else:
-        obj = bson.json_util.default(obj)
+        raise#
 
     return obj
 

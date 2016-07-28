@@ -4,7 +4,7 @@ from numpy import dot, cross, hstack, hsplit
 from scipy.linalg import inv, norm
 from scipy.integrate import ode
 
-from core import Process
+from .core import Process
 
 __all__= ["model",
           "quat2rec", "rec2quat",

@@ -3,8 +3,8 @@ from math import sqrt, radians, cos, sin
 from numpy import array
 from scipy.optimize import root
 
-from core import Process
-from util import I, J, K
+from .core import Process
+from .util import I, J, K
 
 __all__= ["model",
           "sidereal",

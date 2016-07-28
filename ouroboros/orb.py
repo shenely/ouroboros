@@ -1,13 +1,13 @@
-from math import degrees, pi, sqrt, cos, sin, tan, asin, acos, atan
+from math import pi, sqrt, cos, sin, tan, asin, atan
 
-from numpy import array, dot, cross, hstack, hsplit
+from numpy import array, cross, hstack, hsplit
 from scipy.linalg import norm
 from scipy.optimize import newton
 from scipy.integrate import ode
 from sgp4.earth_gravity import wgs84
 from sgp4.io import twoline2rv 
 
-from core import Process
+from .core import Process
 
 __all__= ["model", "simple",
           "rec2orb", "sph2kep"]
