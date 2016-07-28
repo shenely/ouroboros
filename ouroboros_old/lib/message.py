@@ -129,7 +129,3 @@ class MessageFormat(ActionPrimitive, WatcherPrimitive):
                      format(self.name, message.value))
         
         return "output"
-    
-def install(service):
-    MessageParse.install(service)
-    MessageFormat.install(service)

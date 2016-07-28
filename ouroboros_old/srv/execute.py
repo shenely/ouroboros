@@ -77,7 +77,7 @@ class ExecutionService(ServiceObject):
         
         self.name = name
         
-        self._process = ProcessorService()
+        #self._process = ProcessorService()
         self._database = PersistenceService()
     
     def start(self):
@@ -103,7 +103,7 @@ class ExecutionService(ServiceObject):
         if super(ExecutionService, self).pause():
             self._database.pause()
             
-            self._process.stop()
+            #self._process.stop()
             
             return True
         else:
@@ -116,7 +116,7 @@ class ExecutionService(ServiceObject):
             
             self.run()
             
-            self._process.start()
+            #self._process.start()
             
             return True
         else:
@@ -125,6 +125,6 @@ class ExecutionService(ServiceObject):
     def run(self):
         """Initialize main behavior."""
         if self._running:
-            self._main = BehaviorFactory(self, self.name)(MAIN_NAME)
+            self._main = BehaviorFactory(self.name)(MAIN_NAME)
         else:
             self.resume()

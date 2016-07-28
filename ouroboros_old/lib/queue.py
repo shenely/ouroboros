@@ -153,8 +153,3 @@ class QueuePut(ActionPrimitive, WatcherPrimitive):
         else:                    
             logging.warn("{0}:  Queue is full".\
                          format(self.name))
-    
-def install(service):
-    QueuePrimitive.install(service)
-    QueueGet.install(service)
-    QueuePut.install(service)

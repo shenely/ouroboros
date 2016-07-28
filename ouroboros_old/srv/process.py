@@ -4,7 +4,7 @@
 
 Author(s):  Sean Henely
 Language:   Python 2.x
-Modified:   22 June 2016
+Modified:   23 June 2016
 
 TBD.
 
@@ -34,6 +34,7 @@ Date          Author          Version     Description
 2015-06-04    shenely         1.9         Added examine native method
 2015-07-24    shenely         1.10        Removed socket support
 2016-06-22    shenely         1.11        Control flow via exception
+2016-06-23    shenely         1.12        Undid last change
 
 """
 
@@ -49,7 +50,6 @@ import logging
 import tornado.ioloop
 
 #Internal libraries
-from ..common import All, Many, One, No
 from . import ServiceObject
 #
 ##################
@@ -66,7 +66,7 @@ __all__ = ["ProcessorService"]
 ####################
 # Constant section #
 #
-__version__ = "1.11"#current version [major.minor]
+__version__ = "1.12"#current version [major.minor]
 
 TIMEOUT = datetime.timedelta(0, 0, 0, 100)#time between running
 
@@ -136,31 +136,14 @@ class ProcessorService(ServiceObject):
             with root._control_graph.node[node].get("obj") as behavior:                
                 behavior.watch(self, root, node, *behavior._required_data)
                 
-                try:
-                    behavior(face)
-                except All:#all the things!
-                    targets = [target for source, target, data
-                               in root._control_graph.out_edges_iter(node, data=True)
-                               if root._control_graph.node[target]["obj"] is not None]
-                except Many as signal:#some of the things.
-                    targets = [target for source, target, data
-                               in root._control_graph.out_edges_iter(node, data=True)
-                               if data["mode"] in signal.values
-                               and root._control_graph.node[target]["obj"] is not None]
-                except One as signal:#one of the things...
-                    targets = [target for source, target, data
-                               in root._control_graph.out_edges_iter(node, data=True)
-                               if data["mode"] == signal.value
-                               and root._control_graph.node[target]["obj"] is not None]
-                except No:#nothing!
-                    targets = []
-                except:#uh oh...
-                    targets = []
-                    raise
-                else:#no exceptions used
-                    targets = []
-                finally:#no matter what
-                    for target in targets:self.schedule(root, target)
+                face = behavior(face)
+                targets = [target for source, target, data
+                           in root._control_graph.out_edges_iter(node,
+                                                                 data=True)
+                           if data["mode"] == face
+                           and root._control_graph.node[target]["obj"]
+                           is not None]
+                for target in targets:self.schedule(root, target)
                 
                 behavior.watch(self, root, node, *behavior._provided_data)
             

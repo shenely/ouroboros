@@ -49,6 +49,7 @@ Date          Author          Version     Description
 #
 #Built-in libraries
 import pickle
+import logging
 
 #External libraries
 from networkx import DiGraph
@@ -87,17 +88,9 @@ DEFAULT_DOCUMENT = {"story": {},
 ####################
 
 
-def behavior(name,type,
-             story=DEFAULT_DOCUMENT["story"],
-             faces=DEFAULT_DOCUMENT["faces"],
-             nodes=DEFAULT_DOCUMENT["nodes"],
-             edges=DEFAULT_DOCUMENT["edges"]):
+def behavior(**doc):
     def decorator(cls):
-        cls.doc = dict(name=name,
-                       type=type,
-                       faces=faces,
-                       nodes=nodes,
-                       edges=edges)
+        cls.doc = doc
         
         return cls
     
@@ -107,23 +100,6 @@ def behavior(name,type,
           type=None)
 class BehaviorObject(BaseObject):
     """Generic behavior object"""
-    
-    @classmethod
-    def install(cls, service):
-        cls.doc["path"] = pickle.dumps(cls)
-        
-        service.set({ "name": cls.doc["name"] }, cls.doc)
-    
-    @classmethod
-    def uninstall(cls, service):
-        cls.doc["path"] = pickle.dumps(cls)
-        
-        service.delete({ "name": cls.doc["name"] })
-    
-    @classmethod
-    def reinstall(cls, service):
-        cls.uninstall(service)
-        cls.install(service)
     
     def __init__(self, name, *arg, **kwargs):
         self.name = name
@@ -143,16 +119,19 @@ class PrimitiveBehavior(BehaviorObject):
     """Primitive (simple) behavior"""
     
     def __call__(self, face):
-        return self._process(face)
-    
-    def __enter__(self):
-        return self
-    
-    def __exit__(self, type, value, traceback):
-        pass
-    
-    def _process(self, face):
         return NotImplemented
+    
+    def __getitem__(self, face):
+        assert face in self._provided_data
+        
+        source = self._data_graph.node[(self.name, face)].get("obj")
+        return source.value
+    
+    def __setitem__(self, face, value):
+        assert face in self._required_data
+        
+        source = self._data_graph.node[(self.name, face)].get("obj")
+        source.value = value
     
     def default(self, obj):
         return json_util.default(obj)
@@ -165,17 +144,83 @@ class PrimitiveBehavior(BehaviorObject):
 class CompositeBehavior(BehaviorObject):
     """Composite (complex) behavior"""
     
-def install():
-    from .srv.persist import PersistenceService
+    def __call__(self, face):
+        assert face in self._input_control
+        
+        def recursion(path):
+            for source, target in self._control_graph.out_edges_iter(path):
+                node, face = target[:-1], target[-1]
+                
+                if self.__class__.__name__ in node:
+                    return face
+                else:
+                    obj = self._data_graph.node[node]["obj"]
+                    
+                    self._update(*[node + (r,) for r in obj._required_data])
+                    face = obj(face)
+                    self._update(*[node + (p,) for p in obj._provided_data])
+                    
+                    path = node + (face,)
+                    return recursion(path)
+        
+        path = (self.__class__.__name__, face)
+        face = recursion(path)
+        
+        assert face in self._output_control
+        return face
     
-    service = PersistenceService()
-    service.start()
-    service.run()
+    def __getitem__(self, face):
+        assert face in self._provided_data
+        
+        source = self._data_graph.node[(self.name, face)].get("obj")
+        self._update((self.name, face))
+        return source.value
     
-    PrimitiveBehavior.install(service)
-    CompositeBehavior.install(service)
+    def __setitem__(self, face, value):
+        assert face in self._required_data
+        
+        source = self._data_graph.node[(self.name, face)].get("obj")
+        source.value = value
+        self._update((self.name, face))
     
-    service.pause()
-    service.stop()
-    
-install()
+    def _update(self, *faces):
+        for face in faces:
+            nodes = set()
+            
+            source = self._data_graph.node[face].get("obj")
+            
+            def recursion(e):
+                nodes.add(e)
+                
+                for n in list(nodes):
+                    for p in self._data_graph.predecessors_iter(n):
+                        if p not in nodes:
+                            recursion(p)
+                    for s in self._data_graph.successors_iter(n):
+                        if s not in nodes:
+                            recursion(s)
+            
+            recursion(face)
+            nodes.remove(face)
+            
+            for n in nodes:
+                target = self._data_graph.node[n].get("obj")
+                
+                logging.debug("{0}:  Referenced to {1}".\
+                              format(".".join(face), ".".join(n)))
+                
+                if hasattr(source, "value"):
+                    if source.value is None and \
+                       hasattr(target, "value"):
+                        source.value = target.value
+                        source.default = target.default
+                        source.object_hook = target.object_hook
+                    else:
+                        target.value = source.value
+                        target.default = source.default
+                        target.object_hook = source.object_hook
+                elif hasattr(target, "value") and \
+                     target.value is not None:
+                    source.value = target.value
+                    source.default = target.default
+                    source.object_hook = target.object_hook

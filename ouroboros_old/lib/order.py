@@ -124,6 +124,3 @@ class OrderComparison(WatcherPrimitive):
                      format(self.name))
             
             return "around"
-    
-def install(service):    
-    OrderComparison.install(service)

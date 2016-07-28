@@ -133,7 +133,7 @@ class ElapsedPrimitive(PrimitiveBehavior):
                                      "type":"ElapsedPrimitive"}],
                          "provide":[{"name":"message",
                                      "type":"DatetimePrimitive"}]},
-                 "control":{"input":[],
+                 "control":{"input":["input"],
                             "output":["output"]}},
           nodes=[{"name":"epoch",
                   "type":"DatetimePrimitive","args":[]},
@@ -180,7 +180,7 @@ class ClockSource(SourcePrimitive, PeriodicListener, WatcherPrimitive):
                                      "type":"NumberPrimitive"}],
                          "provide":[{"name":"message",
                                      "type":"DatetimePrimitive"}]},
-                 "control":{"input":[],
+                 "control":{"input":["input"],
                             "output":["output"]}},
           nodes=[{"name":"epoch",
                   "type":"DatetimePrimitive","args":[]},
@@ -265,9 +265,3 @@ class DiscreteClock(ClockSource):
         
         #Increase simulation time
         message.value = message.value + step.value
-    
-def install(service):    
-    DatetimePrimitive.install(service)
-    ElapsedPrimitive.install(service)
-    ContinuousClock.install(service)
-    DiscreteClock.install(service)

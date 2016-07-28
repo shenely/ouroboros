@@ -39,7 +39,7 @@ import logging
 #External libraries
 
 #Internal libraries
-from ..common import ObjectDict, All, Many, One, No
+from ..common import ObjectDict
 from ..behavior import *
 #
 ##################=
@@ -112,7 +112,7 @@ class StringPrimitive(PrimitiveBehavior):
                                   output=list("output"))))
 class SourcePrimitive(PrimitiveBehavior):
     
-    def _process(self, face):
+    def __call__(self, face):
         logging.debug("{0}:  Receiving".\
                       format(self.name))
         
@@ -121,7 +121,7 @@ class SourcePrimitive(PrimitiveBehavior):
         logging.debug("{0}:  Received".\
                       format(self.name))
         
-        raise One("output")
+        return "output"
     
     def _receive(self):
         return NotImplemented
@@ -134,7 +134,7 @@ class SourcePrimitive(PrimitiveBehavior):
                                   output=list())))
 class TargetPrimitive(PrimitiveBehavior):
     
-    def _process(self, face):
+    def __call__(self, face):
         logging.debug("{0}:  Sending".\
                       format(self.name))
         
@@ -143,7 +143,7 @@ class TargetPrimitive(PrimitiveBehavior):
         logging.debug("{0}:  Sent".\
                       format(self.name))
         
-        return No()
+        return None
     
     def _send(self):
         return NotImplemented
@@ -157,7 +157,7 @@ class TargetPrimitive(PrimitiveBehavior):
                                   output=[True,False])))
 class ConditionPrimitive(PrimitiveBehavior):
     
-    def _process(self, face):
+    def __call__(self, face):
         logging.debug("{0}:  Satisfying".\
                       format(self.name))
         
@@ -170,7 +170,7 @@ class ConditionPrimitive(PrimitiveBehavior):
             logging.warning("{0}:  Not satisfied".\
                          format(self.name))
             
-        raise One(state)
+        return state
     
     def _satisfy(self):
         return NotImplemented
@@ -183,7 +183,7 @@ class ConditionPrimitive(PrimitiveBehavior):
                                   output=list("output"))))
 class EventPrimitive(PrimitiveBehavior):
     
-    def _process(self, face):
+    def __call__(self, face):
         logging.debug("{0}:  Occurring".\
                       format(self.name))
         
@@ -192,11 +192,11 @@ class EventPrimitive(PrimitiveBehavior):
         if state is not None:
             logging.debug("{0}:  Occurred".\
                          format(self.name))
-            raise One(state)
+            return state
         else:
             logging.warn("{0}:  False alarm".\
                          format(self.name))
-            raise No()
+            return None
     
     def _occur(self):
         return NotImplemented
@@ -209,7 +209,7 @@ class EventPrimitive(PrimitiveBehavior):
                                   output=list("output"))))
 class ActionPrimitive(PrimitiveBehavior):
     
-    def _process(self, face):
+    def __call__(self, face):
         logging.debug("{0}:  Executing".\
                       format(self.name))
         
@@ -218,29 +218,7 @@ class ActionPrimitive(PrimitiveBehavior):
         logging.debug("{0}:  Executed".\
                      format(self.name))
             
-        raise One("output")
+        return "output"
     
     def _execute(self):
         return NotImplemented
-    
-def install(service):
-    NumberPrimitive.install(service)
-    StringPrimitive.install(service)
-    SourcePrimitive.install(service)
-    TargetPrimitive.install(service)
-    ConditionPrimitive.install(service)
-    EventPrimitive.install(service)
-    ActionPrimitive.install(service)
-    
-    from . import clock as _
-    _.install(service)
-    
-    from . import message as _
-    _.install(service)
-    
-    from . import order as _
-    _.install(service)
-    
-    from . import queue as _
-    _.install(service)
-        

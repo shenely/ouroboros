@@ -41,9 +41,10 @@ import copy
 ##################
 # Export section #
 #
-__all__ = ["ObjectDict",
+__all__ = ["coroutine",
+           "ObjectDict",
            "BaseObject",
-           "Go", "All", "Many", "One", "No"]
+           "Memoize"]
 #
 ##################
 
@@ -55,6 +56,18 @@ __version__ = "1.4"#current version [major.minor]
 #
 ####################
 
+
+def coroutine(func):
+    def wrapper(*args, **kwargs):
+        gen = func(*args, **kwargs)
+        gen.next()
+        return gen
+    
+    wrapper.__name__ = func.__name__
+    wrapper.__dict__ = func.__dict__
+    wrapper.__doc__  = func.__doc__
+    
+    return wrapper
 
 class ObjectDict(dict):
     """JSON-compatible object/dictionary"""
@@ -83,18 +96,24 @@ class ObjectDict(dict):
 class BaseObject(object):
     """Ouroboros base object"""
     
-class Go(Exception):pass
-
-class All(Go):pass
-
-class Many(Go):
-
-    def __init__(self, *outs):
-        self.value = outs
-
-class One(Go):
-
-    def __init__(self, out):
-        self.value = out
-
-class No(Go):pass
+class Memoize(type):
+    """Memoize something"""
+    
+    def __init__(self, *args, **kwargs):
+        super(Memoize, self).__init__(*args, **kwargs)
+        self._cache = {}
+    
+    def __len__(self):
+        return len(self._cache)
+    
+    def __getitem__(self, key):
+        return self._cache[key]
+    
+    def __setitem__(self, key, value):
+        self._cache[key] = value
+    
+    def __delitem__(self, key):
+        del self._cache[key]
+        
+    def __iter__(self):
+        return iter(self._cache)

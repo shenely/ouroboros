@@ -183,8 +183,3 @@ class SocketPublish(TargetPrimitive, WatcherPrimitive):
                 
         logging.info("{0}:  To address {1}".\
                      format(self.name, address.value))
-    
-def install(service):
-    SocketPrimitive.install(service)
-    SocketSubscribe.install(service)
-    SocketPublish.install(service)
