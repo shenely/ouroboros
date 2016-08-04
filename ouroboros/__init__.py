@@ -1,7 +1,3 @@
-import time
-
-import simpy.core
-import tornado.ioloop
 import tornado.concurrent
 
 from .core import System, Process
