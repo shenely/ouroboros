@@ -7,7 +7,7 @@ from scipy.integrate import ode
 from sgp4.earth_gravity import wgs84
 from sgp4.io import twoline2rv 
 
-from .core import Process
+from ..core import Process
 
 __all__= ["model", "simple",
           "rec2orb", "sph2kep"]
@@ -37,7 +37,8 @@ def mean2ecc(M_rad, e):
     
     return E_rad
 
-@Process((["t_dt"], ["+1*"], [], ["t_dt"], []),#system
+@Process("orb.model",
+         (["t_dt"], ["+1*"], [], ["t_dt"], []),#system
          (["_bar", "_t_bar"], [], {"rec":True}, [], ["_bar", "_t_bar"]),#sat
          (["mu"], [], [], [], []))#earth
 def model(t0_dt, r0_bar, v0_bar, mu):
@@ -68,7 +69,8 @@ def model(t0_dt, r0_bar, v0_bar, mu):
         y = box.integrate((t_dt - t0_dt).total_seconds())
         r_bar, v_bar = hsplit(y, 2)
 
-@Process(([], ["clock"], [], ["t_dt"], []),#clock
+@Process("orb.simple",
+         ([], ["clock"], [], ["t_dt"], []),#clock
          (["line1", "line2"], [], {"rec":True}, [], ["_bar", "_t_bar"]))#TLE
 def simple(line1, line2):
     """Propagate orbit"""
@@ -88,7 +90,8 @@ def simple(line1, line2):
         r_bar = array(r_bar)
         v_bar = array(v_bar)
 
-@Process((["mu"], [], [], [], []),#earth
+@Process("orb.rec2orb",
+         (["mu"], [], [], [], []),#earth
          ([], ["rec"], [], ["_bar", "_t_bar"], []),#orbit
          ([], [], {"rec":True}, [], ["_bar"]),#apse
          ([], [], {"rec":True}, [], ["_bar"]))#pole
@@ -105,7 +108,8 @@ def rec2orb(mu):
         h_bar = cross(r_bar, v_bar)#angular momentum
         e_bar = cross(v_bar, h_bar) / mu - r_hat#eccentricity
 
-@Process(([], ["sph"], [], ["r", "az", ], []),#pqw
+@Process("orb.sph2kep",
+         ([], ["sph"], [], ["r", "az", ], []),#pqw
          ([], [], [], ["r", "az", "el"], []),#apse
          ([], [], [], ["az", "el"], []),#pole
          ([], [], {"kep":True}, [], ["a", "M", "e", "om", "i", "OM"]))#elements

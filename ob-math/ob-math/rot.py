@@ -4,7 +4,7 @@ from numpy import dot, cross, hstack, hsplit
 from scipy.linalg import inv, norm
 from scipy.integrate import ode
 
-from .core import Process
+from ..core import Process
 
 __all__= ["model",
           "quat2rec", "rec2quat",
@@ -14,7 +14,8 @@ __all__= ["model",
 KILO = 1000
 MICRO = 1e-6
 
-@Process((["t_dt"], ["+1*"], [], ["t_dt"], []),
+@Process("rot.model",
+         (["t_dt"], ["+1*"], [], ["t_dt"], []),
          (["_bar", "_t_bar"], [], {"rec":True}, [], ["_bar", "_t_bar"]),
          (["_mat"], [], [], [], []))
 def model(t0_dt, th0_bar, om0_bar, I_mat):

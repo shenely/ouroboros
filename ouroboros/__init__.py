@@ -6,7 +6,9 @@ import tornado.concurrent
 
 from .core import System, Process
 from .util import coroutine
-from . import clock, vec, geo, orb
+from . import lib
+
+__all__ = ["Ouroboros"]
 
 class Ouroboros(object):
     System = System

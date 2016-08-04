@@ -1,16 +1,18 @@
 from math import cos, sin, asin, atan2
 
-from numpy import array, dot, cross
+from numpy import ndarray, array, dot, cross
 from scipy.linalg import norm
 
-from .core import Process
+from ..core import Process
+from ..util import register
 
 __all__= ["abs2rel", "rel2abs", 
           "nrt2rot", "rot2nrt", 
           "fun2obl", "obl2fun", 
           "rec2sph", "sph2rec"]
 
-@Process(([], [], [], ["_bar", "_t_bar"], []),#source
+@Process("vec.abs2rel",
+         ([], [], [], ["_bar", "_t_bar"], []),#source
          ([], ["rec"], [], ["_bar", "_t_bar"], []),#target
          ([], [], {"rec":True}, [], ["_bar", "_t_bar"]))#relative
 def abs2rel():
@@ -23,7 +25,8 @@ def abs2rel():
         _bar = _2_bar - _1_bar
         _t_bar = _2_t_bar - _1_t_bar
     
-@Process(([], [], [], ["_bar", "_t_bar"], []),#source
+@Process("vec.rel2abs",
+         ([], [], [], ["_bar", "_t_bar"], []),#source
          ([], [], {"rec":True}, [], ["_bar", "_t_bar"]),#target
          ([], ["rec"], [], ["_bar", "_t_bar"], []))#relative
 def rel2abs():
@@ -36,7 +39,8 @@ def rel2abs():
         _2_bar = _bar + _1_bar
         _2_t_bar = _t_bar + _1_t_bar
 
-@Process(([], ["rec"], [], ["_bar", "_t_bar"], []),#axis
+@Process("vec.nrt2rot",
+         ([], ["rec"], [], ["_bar", "_t_bar"], []),#axis
          ([], ["rec"], [], ["_bar", "_t_bar"], []),#inertial
          ([], [], {"rec":True}, [], ["_bar", "_t_bar"]))#rotating
 def nrt2rot():
@@ -75,7 +79,8 @@ def nrt2rot():
                sin_th * cross_th +\
                (1 - cos_th) * dot_th * th_hat
             
-@Process(([], ["rec"], [], ["_bar", "_t_bar"], []),#axis
+@Process("vec.rot2nrt",
+         ([], ["rec"], [], ["_bar", "_t_bar"], []),#axis
          ([], [], {"rec":True}, [], ["_bar", "_t_bar"]),#inertial
          ([], ["rec"], [], ["_bar", "_t_bar"], []))#rotating
 def rot2nrt(th_bar, r_bar):
@@ -114,7 +119,8 @@ def rot2nrt(th_bar, r_bar):
                sin_th * cross_th +\
                (1 - cos_th) * dot_th * th_hat
     
-@Process(([], [], [], ["_bar", "_t_bar"], []),#node
+@Process("vec.fun2obl",
+         ([], [], [], ["_bar", "_t_bar"], []),#node
          ([], [], [], ["_bar", "_t_bar"], []),#pole
          ([], ["rec"], [], ["_bar", "_t_bar"], []),#fundamental
          ([], [], {"rec":True}, [], ["_bar", "_t_bar"]))#oblique
@@ -159,7 +165,8 @@ def fun2obl():
                       dot(_bar, j_hat),
                       dot(_bar, k_hat)])
     
-@Process(([], [], [], ["_bar", "_t_bar"], []),#zero
+@Process("vec.obl2fun",
+         ([], [], [], ["_bar", "_t_bar"], []),#zero
          ([], [], [], ["_bar", "_t_bar"], []),#pole
          ([], [], {"rec":True}, [], ["_bar", "_t_bar"]),#fundamental
          ([], ["rec"], [], ["_bar", "_t_bar"], []))#oblique
@@ -204,7 +211,8 @@ def obl2fun():
                _bar[1] * j_hat + \
                _bar[2] * k_hat
            
-@Process(([], ["rec"], {"sph":True},
+@Process("vec.rec2sph",
+         ([], ["rec"], {"sph":True},
           ["_bar", "_t_bar"], 
           ["r", "r_t", "az", "az_t", "el", "el_t"]))#vector
 def rec2sph():
@@ -228,7 +236,8 @@ def rec2sph():
         el = asin(z / r)
         el_t = (z_t - z * (r_t / r)) / xy__2
                
-@Process(([], ["sph"], {"rec":True},
+@Process("vec.sph2rec",
+         ([], ["sph"], {"rec":True},
           ["r", "r_t", "az", "az_t", "el", "el_t"],
           ["_bar", "_t_bar"]))#vector
 def sph2rec():
@@ -260,3 +269,7 @@ def sph2rec():
               r * el_t * cos_el
         
         v_bar = array([x_t, y_t, z_t])
+        
+register(ndarray, "$array",
+         object_hook=lambda value: array(value),
+         default=lambda obj: obj.tolist())

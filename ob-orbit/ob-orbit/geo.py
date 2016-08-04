@@ -3,8 +3,8 @@ from math import sqrt, radians, cos, sin
 from numpy import array
 from scipy.optimize import root
 
-from .core import Process
-from .util import I, J, K
+from ..core import Process
+from ..util import I, J, K
 
 __all__= ["model",
           "sidereal",
@@ -45,7 +45,8 @@ def geo(R_km, f):
     
     return fun, jac
 
-@Process(([], ["@0"], [], [], []),
+@Process("geo.model",
+         ([], ["@0"], [], [], []),
          ([], [], {"sph": True}, ["az", "az_t"], []),
          ([], [], [], [], ["_bar", "_t_bar"]))
 def model():
@@ -60,7 +61,8 @@ def model():
 
     yield _hat, _t_hat
 
-@Process(([], ["clock"], [], ["t_dt"], []),
+@Process("geo.sidereal",
+         ([], ["clock"], [], ["t_dt"], []),
          ([], [], {"rec":True}, [], ["_bar", "_t_bar"]))
 def sidereal():
     """Sidereal time"""
@@ -95,7 +97,8 @@ def sidereal():
 
         th_bar = radians(th_G) * K
 
-@Process((["R_km", "f"], [], [], [], []),
+@Process("geo.sph2geo",
+         (["R_km", "f"], [], [], [], []),
          ([], ["sph"], [], ["r", "r_t",
                             "az", "az_t",
                             "el", "el_t"], []),
@@ -164,7 +167,8 @@ def sph2geo(R_km, f):
         _1_hat = - sin_az * I + cos_az * J
         _1_t_hat = - az_t * (cos_az * I + sin_az * J)
         
-@Process((["R_km", "f"], [], [], [], []),
+@Process("geo.geo2rec",
+         (["R_km", "f"], [], [], [], []),
          ([], ["sph"], [], ["r", "r_t",
                             "az", "az_t",
                             "el", "el_t"], []),

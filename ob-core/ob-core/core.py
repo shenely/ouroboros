@@ -1,5 +1,6 @@
 import operator
 import collections
+import logging
 
 import simpy
 
@@ -44,7 +45,7 @@ class System(object):
             
         self._ctrl.update({out: self._env.event()
                            for ctrl in config["ctrl"]
-                           for out in Process[ctrl["name"]]
+                           for out in Process[ctrl["name"]._caller]
                            (self, *ctrl["args"])})
         for name in System:
             #Copy controls to child systems
@@ -200,7 +201,8 @@ class System(object):
 class Process(object):
     __metaclass__ = Memoize
 
-    def __init__(self, *config):
+    def __init__(self, name, *config):
+        self._name = name
         self._config = [Config(*c) for c in config]
     
     def __call__(self, func):        
@@ -275,8 +277,8 @@ class Process(object):
                     for (j, c) in enumerate(self._config)
                     for o in c.outs]
         
-        print ".".join([func.__module__, func.__name__])
-        Process[".".join([func.__module__.replace("ouroboros", "ob"),
-                          func.__name__])] = caller
+        print self._name
+        self._caller = caller
+        Process[self._name] = self
             
         return caller
