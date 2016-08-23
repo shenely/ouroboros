@@ -62,7 +62,7 @@ def model():
     yield _hat, _t_hat
 
 @Process("geo.sidereal",
-         ([], ["clock"], [], ["t_dt"], []),
+         ([], ["tick"], [], ["t_dt"], []),
          ([], [], {"rec":True}, [], ["_bar", "_t_bar"]))
 def sidereal():
     """Sidereal time"""

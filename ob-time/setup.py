@@ -5,6 +5,6 @@ setup(name="ob-time",
       author="shenely",
       description="A brief history",
       package_dir={"ouroboros.lib": "ob-time"},
-      py_modules=["ouroboros.lib.clock"],
+      py_modules=["ouroboros.lib.time"],
       install_requires=["ob-core"])
 

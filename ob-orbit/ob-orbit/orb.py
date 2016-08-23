@@ -70,7 +70,7 @@ def model(t0_dt, r0_bar, v0_bar, mu):
         r_bar, v_bar = hsplit(y, 2)
 
 @Process("orb.simple",
-         ([], ["clock"], [], ["t_dt"], []),#clock
+         ([], ["tick"], [], ["t_dt"], []),#clock
          (["line1", "line2"], [], {"rec":True}, [], ["_bar", "_t_bar"]))#TLE
 def simple(line1, line2):
     """Propagate orbit"""

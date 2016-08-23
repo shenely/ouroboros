@@ -24,10 +24,8 @@ class System(object):
         
         #Time configuration
         self._data = {(None, "t"): self._env.now}
-        self._ctrl = {(None, getattr(self, name)(value)):
-                      self._env.event()
-                      for name in config["time"]
-                      for value in set(config["time"][name])}
+        self._ctrl = {(None, self.at(0)): self._env.event(),
+                      (None, self.every(1)): self._env.event()}
         
         #Everything else
         self._data.update({(data["name"], arg["key"]): arg["value"]
@@ -45,7 +43,7 @@ class System(object):
             
         self._ctrl.update({out: self._env.event()
                            for ctrl in config["ctrl"]
-                           for out in Process[ctrl["name"]._caller]
+                           for out in Process[ctrl["name"]]._caller
                            (self, *ctrl["args"])})
         for name in System:
             #Copy controls to child systems
@@ -257,14 +255,16 @@ class Process(object):
                                     if (j, o) == err.value]
                         except No:#nothing!
                             outs = []
+                        except StopIteration:#oh, ok
+                            outs = []
                         except:#uh oh...
                             outs = []
                             raise
-                        else:#no exceptions used
+                        else:#keep calm...
                             outs = [(j, o)
                                     for (j, c) in enumerate(self._config)
                                     for o in c.outs if c.outs[o]]
-                        finally:#no matter what
+                        finally:#...and carry on
                             sys.go([(pres[j], o) for (j, o) in outs])
                 except simpy.Interrupt:
                     return

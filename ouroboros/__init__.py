@@ -1,12 +1,8 @@
-import time
-
-import simpy.core
-import tornado.ioloop
 import tornado.concurrent
 
 from .core import System, Process
 from .util import coroutine
-from . import lib
+from . import lib as _
 
 __all__ = ["Ouroboros"]
 
