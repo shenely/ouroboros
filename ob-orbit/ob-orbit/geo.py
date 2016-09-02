@@ -46,7 +46,7 @@ def geo(R_km, f):
     return fun, jac
 
 @Process("geo.model",
-         ([], ["@0"], [], [], []),
+         ([], ["tock"], [], [], []),
          ([], [], {"sph": True}, ["az", "az_t"], []),
          ([], [], [], [], ["_bar", "_t_bar"]))
 def model():
@@ -58,6 +58,8 @@ def model():
 
     _hat = - sin_az * I + cos_az * J
     _t_hat = - az_t * (cos_az * I + sin_az * J)
+    
+    print _hat, _t_hat
 
     yield _hat, _t_hat
 

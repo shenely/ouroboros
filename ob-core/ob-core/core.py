@@ -33,13 +33,13 @@ class System(object):
                            for arg in data["args"]})
         for name in System:
             #Copy data to child systems
-            System[name]._data.update({((True,) + key[1:]): self._data[key]
+            System[name]._data.update({((False,) + key[1:]): self._data[key]
                                        for key in self._data
                                        if key[0] == name})
             #Copy data from parent systems
             self._data.update({((name,) + key[1:]): System[name]._data[key]
                                for key in System[name]._data
-                               if key[0] == True})
+                               if key[0] == False})
             
         self._ctrl.update({out: self._env.event()
                            for ctrl in config["ctrl"]
@@ -47,8 +47,8 @@ class System(object):
                            (self, *ctrl["args"])})
         for name in System:
             #Copy controls to child systems
-            System[name]._ctrl.update({((True,) + key[1:]):
-                                       System[name]._ctrl.get((True,) + key[1:],
+            System[name]._ctrl.update({((False,) + key[1:]):
+                                       System[name]._ctrl.get((False,) + key[1:],
                                                               self._env.event())
                                        for key in self._ctrl
                                        if key[0] == name})
@@ -57,7 +57,7 @@ class System(object):
                                self._ctrl.get((name,) + key[1:],
                                               self._env.event())
                                for key in System[name]._ctrl
-                               if key[0] == True})
+                               if key[0] == False})
         
         self._eyes = []
         self._ears = []
@@ -70,10 +70,9 @@ class System(object):
         
         def wrapper():
             try:
-                self._ctrl[(None, name)] = self._env.event()
-                yield self._env.timeout(t - self._env.now)
+                self._ctrl[(None, name)] = self._env.timeout(t - self._env.now)
+                yield self._ctrl[(None, name)]
                 self._data[(None, "t")] = self._env.now
-                self._ctrl[(None, name)].succeed()
             except simpy.Interrupt:
                 return
             finally:
@@ -88,10 +87,9 @@ class System(object):
         
         def wrapper():
             try:
-                self._ctrl[(None, name)] = self._env.event()
-                yield self._env.timeout(dt)
+                self._ctrl[(None, name)] = self._env.timeout(dt)
+                yield self._ctrl[(None, name)]
                 self._data[(None, "t")] = self._env.now
-                self._ctrl[(None, name)].succeed()
             except simpy.Interrupt:
                 return
             finally:
@@ -107,10 +105,9 @@ class System(object):
         def wrapper():
             try:
                 while until is None or self._env.now < until:
-                    self._ctrl[(None, name)] = self._env.event()
-                    yield self._env.timeout(dt)
+                    self._ctrl[(None, name)] = self._env.timeout(dt)
+                    yield self._ctrl[(None, name)]
                     self._data[(None, "t")] = self._env.now
-                    self._ctrl[(None, name)].succeed()
             except simpy.Interrupt:
                 return
             finally:
@@ -131,13 +128,13 @@ class System(object):
         for name in System:
             if name != self._name:
                 #Set some data if...
-                mapping = {((True,) + key[1:]): dct[key]#...child
+                mapping = {((False,) + key[1:]): dct[key]#...child
                            for key in dct
                            if key[0] == name}
-                mapping.update({key: dct[(True,) + key[1:]]#...parent
+                mapping.update({key: dct[(False,) + key[1:]]#...parent
                                 for key in System[name]._data
                                 if key[0] == self._name
-                                and (True,) + key[1:] in dct})
+                                and (False,) + key[1:] in dct})
                 if mapping:
                     System[name]._data.update(mapping)
                     [eye(name, mapping)
@@ -159,13 +156,13 @@ class System(object):
         for name in System:
             if name != self._name:
                 #Fire some controls if...
-                mapping = (set([(True,) + key[1:]#...child
+                mapping = (set([(False,) + key[1:]#...child
                                 for key in keys
                                 if key[0] == name]) |
                            set([key#...parent
                                 for key in System[name]._ctrl
                                 if key[0] == self._name
-                                and (True,) + key[1:] in keys]))
+                                and (False,) + key[1:] in keys]))
                 if mapping:
                     map(simpy.Event.succeed, [System[name]._ctrl[key]
                                               for key in mapping])
@@ -255,8 +252,6 @@ class Process(object):
                                     if (j, o) == err.value]
                         except No:#nothing!
                             outs = []
-                        except StopIteration:#oh, ok
-                            outs = []
                         except:#uh oh...
                             outs = []
                             raise
@@ -267,6 +262,8 @@ class Process(object):
                         finally:#...and carry on
                             sys.go([(pres[j], o) for (j, o) in outs])
                 except simpy.Interrupt:
+                    return
+                except StopIteration:
                     return
                 finally:
                     sys.kill(process)

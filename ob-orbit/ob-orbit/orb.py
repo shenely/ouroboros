@@ -38,7 +38,7 @@ def mean2ecc(M_rad, e):
     return E_rad
 
 @Process("orb.model",
-         (["t_dt"], ["+1*"], [], ["t_dt"], []),#system
+         (["t_dt"], ["tick"], [], ["t_dt"], []),#system
          (["_bar", "_t_bar"], [], {"rec":True}, [], ["_bar", "_t_bar"]),#sat
          (["mu"], [], [], [], []))#earth
 def model(t0_dt, r0_bar, v0_bar, mu):
