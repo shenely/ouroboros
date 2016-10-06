@@ -2,19 +2,11 @@ import types
 import json
 import functools
 
-import numpy
-
 __all__ = ["coroutine",
            "Memoize",
            "Go", "All", "Many", "One", "No",
            "register",
            "dumps", "loads"]
-
-#Unit vectors
-O = numpy.array([0,0,0])
-I = numpy.array([1,0,0])
-J = numpy.array([0,1,0])
-K = numpy.array([0,0,1])
 
 def coroutine(func):
     def wrapper(*args, **kwargs):

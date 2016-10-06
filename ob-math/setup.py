@@ -7,5 +7,7 @@ setup(name="ob-math",
       package_dir={"ouroboros.lib": "ob-math"},
       py_modules=["ouroboros.lib.vec",
                   "ouroboros.lib.rot"],
-      install_requires=["ob-core"])
+      install_requires=["ob-core",
+                        "numpy>=1.11",
+                        "scipy>0.18"])
 

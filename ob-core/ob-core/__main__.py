@@ -1,8 +1,7 @@
 import tornado.ioloop
 
-from .. import Ouroboros
-from . import *
-from .util import TornadoEnvironment
+from . import Ouroboros
+from .util import *
 
 """
 /ob-rest-api/

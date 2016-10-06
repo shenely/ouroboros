@@ -7,5 +7,8 @@ setup(name="ob-orbit",
       package_dir={"ouroboros.lib": "ob-orbit"},
       py_modules=["ouroboros.lib.geo",
                   "ouroboros.lib.orb"],
-      install_requires=["ob-core"])
+      install_requires=["ob-core",
+                        "numpy>=1.11",
+                        "scipy>0.18",
+                        "sgp4>=1.4"])
 

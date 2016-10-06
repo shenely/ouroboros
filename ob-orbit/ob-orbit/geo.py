@@ -4,11 +4,15 @@ from numpy import array
 from scipy.optimize import root
 
 from ..core import Process
-from ..util import I, J, K
 
 __all__= ["model",
           "sidereal",
           "sph2geo", "geo2rec"]
+
+O = array([0,0,0])
+I = array([1,0,0])
+J = array([0,1,0])
+K = array([0,0,1])
 
 def geo(R_km, f):
     def fun(x, r, el):
