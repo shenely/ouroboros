@@ -1,1 +1,1 @@
-pip uninstall ob-core ob-time ob-math ob-orbit ob-web ouroboros -y
+pip uninstall ob-core ob-time ob-math ob-orbit ouroboros -y

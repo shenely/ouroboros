@@ -51,6 +51,7 @@ angular.module('ob.core', ['angular-websocket'])
         }
 
         if (obj.ctrl !== undefined) {
+          ctrl[name].forEach(function (d) { d.value = false; });
           obj.ctrl.forEach(function (o) {
             d = ctrl[name].find(function (d) {
               return angular.equals(d.key, o);
@@ -59,7 +60,6 @@ angular.module('ob.core', ['angular-websocket'])
                               : ctrl[name].push({ "key": o, "value": true });
           });
           callers[name].ctrl.forEach(function (callback) { callback(); });
-          ctrl[name].forEach(function (d) { d.value = false; });
         }
       };
       

@@ -7,7 +7,7 @@ import tornado.web
 import tornado.websocket
 import tornado.concurrent
 
-from .util import coroutine, loads, dumps
+from .util import coroutine, loads, dumps, default
 
 __all__ = ["TornadoEnvironment",
            "SystemHandler",

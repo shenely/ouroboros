@@ -1,1 +1,1 @@
-angular.module('ob', ['ob.core']);
+angular.module('app', ['ouroboros']);
