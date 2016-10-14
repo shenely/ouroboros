@@ -83,4 +83,14 @@ angular.module('ob.core', ['angular-websocket'])
       };
     }
   };
+})
+.directive('obNumber', function () {
+  return {
+    restrict: 'E',
+    scope: {
+      "obValue": "="
+    },
+    templateUrl: 'html/ob-number.html',
+    controller: function ($scope) { }
+  };
 });

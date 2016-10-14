@@ -1,9 +1,9 @@
-angular.module('ob.math', ['ob.core'])
-.directive('obArray', function (obRestApi) {
+angular.module('ob.math', [])
+.directive('obArray', function () {
   return {
     restrict: 'E',
     scope: {
-      "item": "="
+      "obValue": "="
     },
     templateUrl: 'html/ob-array.html',
     controller: function ($scope) { }

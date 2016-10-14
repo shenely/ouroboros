@@ -3,14 +3,14 @@ angular.module('ob.time', ['ob.core'])
   return {
     restrict: 'E',
     scope: {
-      "name": "=",
-      "item": "="
+      "obName": "=",
+      "obValue": "="
     },
     templateUrl: 'html/ob-time.html',
     controller: function ($scope) {
-      var stream = obRestApi.stream($scope.name);
+      var stream = obRestApi.stream($scope.obName);
       stream.sub.data(function () {
-        $scope.date = new Date($scope.item.value.$date);
+        $scope.obDate = new Date($scope.obValue.$date);
       });
       stream.open();
     }

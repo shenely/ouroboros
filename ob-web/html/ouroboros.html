@@ -1,22 +1,23 @@
 <table>
-    <tr ng-repeat="item in data">
-        <th>{{item.key}}</th>
+    <tr ng-repeat="(key, items) in groups">
+        <th>{{key}}</th>
         <td>
-            <ob-time ng-if="item.value.hasOwnProperty('$date')"
-                     name="name" item="item">
-            </ob-time>
-            <ob-array ng-if="item.value.hasOwnProperty('$array')"
-                     item="item">
-            </ob-array>
-            <span ng-if="isNumber(item.value)">{{item.value}}</span>
-            
+            <table>
+                <tr ng-repeat="(key, value) in items">
+                    <th>{{key}}</th>
+                    <td>
+                        <ob-time ng-if="value.hasOwnProperty('$date')"
+                                 ob-name="name" ob-value="value">
+                        </ob-time>
+                        <ob-array ng-if="value.hasOwnProperty('$array')"
+                                  ob-value="value">
+                        </ob-array>
+                        <ob-number ng-if="isNumber(value)"
+                                   ob-value="value">
+                        </ob-number>
+                    </td>
+                </tr>
+            </table>
         </td>
-    </tr>
-</table>
-
-<table>
-    <tr ng-repeat="item in ctrl">
-        <th>{{item.key}}</th>
-        <td>{{item.value}}</td>
     </tr>
 </table>

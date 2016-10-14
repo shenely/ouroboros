@@ -152,7 +152,8 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler, BaseHandler):
                           "data": [{"key": default(key),
                                     "value":self._packet[name]["data"][key]}
                                    for key in self._packet[name]["data"]],
-                          "ctrl": list(self._packet[name]["ctrl"])}
+                          "ctrl": list(map(default, 
+                                           self._packet[name]["ctrl"]))}
                          for name in self._packet])
                 self._packet.clear()
         self._._env.process(wrapper())
