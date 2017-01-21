@@ -8,6 +8,7 @@ from .util import *
 
 __all__ = ["Config", "System", "Process"]
 
+
 Config = collections.namedtuple("Config",
                                 ["args", "ins", "outs", "reqs", "pros"])
 
@@ -24,8 +25,9 @@ class System(object):
         
         #Time configuration
         self._data = {(None, "t"): self._env.now}
-        self._ctrl = {(None, self.at(0)): self._env.event(),
-                      (None, self.every(1)): self._env.event()}
+        self._ctrl = {self.clock(clock["name"], **args): self._env.event()
+                      for clock in config["time"]
+                      for args in clock["args"]}
         
         #Everything else
         self._data.update({(data["name"], arg["key"]): arg["value"]
@@ -64,49 +66,16 @@ class System(object):
         
         System[self._name] = self
         
-    def at(self, t):
-        """Trigger at a specific tick"""
-        name = "@{0:d}".format(t)
-        
-        def wrapper():
-            try:
-                self._ctrl[(None, name)] = self._env.timeout(t - self._env.now)
-                yield self._ctrl[(None, name)]
-                self._data[(None, "t")] = self._env.now
-            except simpy.Interrupt:
-                return
-            finally:
-                self.kill(process)
-                
-        process = self.spawn(wrapper)
-        return name
-        
-    def after(self, dt):
-        """Trigger after a number of ticks"""
-        name = "+{0:d}".format(dt)
-        
-        def wrapper():
-            try:
-                self._ctrl[(None, name)] = self._env.timeout(dt)
-                yield self._ctrl[(None, name)]
-                self._data[(None, "t")] = self._env.now
-            except simpy.Interrupt:
-                return
-            finally:
-                self.kill(process)
-                
-        process = self.spawn(wrapper)
-        return name
-        
-    def every(self, dt, until=None):
+    def clock(self, name, key, every=1, after=None, before=None):
         """Trigger every number of ticks"""
-        name = "+{0:d}*".format(dt)
         
         def wrapper():
             try:
-                while until is None or self._env.now < until:
-                    self._ctrl[(None, name)] = self._env.timeout(dt)
-                    yield self._ctrl[(None, name)]
+                if after is not None:
+                    yield self._env.timeout(after)
+                while before is None or self._env.now <= before:
+                    self._ctrl[(name, key)] = self._env.timeout(every)
+                    yield self._ctrl[(name, key)]
                     self._data[(None, "t")] = self._env.now
             except simpy.Interrupt:
                 return
@@ -114,7 +83,7 @@ class System(object):
                 self.kill(process)
                 
         process = self.spawn(wrapper)
-        return name
+        return (name, key)
 
     def get(self, keys):
         """Get some values"""
@@ -224,14 +193,14 @@ class Process(object):
                                 sys.set((lambda d:
                                          {(pres[j], p): d[k]
                                           for (k, (j, p)) in enumerate([(j, p)
-                                                                    for (j, c) in enumerate(self._config)
-                                                                    for p in c.pros])})
+                                                                        for (j, c) in enumerate(self._config)
+                                                                        for p in c.pros])})
                                         (f.send(sys.get([(pres[j], r)
                                                          for (j, c) in enumerate(self._config)
                                                          for r in c.reqs]))))
                             except Go as err:
                                 #If using exceptions for control handling, restart function
-                                f = self._func(*sys.get([(pres[j],a)
+                                f = self._func(*sys.get([(pres[j], a)
                                                          for (j, c) in enumerate(self._config)
                                                          for a in c.args]))
     

@@ -38,8 +38,10 @@ def mean2ecc(M_rad, e):
     return E_rad
 
 @Process("orb.model",
-         (["t_dt"], ["tick"], [], ["t_dt"], []),#system
-         (["_bar", "_t_bar"], [], {"rec":True}, [], ["_bar", "_t_bar"]),#sat
+         ([], [], [], ["t_dt"], []),#system
+         (["t_dt", "_bar", "_t_bar"],
+          ["tock"], {"rec":True},
+          [], ["_bar", "_t_bar"]),#sat
          (["mu"], [], [], [], []))#earth
 def model(t0_dt, r0_bar, v0_bar, mu):
     """Propagate orbit"""
@@ -70,8 +72,10 @@ def model(t0_dt, r0_bar, v0_bar, mu):
         r_bar, v_bar = hsplit(y, 2)
 
 @Process("orb.simple",
-         ([], ["tick"], [], ["t_dt"], []),#clock
-         (["line1", "line2"], [], {"rec":True}, [], ["_bar", "_t_bar"]))#TLE
+         ([], [], [], ["t_dt"], []),#system
+         (["line1", "line2"],
+          ["tock"], {"rec":True}, [],
+          ["_bar", "_t_bar"]))#TLE
 def simple(line1, line2):
     """Propagate orbit"""
     r_bar = v_bar = None
@@ -111,7 +115,7 @@ def rec2orb(mu):
 @Process("orb.sph2kep",
          ([], ["sph"], [], ["r", "az", ], []),#pqw
          ([], [], [], ["r", "az", "el"], []),#apse
-         ([], [], [], ["az", "el"], []),#pole
+         ([], [], [], ["az", "el"], []),#pole 
          ([], [], {"kep":True}, [], ["a", "M", "e", "om", "i", "OM"]))#elements
 def sph2kep():
     a = M = e = om = i = OM = None
@@ -119,7 +123,7 @@ def sph2kep():
     while True:
         #Input/output
         r, th, e, az, el, OM, i = yield a, M, e, om, i, OM,
-
+        
         #Semi-major axis
         a = r * (1 + e * cos(th)) / (1 - e ** 2)#from orbit equation
 

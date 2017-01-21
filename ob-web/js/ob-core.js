@@ -84,6 +84,28 @@ angular.module('ob.core', ['angular-websocket'])
     }
   };
 })
+.directive('obBuild', function (obRestApi) {
+  return {
+    restrict: 'E',
+    scope: {
+      "obValue": "="
+    },
+    templateUrl: 'html/ob-build.html',
+    controller: function ($scope) {
+      obRestApi.system.get("test")
+        .then(function (response) {
+          $scope.system = response.data.data;
+        })
+      $scope.registry = ["$date", "$array"];
+      
+      $scope.dataType = function (value) {
+        return angular.isObject(value) 
+             ? Object.keys(value)[0]
+             : (typeof value);
+      };
+    }
+  };
+})
 .directive('obNumber', function () {
   return {
     restrict: 'E',
@@ -91,6 +113,16 @@ angular.module('ob.core', ['angular-websocket'])
       "obValue": "="
     },
     templateUrl: 'html/ob-number.html',
+    controller: function ($scope) { }
+  };
+})
+.directive('obString', function () {
+  return {
+    restrict: 'E',
+    scope: {
+      "obValue": "="
+    },
+    templateUrl: 'html/ob-string.html',
     controller: function ($scope) { }
   };
 });

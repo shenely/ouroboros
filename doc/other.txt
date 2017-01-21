@@ -30,12 +30,11 @@ rot
 
 [
   {
-    name: String,
-    time: {
-	    at: [ Number, ...],
-	    after: [ Number, ...]
-	    every: [ Number, ...]
-    },
+    name: String,.
+    time: [ { name: String,
+    	      args: [ { key: String,
+    	                every: Number,
+    	                after: Number, before: Number}, ...],
     data: [ { name: String,
               args: [ { key: String, value: Object }, ... ] }, ... ],
     ctrl: [ { name: String,

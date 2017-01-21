@@ -15,7 +15,7 @@ def model(L, A, N):
         B = dot(B_bar, _bar)
         
         i_drive = cumsum(v_drive) / 8 / L_mag + i0_drive
-        i_sense = (A * N/ L) * B + i_drive
+        i_sense = (A * N / L) * B + i_drive
         i0_drive = i_drive[-1]
         
         

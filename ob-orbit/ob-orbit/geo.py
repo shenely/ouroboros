@@ -50,8 +50,7 @@ def geo(R_km, f):
     return fun, jac
 
 @Process("geo.model",
-         ([], ["tock"], [], [], []),
-         ([], [], {"sph": True}, ["az", "az_t"], []),
+         ([], ["tock"], {"sph": True}, ["az", "az_t"], []),
          ([], [], [], [], ["_bar", "_t_bar"]))
 def model():
     """Ground station"""
@@ -68,7 +67,7 @@ def model():
     yield _hat, _t_hat
 
 @Process("geo.sidereal",
-         ([], ["tick"], [], ["t_dt"], []),
+         ([], ["tick"], [], ["t_dt"], []),#system
          ([], [], {"rec":True}, [], ["_bar", "_t_bar"]))
 def sidereal():
     """Sidereal time"""
