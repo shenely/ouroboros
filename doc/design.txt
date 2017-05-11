@@ -1,0 +1,12 @@
+Environment
+System
+Process
+
+Environment { (None[, Object]*): Object }
+System { (True[, Object]*): Object }
+Parent-child { (False[, Object]*): Object }
+Other { (Object[, Object]*): Object }
+
+time
+data
+control

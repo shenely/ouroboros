@@ -26,19 +26,155 @@ rot
 	rpy2quat
 	quat2mat
 	mat2quat
-	
+
+time: [n]ame [a]fter [b]efore [e]very
+ctlr: [n]ame [p]roc [t]ime [d]ata*
+obsr: [n]ame [p]roc [t]ime [d]ata*
+data: [n]ame ([k]ey [t]ype [v]alue)*
+    null: system
+    true: truth
+    false: external
+    str: internal
+fact: [n]ame [p]roc [d]ata* [r]ule*
+plan: [n]ame [p]roc [d]ata* [r]ule*
+rule: [n]ame [f]act* [p]lan*
+
+
+//GET    /ob-rest-api/system?name=String
+//POST   /ob-rest-api/system
+//PUT    /ob-rest-api/system?name=String
+//DELETE /ob-rest-api/system?name=String
+{ 'name': String,
+  'time': [ String, ... ], //reference to Time
+  'ctlr': [ String, ... ], //reference to Ctlr
+  'obsr': [ String, ... ], //reference to Obsr
+  'data': [ String, ... ], //reference to Data
+  'fact': [ String, ... ], //reference to Fact
+  'plan': [ String, ... ], //reference to Plan
+  'rule': [ String, ... ] }//reference to Rule
+
+//GET    /ob-rest-api/<System>/time?name=String&after=Number&before=Number
+//POST   /ob-rest-api/<System>/time
+//PUT    /ob-rest-api/<System>/time?name=String
+//DELETE /ob-rest-api/<System>/time?name=String
+{ 'name': String,//unique to System
+  'after': Number,
+  'before': Number,
+  'every': Number }
+  
+//GET    /ob-rest-api/<System>/ctlr?name=String&time=String
+//POST   /ob-rest-api/<System>/ctlr
+//PUT    /ob-rest-api/<System>/ctlr?name=String
+//DELETE /ob-rest-api/<System>/ctlr?name=String
+{ 'name': String,//unique to System
+  'proc': String,
+  'time': String,          //reference to Time
+  'data': [ String, ... ] }//reference to Data
+  
+//GET    /ob-rest-api/<System>/obsr?name=String&time=String
+//POST   /ob-rest-api/<System>/obsr
+//PUT    /ob-rest-api/<System>/obsr?name=String
+//DELETE /ob-rest-api/<System>/obsr?name=String
+{ 'name': String,//unique to System
+  'proc': String,
+  'time': String,          //reference to Time
+  'data': [ String, ... ] }//reference to Data
+  
+//GET    /ob-rest-api/<System>/data?name=String
+//POST   /ob-rest-api/<System>/data
+//PUT    /ob-rest-api/<System>/data?name=String
+//DELETE /ob-rest-api/<System>/data?name=String
+{ 'name': String,//unique to System
+  'data': [ { 'name': String,
+              'type': String,
+              'value': Object }, ... ] }
+            
+//GET    /ob-rest-api/<System>/fact?name=String
+//POST   /ob-rest-api/<System>/fact
+//PUT    /ob-rest-api/<System>/fact?name=String
+//DELETE /ob-rest-api/<System>/fact?name=String
+{ 'name': String,//unique to System
+  'proc': String,
+  'data': [ String, ... ], //reference to Data
+  'rule': [ String, ... ] }//reference to Rule
+            
+//GET    /ob-rest-api/<System>/plan?name=String
+//POST   /ob-rest-api/<System>/plan
+//PUT    /ob-rest-api/<System>/plan?name=String
+//DELETE /ob-rest-api/<System>/plan?name=String
+{ 'name': String,//unique to System
+  'proc': String,
+  'data': [ String, ... ], //reference to Data
+  'rule': [ String, ... ] }//reference to Rule
+  
+//GET    /ob-rest-api/<System>/rule?name=String
+//POST   /ob-rest-api/<System>/rule
+//PUT    /ob-rest-api/<System>/rule?name=String
+//DELETE /ob-rest-api/<System>/rule?name=String
+{ 'name': String,//unique to System
+  'fact': [ String, ... ], //reference to Fact
+  'plan': [ String, ... ] }//reference to Plan
+  
+  
+data>ctlr>true
+true>obsr>data
+data>fact>flag
+flag>rule>flag
+flag>plan>data
+
+ctrl>???>data
+data>???>ctrl
+
+
+{Object: Object, ...} <-> { $dict: [ { key: Object, value: Object }, ... ] }
+(Object, ...) <-> { $tuple: [ Object, ... ] }
+
+{ name: None|String,
+  item: { (None, String):  {...},
+          (True, String):  {...},
+          (False, String):  {...},
+          (String, String):  { data: {...},
+                               ctrl: [...] },
+          ... },
+  proc: [ { name: String,
+            item: [ (Object, ...), ... ] } ] }
+            
+(src, trg, rel)
+((item,), (item, item, item), (item, item, item))
+(((ins, pros),),
+ ((ins, pros),
+  (ins, pros),
+  (ins, pros)),
+ ((ins, pros),
+  (ins, pros),
+  (ins, pros)))
+((((_bar, _t_bar), (rec,)),),
+ (((_bar, _t_bar), (rec,)),
+  ((_bar, _t_bar), (rec,)),
+  ((_bar, _t_bar), (rec,))),
+ (((_bar, _t_bar), (rec,)),
+  ((_bar, _t_bar), (rec,)),
+  ((_bar, _t_bar), (rec,))))
 
 [
   {
-    name: String,.
+    name: String,
     time: [ { name: String,
-    	      args: [ { key: String,
-    	                every: Number,
-    	                after: Number, before: Number}, ...],
+              args: [ { key: String,
+                        every: Number,
+                        after: Number,
+                        before: Number },
+                      ...] },
+            ... ],
     data: [ { name: String,
-              args: [ { key: String, value: Object }, ... ] }, ... ],
+              args: [ { key: String,
+                        value: Object },
+                      ... ] },
+            ... ],
     ctrl: [ { name: String,
-              args: [ String, ... ] }, ... ]
+              args: [ String,
+                      ... ] },
+            ... ]
   },
   ...
 ]

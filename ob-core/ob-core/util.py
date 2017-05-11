@@ -18,7 +18,7 @@ def coroutine(func):
     wrapper.__dict__ = func.__dict__
     wrapper.__doc__  = func.__doc__
     
-    return wrapper      
+    return wrapper
 
 class Memoize(type):
     
