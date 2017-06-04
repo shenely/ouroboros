@@ -1,16 +1,21 @@
+#built-in imports
 from math import pi
 
+#external imports
 from numpy import dot, cross, hstack, hsplit
 from scipy.linalg import inv, norm
 from scipy.integrate import ode
 
-from ..core import Process
+#internal imports
+from ouroboros import Item, PROCESS
 
+#exports
 __all__= ["model",
           "quat2rec", "rec2quat",
           "quat2rpy", "rpy2quat",
           "quat2mat", "mat2quat"]
 
+#constants
 KILO = 1000
 MICRO = 1e-6
 

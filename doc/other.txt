@@ -130,14 +130,14 @@ data>???>ctrl
 (Object, ...) <-> { $tuple: [ Object, ... ] }
 
 { name: None|String,
-  item: { (None, String):  {...},
-          (True, String):  {...},
-          (False, String):  {...},
-          (String, String):  { data: {...},
-                               ctrl: [...] },
+  items: { (None, String):  {...},
+           (True, String):  {...},
+           (False, String):  {...},
+           (String, String):  { data: {...},
+                                ctrl: [...] },
           ... },
-  proc: [ { name: String,
-            item: [ (Object, ...), ... ] } ] }
+  procs: [ { name: String,
+             keys: [ (Object, ...), ... ] } ] }
             
 (src, trg, rel)
 ((item,), (item, item, item), (item, item, item))

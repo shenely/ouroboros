@@ -1,82 +1,85 @@
+#built-in libraries
 from math import cos, sin, asin, atan2
 
+#external libraries
 from numpy import ndarray, array, dot, cross
 from scipy.linalg import norm
 
-from ..core import Process
-from ..util import register
+#internal libraries
+from ouroboros import NORMAL, Item, PROCESS
 
+#exports
 __all__= ["abs2rel", "rel2abs", 
           "nrt2rot", "rot2nrt", 
           "fun2obl", "obl2fun", 
           "rec2sph", "sph2rec"]
 
-@Process('vec.abs2rel', lvl=1,
-         Process.Item('source',
-                      evs=('rec',),
-                      ins=('rec',),
-                      reqs=('_bar', '_t_bar')),
-         Process.Item('target', 
-                      evs=('rec',),
-                      ins=('rec',),
-                      reqs=('_bar', '_t_bar')),
-         Process.Item('relative',
-                      ins=('rec',),
-                      outs=('rec',),
-                      pros=('_bar', '_t_bar')))
-def abs2rel(*_):
+@PROCESS('vec.abs2rel', NORMAL,
+         Item('source',
+              evs=('rec',), args=(),
+              ins=('rec',), reqs=('_bar', '_t_bar'),
+              outs=(), pros()),
+         Item('target',
+              evs=('rec',), args=(),
+              ins=('rec',), reqs=('_bar', '_t_bar'),
+              outs=(), pros=()),
+         Item('relative',
+              evs=(), args=(),
+              ins=('rec',), reqs=(),
+              outs=('rec',), pros=('_bar', '_t_bar')))
+def abs2rel(_1, _2, _3):
     """Absolute to relative origin"""
     _1, _2, _3 = yield
     while True:
         (_1_bar, _1_t_bar), (rec1,) = _1.next()
-        rec, = (_i for (_p, _i) in _3)
-        _3 = (iter((_2_bar - _1_bar, _2_t_bar - _1_t_bar)
-                   if (rec1 and rec2) ^ rec3.next()
-                   else (None, None)),
-              iter((rec1 and rec2,))
+        rec3 = (_ for ((), (_,)) in _3)
+        _3 = (((_2_bar - _1_bar, _2_t_bar - _1_t_bar)
+                if (rec1 and rec2) ^ rec3.next()
+                else (None, None)),
+               (rec1 and rec2,))
               for (_2_bar, _2_t_bar), (rec2,) in _2)
-        _1, _2, _3 = yield (), (), _3
+        _1, _2, _3 = yield None, None, _3
     
-@Process('vec.rel2abs', lvl=1,
-         Process.Item('source',
-                      evs=('rec',),
-                      ins=('rec',),
-                      reqs=('_bar', '_t_bar')),
-         Process.Item('target', 
-                      ins=('rec',),
-                      outs=('vec',),
-                      reqs=('_bar', '_t_bar')),
-         Process.Item('relative',
-                      evs=('rec',),
-                      ins=('rec',),
-                      pros=('_bar', '_t_bar')))
-def rel2abs(*_):
+@PROCESS('vec.rel2abs', NORMAL,
+         Item('source',
+              evs=('rec',), args=(),
+              ins=('rec',), reqs=('_bar', '_t_bar'),
+              outs=(), pros=()),
+         Item('target',
+              evs=(), args=(),
+              ins=('rec',), reqs=(),
+              outs=('rec',), pros=('_bar', '_t_bar')),
+         Item('relative',
+              evs=('rec',), args=(),
+              ins=('rec',), reqs=('_bar', '_t_bar'),
+              outs=(), pros=()))
+def rel2abs(_1, _2, _3):
     """Relative to absolute origin"""
     _1, _2, _3 = yield
     while True:
         (_1_bar, _1_t_bar), (rec1,) = _1.next()
-        rec2, = (_i for (_p, _i) in _2)
-        _2 = (iter((_3_bar + _3_1_bar, _t_bar + _1_t_bar)
-                   if (rec1 and rec3) ^ rec2.next()
-                   else (None, None)),
-              iter((rec1 and rec3,))
-             for (_3_bar, _3_t_bar), (rec,) in _3)
-        _1, _2, _3 = yield (), _2, ()
+        rec2 = (_ for ((), (_,)) in _2)
+        _2 = ((((_3_bar + _3_1_bar, _t_bar + _1_t_bar)
+                if (rec1 and rec3) ^ rec2.next()
+                else (None, None)),
+               (rec1 and rec3,))
+              for (_3_bar, _3_t_bar), (rec,) in _3)
+        _1, _2, _3 = yield None, _2, None
     
-@Process('vec.nrt2rot', lvl=1,
-         Process.Item('axis',
-                      evs=('rec',),
-                      ins=('rec',),
-                      reqs=('_bar', '_t_bar')),
-         Process.Item('inertial',
-                      evs=('rec',),
-                      ins=('rec',),
-                      reqs=('_bar', '_t_bar')),
-         Process.Item('rotating',
-                      ins=('rec',),
-                      outs=('rec',),
-                      pros=('_bar', '_t_bar')))
-def nrt2rot(*_):
+@PROCESS('vec.nrt2rot', NORMAL,
+         Item('axis',
+              evs=('rec',), args=(),
+              ins=('rec',), reqs=('_bar', '_t_bar'),
+              outs=(), pros=()),
+         Item('inertial',
+              evs=('rec',), args=(),
+              ins=('rec',), reqs=('_bar', '_t_bar'),
+              outs=(), pros=()),
+         Item('rotating',
+              evs=(), args=(),
+              ins=('rec',), reqs=(),
+              outs=('rec',), pros=('_bar', '_t_bar')))
+def nrt2rot(_, _1, _2):
     """Inertial to rotating frame"""
     _, _1, _2 = yield
     while True:
@@ -97,43 +100,43 @@ def nrt2rot(*_):
               for (_1_bar, _1_t_bar), (rec1,) in _1)
         
         #XXX there still might be a sign wrong here somewhere...
-        rec2, = (_i for (_p, _i) in _2)
-        _2 = ((iter((cos_th * _1_bar -
-                     sin_th * cross_th +
-                     (1 - cos_th) * dot_th * _hat,
-                     #
-                     cos_th * _1_t_bar -
-                     sin_th * cross(th_hat, _1_t_bar) +
-                     (1 - cos_th) * dot(th_hat, _1_t_bar) * th_hat
-                     +#
-                     th_t * (sin_th * (dot_th * th_hat - _1_bar) -
-                             cos_th * cross_th)
-                     -#
-                     sin_th * cross(_t_hat, _1_bar) +
-                     (1 - cos_th) * (_hat * dot(_t_hat, _1_bar) +
-                                     _t_hat * dot_th))
-                    if (rec1 and rec) ^ rec2.next()
-                    else (None, None)),
-               iter((rec1 and rec,)))
+        rec2 = (_ for ((), (_,)) in _2)
+        _2 = ((((cos_th * _1_bar -
+                 sin_th * cross_th +
+                 (1 - cos_th) * dot_th * _hat,
+                 #
+                 cos_th * _1_t_bar -
+                 sin_th * cross(th_hat, _1_t_bar) +
+                 (1 - cos_th) * dot(th_hat, _1_t_bar) * th_hat
+                 +#
+                 th_t * (sin_th * (dot_th * th_hat - _1_bar) -
+                         cos_th * cross_th)
+                 -#
+                 sin_th * cross(_t_hat, _1_bar) +
+                 (1 - cos_th) * (_hat * dot(_t_hat, _1_bar) +
+                                 _t_hat * dot_th))
+                if (rec1 and rec) ^ rec2.next()
+                else (None, None)),
+               (rec1 and rec,))
               for (_1_bar, _1_t_bar,
                    dot_th, cross_th), (rec1,) in _1)
         
-        _, _1, _2 = yield (), (), _2
+        _, _1, _2 = yield None, None, _2
 
-@Process('vec.rot2nrt', lvl=1,
-         Process.Item('axis',
-                      evs=('rec',),
-                      ins=('rec',),
-                      reqs=('_bar', '_t_bar')),
-         Process.Item('inertial',
-                      ins=('rec',),
-                      outs=('rec',),
-                      reqs=('_bar', '_t_bar')),
-         Process.Item('rotating',
-                      evs=('rec',),
-                      ins=('rec',),
-                      pros=('_bar', '_t_bar')))
-def rot2nrt(*_):
+@PROCESS('vec.rot2nrt', NORMAL,
+         Item('axis',
+              evs=('rec',), args=(),
+              ins=('rec',), reqs=('_bar', '_t_bar'),
+              outs=(), pros=()),
+         Item('inertial',
+              evs=(), args=(),
+              ins=('rec',), reqs=(),
+              outs=('rec',), pros=('_bar', '_t_bar')),
+         Item('rotating',
+              evs=('rec',), args=(),
+              ins=('rec',), reqs=('_bar', '_t_bar'),
+              outs=(), pros=()))
+def rot2nrt(_, _1, _2):
     """Rotating to inertial frame"""
     _, _1, _2 = yield
     while True:
@@ -154,47 +157,47 @@ def rot2nrt(*_):
               for (_2_bar, _2_t_bar), (rec2,) in _2)
         
         #XXX there still might be a sign wrong here somewhere...
-        rec1, = (_i for (_p, _i) in _1)
-        _1 = ((iter((cos_th * _2_bar +
-                     sin_th * cross_th +
-                     (1 - cos_th) * dot_th * _hat,
-                     #
-                     cos_th * _2_t_bar +
-                     sin_th * cross(th_hat, _2_t_bar) +
-                     (1 - cos_th) * dot(th_hat, _2_t_bar) * th_hat
-                     +#
-                     th_t * (sin_th * (dot_th * th_hat - _2_bar) +
-                             cos_th * cross_th)
-                     +#
-                     sin_th * cross(_t_hat, _2_bar) +
-                     (1 - cos_th) * (_hat * dot(_t_hat, _2_bar) +
-                                     _t_hat * dot_th))
-                    if (rec2 and rec) ^ rec1.next()
-                    else (None, None)),
-               iter((rec2 and rec,)))
+        rec1 = (_ for ((), (_,)) in _1)
+        _1 = ((((cos_th * _2_bar +
+                 sin_th * cross_th +
+                 (1 - cos_th) * dot_th * _hat,
+                 #
+                 cos_th * _2_t_bar +
+                 sin_th * cross(th_hat, _2_t_bar) +
+                 (1 - cos_th) * dot(th_hat, _2_t_bar) * th_hat
+                 +#
+                 th_t * (sin_th * (dot_th * th_hat - _2_bar) +
+                         cos_th * cross_th)
+                 +#
+                 sin_th * cross(_t_hat, _2_bar) +
+                 (1 - cos_th) * (_hat * dot(_t_hat, _2_bar) +
+                                 _t_hat * dot_th))
+                if (rec2 and rec) ^ rec1.next()
+                else (None, None)),
+               (rec2 and rec,))
               for (_2_bar, _2_t_bar,
                    dot_th, cross_th), (rec2,) in _2)
         
-        _, _1, _2 = yield (), _1, ()
+        _, _1, _2 = yield None, _1, None
 
-@Process('vec.fun2obl', lvl=1,
-         Process.Item('node',
-                      evs=('rec',),
-                      ins=('rec',),
-                      reqs=('_bar', '_t_bar')),
-         Process.Item('pole',
-                      evs=('rec',),
-                      ins=('rec',),
-                      reqs=('_bar', '_t_bar')),
-         Process.Item('fundamental',
-                      evs=('rec',),
-                      ins=('rec',),
-                      pros=('_bar', '_t_bar')),
-         Process.Item('oblique',
-                      ins=('rec',),
-                      outs=('rec',),
-                      pros=('_bar', '_t_bar')))
-def fun2obl(*_):
+@PROCESS('vec.fun2obl', NORMAL,
+         Item('node',
+              evs=('rec',), args=(),
+              ins=('rec',), reqs=('_bar', '_t_bar'),
+              outs=(), pros=()),
+         Item('pole',
+              evs=('rec',), args=(),
+              ins=('rec',), reqs=('_bar', '_t_bar'),
+              outs=(), pros=()),
+         Item('fundamental',
+              evs=('rec',), args=()
+              ins=('rec',), reqs=('_bar', '_t_bar'),
+              outs=(), pros=()),
+         Item('oblique',
+              evs=(), args=(),
+              ins=('rec',), reqs=(),
+              outs=('rec',), pros=('_bar', '_t_bar')))
+def fun2obl(n, p, _1, _2):
     """Fundamental to oblique plane"""
     n, p, _1, _2 = yield
     while True:
@@ -225,38 +228,38 @@ def fun2obl(*_):
         k_t_hat = (cross(i_t_hat, j_hat) +
                    cross(i_hat, j_t_hat))
         
-        rec2, = (_i for (_p, _i) in _2)
-        _2 = ((iter((array([dot(_bar, i_hat),
-                            dot(_bar, j_hat),
-                            dot(_bar, k_hat)]),
-                     array([dot(_1_t_bar, i_hat) + dot(_1_bar, i_t_hat),
-                            dot(_1_t_bar, j_hat) + dot(_1_bar, j_t_hat),
-                            dot(_1_t_bar, k_hat) + dot(_1_bar, k_t_hat)]))
-                    if (rec1 and n_rec and p_rec) ^ rec2.next()
-                    else (None, None)),
-               iter((rec1 and rec,)))
+        rec2 = (_ for ((), (_,)) in _2)
+        _2 = ((((array([dot(_bar, i_hat),
+                        dot(_bar, j_hat),
+                        dot(_bar, k_hat)]),
+                 array([dot(_1_t_bar, i_hat) + dot(_1_bar, i_t_hat),
+                        dot(_1_t_bar, j_hat) + dot(_1_bar, j_t_hat),
+                        dot(_1_t_bar, k_hat) + dot(_1_bar, k_t_hat)]))
+                if (rec1 and n_rec and p_rec) ^ rec2.next()
+                else (None, None)),
+               (rec1 and rec,))
               for (_1_bar, _1_t_bar), (rec1,) in _1)
         
-        n, p, _1, _2 = yield (), (), _1, ()
+        n, p, _1, _2 = yield None, None, None, _2
     
-@Process('vec.obl2fun', lvl=1,
-         Process.Item('node',
-                      evs=('rec',),
-                      ins=('rec',),
-                      reqs=('_bar', '_t_bar')),
-         Process.Item('pole',
-                      evs=('rec',),
-                      ins=('rec',),
-                      reqs=('_bar', '_t_bar')),
-         Process.Item('fundamental',
-                      ins=('rec',),
-                      outs=('rec',),
-                      pros=('_bar', '_t_bar')),
-         Process.Item('oblique',
-                      evs=('rec',),
-                      ins=('rec',),
-                      pros=('_bar', '_t_bar')))
-def obl2fun(*_):
+@PROCESS('vec.obl2fun', NORMAL,
+         Item('node',
+              evs=('rec',), args=(),
+              ins=('rec',), reqs=('_bar', '_t_bar'),
+              outs=(), pros=()),
+         Item('pole',
+              evs=('rec',), args=(),
+              ins=('rec',), reqs=('_bar', '_t_bar'),
+              outs=(), pros=()),
+         Item('fundamental',
+              evs=(), args=(),
+              ins=('rec',), reqs=(),
+              outs=('rec',), pros=('_bar', '_t_bar')),
+         Item('oblique',
+              evs=('rec',), args=(),
+              ins=('rec',), reqs=('_bar', '_t_bar'),
+              outs=(), pros=()))
+def obl2fun(n, p, _1, _2):
     """Oblique to fundamental plane"""
     n, p, _1, _2 = yield
     while True:
@@ -286,35 +289,31 @@ def obl2fun(*_):
         k_t_hat = (cross(i_t_hat, j_hat) +
                    cross(i_hat, j_t_hat))
         
-        rec1, = (_i for (_p, _i) in _1)
-        _1 = ((iter((_2_bar[0] * i_hat + 
-                     _2_bar[1] * j_hat +
-                     _2_bar[2] * k_hat,
-                     _2_t_bar[0] * i_hat + _2_bar[0] * i_t_hat +
-                     _2_t_bar[1] * j_hat + _2_bar[1] * j_t_hat +
-                     _2_t_bar[2] * k_hat + _bar[2] * k_t_hat)
-                    if (rec2 and n_rec and p_rec) ^ rec1.next()
-                    else (None, None)),
-               iter((rec1 and rec,)))
+        rec1 = (_ for ((), (_,)) in _1)
+        _1 = ((((_2_bar[0] * i_hat + 
+                 _2_bar[1] * j_hat +
+                 _2_bar[2] * k_hat,
+                 _2_t_bar[0] * i_hat + _2_bar[0] * i_t_hat +
+                 _2_t_bar[1] * j_hat + _2_bar[1] * j_t_hat +
+                 _2_t_bar[2] * k_hat + _bar[2] * k_t_hat)
+                if (rec2 and n_rec and p_rec) ^ rec1.next()
+                else (None, None)),
+               (rec1 and rec,))
               for (_2_bar, _2_t_bar), (rec2,) in _2)
         
-        n, p, _1, _2 = yield (), (), (), _2
+        n, p, _1, _2 = yield None, None, _1, None
     
-@Process('vec.rec2sph', lvl=1,
-         Process.Item('vector',
-                      evs=('rec',),
-                      ins=('rec', 'sph'),
-                      reqs=('_bar', '_t_bar'),
-                      outs=('sph',),
-                      pros=('r', 'r_t',
-                            'az', 'az_t',
-                            'el', 'el_t')))
-def rec2sph(*_):
+@PROCESS('vec.rec2sph', NORMAL,
+         Item('vector',
+              evs=('rec',), args=(),
+              ins=('rec', 'sph'), reqs=('_bar', '_t_bar'),
+              outs=('sph',), pros=('r', 'r_t',
+                                   'az', 'az_t',
+                                   'el', 'el_t')))
+def rec2sph(_):
     """Rectangular to spherical coordinates"""
     _, = yield
     while True:
-        _, = yield _,
-        
         _ = (((r_bar, v_bar,
                norm(r_bar), atan2(r_bar[1],
                                   r_bar[0])), 
@@ -334,26 +333,23 @@ def rec2sph(*_):
                     r_bar[2] * r_t / r) / xy__2), 
               __)
              for (_bar, _t_bar, r, r_t, az, el, xy__2), __ in _)
-        _ = ((iter(__ if rec ^ sph
-                   else (None,) * len(__)),
-              iter((rec,)))
+        _ = (((__ if rec ^ sph
+               else (None,) * len(__)),
+              (rec,))
              for __, (rec, sph) in _)
+        _, = yield _,
     
-@Process('vec.sph2rec', lvl=1,
-         Process.Item('vector',
-                      evs=('sph',),
-                      ins=('sph', 'rec'),
-                      reqs=('r', 'r_t',
-                            'az', 'az_t',
-                            'el', 'el_t'),
-                      outs=('rec',),
-                      pros=('_bar', '_t_bar')))
-def sph2rec(*_):
+@PROCESS('vec.sph2rec', NORMAL,
+         Item('vector',
+              evs=('sph',), args=(),
+              ins=('sph', 'rec'), reqs=('r', 'r_t',
+                                        'az', 'az_t',
+                                        'el', 'el_t'),
+              outs=('rec',), pros=('_bar', '_t_bar')))
+def sph2rec(_):
     """Spherical to rectangular coordinates"""
     _, = yield
     while True:
-        _, = yield _,
-        
         _ = (((r, r_t, az_t, el_t,
                cos(az), sin(az),
                cos(el), sin(el)),
@@ -374,11 +370,8 @@ def sph2rec(*_):
              for (r, r_t, az_t, el_t,
                   cos_az, sin_az,
                   cos_el, sin_el), __ in _)
-        _ = ((iter(__ if sph ^ rec
-                   else (None,) * len(__)),
-              iter((sph)))
+        _ = (((__ if sph ^ rec
+               else (None,) * len(__)),
+              (sph,))
              for __, (sph, rec) in _)
-        
-register(ndarray, "$array",
-         object_hook=lambda value: array(value),
-         default=lambda obj: obj.tolist())
+        _, = yield _,

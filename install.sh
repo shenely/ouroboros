@@ -6,14 +6,6 @@ cd ../ob-time
 python setup.py sdist
 pip install ./dist/ob-time-0.1.tar.gz
 
-cd ../ob-math
-python setup.py sdist
-pip install ./dist/ob-math-0.1.tar.gz
-
-cd ../ob-orbit
-python setup.py sdist
-pip install ./dist/ob-orbit-0.1.tar.gz
-
-cd ..
+cd ../
 python setup.py sdist
 pip install ./dist/ouroboros-0.1.tar.gz
