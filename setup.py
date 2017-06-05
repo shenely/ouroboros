@@ -10,5 +10,6 @@ setup(name='ouroboros',
       description='A serpent eating its own tail',
       packages=['ouroboros.lib'],
       install_requires=['ob-core',
-                        'ob-time'])
+                        'ob-time',
+                        'ob-orbit'])
 

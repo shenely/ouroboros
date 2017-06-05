@@ -12,7 +12,7 @@ import logging
 #exports
 __all__ = ['CATELOG',
            'CRITICAL', 'HIGH', 'NORMAL', 'LOW', 'TRIVIAL',
-           'Item', 'PROCESS']
+           'coroutine', 'Item', 'PROCESS']
 
 #constants
 CATELOG = {}#process catelog

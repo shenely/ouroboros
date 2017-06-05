@@ -6,6 +6,6 @@ setup(name='ob-time',
       description='A brief history',
       package_dir={'ouroboros.lib': 'src'},
       packages=['ouroboros.lib'],
-      install_requires=['pytz',
-                        'ob-core'])
+      install_requires=['ob-core',
+                        'pytz'])
 

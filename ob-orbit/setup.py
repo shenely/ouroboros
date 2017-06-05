@@ -5,10 +5,8 @@ setup(name='ob-orbit',
       author='shenely',
       description='Circles within circles',
       package_dir={'ouroboros.lib': 'src'},
-      py_modules=['ouroboros.lib.geo',
-                  'ouroboros.lib.orb'],
+      packages=['ouroboros.lib'],
       install_requires=['ob-core',
-                        'numpy>=1.11',
-                        'scipy>0.18',
-                        'sgp4>=1.4'])
+                        'numpy',
+                        'scipy'])
 

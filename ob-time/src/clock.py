@@ -109,7 +109,7 @@ def timer(clk, usr):
               outs=(), pros=()),
          Item('user',
               evs=(), args=(),
-              ins=('<', '>'), reqs=(),
+              ins=('<', '>'), reqs=('t',),
               outs=('<', '>'), pros=()))
 def relate(clk, usr):
     """relate"""
@@ -125,20 +125,20 @@ def relate(clk, usr):
 @PROCESS('clock.iso8601', NORMAL,
          Item('clock',
               evs=('tick',), args=(),
-              ins=('tick', 8601,), reqs=('t',),
+              ins=('tick', 8601), reqs=('t',),
               outs=(8601,), pros=('t_dt',)))
 def iso8601(clk):
     clk, = yield
     while True:
         clk = ((datetime.datetime
                 .fromtimestamp
-                (t, tz=pytz.utc)
-                if T and not e else None)
-               for (t,), (T, e) in clk)
-        clk = (logging.info('%s', t_dt)
-               or t_dt for t_dt in clk)
-        clk = ((((t_dt,), (True,))
-                if t_dt is not None else
+                (clk_t, tz=pytz.utc)
+                if clk_e and not iso_e else None)
+               for (clk_t,), (clk_e, iso_e) in clk)
+        clk = (logging.info('%s', iso_t)
+               or iso_t for iso_t in clk)
+        clk = ((((iso_t,), (True,))
+                if iso_t is not None else
                 ((None,), (False,)))
-               for t_dt in clk)
+               for iso_t in clk)
         clk, = yield clk,
