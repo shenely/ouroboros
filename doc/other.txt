@@ -1,31 +1,155 @@
-clock
-	clock
-	sidereal
-vec
-	abs2rel
-	rel2abs
-	nrt2rot
-	rot2nrt
-	fun2obl
-	obl2fun
-	rec2sph
-	sph2rec
-geo
-    model
-	sph2geo
-	geo2rec
-orb
-	model
-	rec2kep
-	kep2rec
-rot
-	model
-	quat2rec
-	rec2quat
-	quat2rpy
-	rpy2quat
-	quat2mat
-	mat2quat
+time
+    clk
+        scaled
+        timer
+        relate
+        iso8601
+math
+    vec - vector transforms
+        abs2rel - absolute to relative frame
+        rel2abs - relative to absolute frame
+        nrt2rot - inertial to rotating frame
+        rot2nrt - rotating to inertial frame
+        fun2obl - fundamental to oblique plane
+        obl2fun - oblique to fundamental plane
+        rec2sph - Rectangular to spherical coordinates
+        sph2rec - spherical to rectangular coordinates
+    rot - spatial rotation
+        quat2rec - quaternion to angle-vector
+        rec2quat - angle-vector to quaternion
+        quat2rpy - quaternion to Euler angles
+        rpy2quat - Euler angles to quaternion
+        quat2mat - quaternion to rotation matrix
+        mat2quat - rotation matrix to quaternion
+    ode - ordinary differential equations
+        euler - Euler method
+        beuler - backward Euler method
+        imid - implicit midpoint
+        heun - Heun method
+        trap - trapezoidal rule
+        rk4 - Runge-Kutta method
+        dp45 - Dormand-Prince method
+        ab5 - Adams-Bashforth method
+        am5 - Adams-Moulton method
+        bdf6 - Backwards differentiation formula method
+        verlet - Velocity Verlet integrator
+    pde - partial differential equations
+        fdm - finite different method
+        fvm - finite volume method
+        fem - finite element method
+    sph_harm - spherical harmonics
+phyx
+    dyn - dynamics
+    em - electrodynamics
+        point - point charge
+        e2pol - electric dipole
+        m2pol - magnetic dipole
+    gee - gravity
+        point - point mass
+astro
+    geo - earth
+        jd - Julian date
+        st - sidereal time
+        axis - axis of rotation
+        rose - compass rose
+        igrf - International Geomagnetic Reference Field
+        wmm - World Magnetic Model
+        egm - Earth Gravitational Model
+        sph2geo - geocentric to geodetic coordinate
+        geo2sph - geodetic to geocentric coordinate
+    orb - orbital dynamics
+        univar - universal variable formulation
+        tle2sgp - two-line elements to simple general perturbation
+        sgp4tle - simple general perturbation for two-line elements
+        jpl_de - Jet Propulsion Lab Development Ephemeris
+        ephem - Generic ephemeris
+        const - constants of motion
+        rec2kep - vector to Kepler elements
+        kep2rec - Kepler elements to vector
+    ev - orbital events
+        apsis - apsis crossing
+        node - node crossing
+        pole - pole crossing
+    sat - satellite hardware
+        ant - Antenna
+        batt - Battery
+        volt_rail - Voltage rail
+        heat_pipe - Heat pipe
+        rad - Radiator
+        gyro - Gyroscope
+        rw - Reaction wheel
+        mag - Magnetometer
+        mt - Magnetorquer
+    eg - examples
+        eci2ecef - inertial to earth-fixed coordinates
+        - add geo.axis
+        - add th_bar = gst * K_HAT to geo.axis
+        - same as vec.nrt2rot
+        ecef2eci - inertial to earth-fixed coordinates
+        - same as vec.rot2nrt
+        geo2helio - geo- to heliocentric coordinates
+        - use orb.kep2rec
+        - use orb.unikep
+        - same as vec.rel2abs
+        helio2geo - helio- to geocentric coordinates
+        - same as vec.abs2rel
+        equ2ecl - equatorial to ecliptic plane
+        - add gst_t = 360.98564724 / (24 * 60 * 60) to geo.st
+        - add obl = radians(dms2deg(23, 26, 21.45) -
+                            (dms2deg(s=46.815) +
+                             (dms2deg(s=0.0059) -
+                              dms2deg(s=0.00181) * T0) * T0) * T0) to geo.axis
+        - add om_bar = gst_t * (sin(obl) * I_HAT + 
+                                cos(obl) * K_HAT) to geo.axis
+        - same as vec.obl2fun
+        ecl2equ - equatorial to ecliptic plane
+        - same as vec.fun2obl
+        geo2topo - geo- to topocentric coordinates
+        - same as abs2rel
+        topo2geo - topo- to geocentric coordinates
+        - same as rel2abs
+        equ2hori - equatorial to horizontal plane
+        - add geo.rose
+        - add north, south, east, west to geo.rose
+        - add zenith, nadir to geo.rose
+        - use geo.sph2geo
+        - use vec.sph2rec
+        - same as vec.fun2obl
+        hori2equ - horizontal to equatorial plane
+        - same as vec.obl2fun
+robot
+    dyn
+    ele
+        rigid6dof - Rigid body (6 DOF)
+    pair
+        fix0dof - Fixed pair (0 DOF)
+        lin1dof - Prismatic pair (1 DOF)
+        rot1dof - Revolute pair (1 DOF)
+    act
+        lin1dof - Linear actuator (1 DOF)
+        rot1dof - Rotary actuator (1 DOF)
+
+ECI to ECEF
+('sc', None) -> rot2nrt -> ('sc', 'center')
+('gs', 'center') -> sph2rec -> ('gs', 'center')
+
+Geocentric to geodetic
+('sc', 'center') -> sph2geo -> ('sc', 'datum')
+
+Geodetic to geocentric
+('gs', 'datum') -> geo2sph -> ('gs', 'center')
+
+ECEF to ECI
+('gs', 'center') -> sph2rec -> ('gs', 'center')
+('gs', 'center') -> rot2nrt -> ('gs', None)
+
+Inertial to topocentric equatorial
+('gs', None), ('sc', None) -> abs2rel -> ('gs', 'sc')
+('gs', 'sc') -> sph2rec -> ('gs', 'sc')
+
+Inertial to topocentric horizontal
+('gs', None), ('gs', 'sc') -> fun2obl -> ('???', 'sc')
+('???', 'sc') -> sph2rec -> ('???', 'sc')
 
 time: [n]ame [a]fter [b]efore [e]very
 ctlr: [n]ame [p]roc [t]ime [d]ata*
@@ -38,6 +162,15 @@ data: [n]ame ([k]ey [t]ype [v]alue)*
 fact: [n]ame [p]roc [d]ata* [r]ule*
 plan: [n]ame [p]roc [d]ata* [r]ule*
 rule: [n]ame [f]act* [p]lan*
+
+ctlr: x[n+1] = A[n] * x[n] + B[n] * u[n]
+      y[n] = C[n] * x[n]
+obsr: x~[n+1] = A[n] * x~[n] + B[n] * u[n] + L[n] * (y[n] - y~[n])
+      y~[n] = C[n] * x~[n]
+
+d[k] = x[n] - x^[n]
+e[k] = x[n] - x~[n]
+u[n] = K[n] * (e[n] - d[n]) + r[n]
 
 
 //GET    /ob-rest-api/system?name=String
@@ -129,15 +262,24 @@ data>???>ctrl
 {Object: Object, ...} <-> { $dict: [ { key: Object, value: Object }, ... ] }
 (Object, ...) <-> { $tuple: [ Object, ... ] }
 
-{ name: None|String,
-  items: { (None, String):  {...},
-           (True, String):  {...},
-           (False, String):  {...},
-           (String, String):  { data: {...},
-                                ctrl: [...] },
-          ... },
-  procs: [ { name: String,
-             keys: [ (Object, ...), ... ] } ] }
+{ name: Object,
+  items: { (None, Object):  {...},
+           (True, Object):  {...},
+           (False, Object):  {...},
+           (String, Object):  { data: { Object: Object,
+                                        ... },
+                                ctrl: [ Object, ... ] },
+           ... },
+  procs: [ { tag: String,
+             keys: { Object: [ (Object, Object), 
+                               ... ], 
+                     ... },
+             maps: { Object: { data: { Object: Object, 
+                                       ... },
+                               ctrl: { Object: Object, 
+                                       ... } },
+                     ... } },
+           ... ] }
             
 (src, trg, rel)
 ((item,), (item, item, item), (item, item, item))

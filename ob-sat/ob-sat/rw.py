@@ -1,5 +1,35 @@
+#built-in libraries
+#...
 
+#external libraries
+#...
 
+#internal libraries
+from ouroboros import NORMAL, Item, PROCESS
+
+#exports
+__all__ = ('power',)
+
+#constants
+#...
+
+@PROCESS('rw.model', NORMAL,
+         Item('power',
+              evs=(), args=(),
+              ins=(), reqs=('v_in',),
+              outs=(), pros=('i_out',)),
+         Item('data',
+              evs=(), args=(),
+              ins=(), reqs=('s1_in', 's2_in', 's3_in'),
+              outs=(), pros=('V', 'C', 'T')),
+         Item('dyno',
+              evs=(), args=(),
+              ins=(), reqs=(),
+              outs=(), pros=('L_bar',)),
+         Item('rw',
+              evs=(), args=('R', 'L', 'I'),
+              ins=(), reqs=(),
+              outs=(), pros=('rpm')))
 @Process("rw.power",
          ([], ["tick"], {}, [], []),#system
          (["dt_td", "R", "L"], [], {}, ["v_in", "i_draw"], ["i_in"]))#rw

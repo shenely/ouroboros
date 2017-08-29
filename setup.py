@@ -11,5 +11,6 @@ setup(name='ouroboros',
       packages=['ouroboros.lib'],
       install_requires=['ob-core',
                         'ob-time',
-                        'ob-orbit'])
+                        'ob-math',
+                        'ob-astro'])
 

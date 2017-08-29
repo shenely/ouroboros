@@ -1,6 +1,6 @@
 from setuptools import setup
 
-setup(name='ob-orbit',
+setup(name='ob-astro',
       version='0.1',
       author='shenely',
       description='Circles within circles',
@@ -8,5 +8,6 @@ setup(name='ob-orbit',
       packages=['ouroboros.lib'],
       install_requires=['ob-core',
                         'numpy',
-                        'scipy'])
+                        'scipy',
+                        'sgp4'])
 

@@ -34,8 +34,10 @@ def main(*args):
     #last pass - start processes
     any(ev.cbs.append((p, gen))
         for _id in mem for p, gen in
-        ((p, wrap(mem[_id], *keys)) for (p, wrap), keys in
-         ((CATELOG[proc['name']], proc['keys']) for proc in
+        ((p, wrap(mem[_id], maps, keys))
+         for (p, wrap), maps, keys in
+         ((CATELOG[proc['tag']],
+           proc['maps'], proc['keys']) for proc in
           mem[_id][True, None].pop('procs')))
         for ev in gen.next())
     mem[None][True, None]['data'][True] = mem#memory
@@ -44,15 +46,14 @@ def main(*args):
     q = mem[None][True, None]['data']['q']#task queue
     e = mem[None][True, None]['data']['e']#event set
     any(heapq.heappush(q, cb) for cb in
-        mem[None][True, None]['ctrl'][None].cbs)#init event
-    while True:
-        while len(q) > 0:
-            (p, gen) = heapq.heappop(q)
-            any(heapq.heappush(q, cb)
-                for ev in gen.send(e)
-                if ev not in e
-                for cb in e.add(ev) or ev.cbs
-                if cb not in q)
+        mem[None][False, None]['ctrl'][None].cbs)#init event
+    while len(q) > 0:
+        (p, gen) = heapq.heappop(q)
+        any(heapq.heappush(q, cb)
+            for ev in gen.send(e)
+            if ev not in e
+            for cb in e.add(ev) or ev.cbs
+            if cb not in q)
 
 if __name__ == '__main__':
     a = Event(cbs=[])

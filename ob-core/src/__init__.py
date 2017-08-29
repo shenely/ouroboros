@@ -10,9 +10,10 @@ import logging
 #...
 
 #exports
-__all__ = ['CATELOG',
+__all__ = ('CATELOG',
            'CRITICAL', 'HIGH', 'NORMAL', 'LOW', 'TRIVIAL',
-           'coroutine', 'Item', 'PROCESS']
+           'coroutine', 'Item', 'PROCESS',
+           'step', 'init')
 
 #constants
 CATELOG = {}#process catelog
@@ -24,7 +25,9 @@ NORMAL   = 100
 LOW      = 1000
 TRIVIAL  = 10000
 
-Item = collections.namedtuple('Item', ('name',
+EMPTY = {'data': {}, 'ctrl': {}}
+
+Item = collections.namedtuple('Item', ('tag',
                                        'evs', 'args',
                                        'ins', 'reqs',
                                        'outs', 'pros'))
@@ -38,49 +41,80 @@ def coroutine(func):
     return wrapper
 
 def PROCESS(name, level=NORMAL, *items):
+    items = {item.tag: item for item in items}
     def decorator(func):
         func = coroutine(func)
         @functools.wraps(func)
-        def wrapper(sys, *confs):
+        def wrapper(sys, maps, keys):
             try:
                 #Pull arguments and events from items
-                args = ((lambda conf, item:
-                         ((sys[name]['data'][key]
-                           for key in item.args)
-                          for name in conf))
-                         (conf, item)
-                        for conf, item in zip(confs, items))
-                evs = (sys[name]['ctrl'][key]
-                       for conf, item in zip(confs, items)
-                       for name in conf
-                       for key in item.evs)
-                gen = func(*args)#create generator
+                args = {tag:
+                        (lambda tag, names:
+                         ((sys[name]['data']
+                           [maps[tag]['data'].get(key, key)
+                            if maps is not None
+                            and tag in maps
+                            else key]
+                           for key in items[tag].args)
+                          for name in names))
+                        (tag, names)
+                        for tag, names in keys.iteritems()}
+                evs = (sys[name]['ctrl']
+                       [maps[tag]['ctrl'].get(key, key)
+                        if maps is not None
+                        and tag in maps
+                        else key]
+                       for tag, names in keys.iteritems()
+                       for name in names
+                       for key in items[tag].evs)
+                gen = func(**args)#create generator
 
                 evs = yield evs
                 while True:
                     #XXX this mess actually calls the function
-                    right = ((lambda conf, item:
-                              (((sys[name]['data'][key]
-                                 for key in item.reqs),
-                                (sys[name]['ctrl'][key] in evs
-                                 for key in item.ins))
-                               for name in conf))
-                             (conf, item)
-                             for conf, item in zip(confs, items))
+                    right = {tag:
+                             (lambda tag, names:
+                              (((sys[name]['data']
+                                 [maps[tag]['data'].get(key, key)
+                                  if maps is not None
+                                  and tag in maps
+                                  else key]
+                                 for key in items[tag].reqs),
+                                (sys[name]['ctrl']
+                                 [maps[tag]['ctrl'].get(key, key)
+                                  if maps is not None
+                                  and tag in maps
+                                  else key] in evs
+                                 for key in items[tag].ins))
+                               for name in names))
+                             (tag, names)
+                             for tag, names in keys.iteritems()}
                     left = gen.send(right)
-                    evs = yield (ev for n, (names, item) in
-                                 enumerate(zip(confs, left))
-                                 if item is not None
-                                 for name, (pros, outs) in
-                                 zip(names, item)
+                    evs = yield (ev for tag, names
+                                 in keys.iteritems()
+                                 if tag in left
+                                 for name, (pros, outs)
+                                 in zip(names, left[tag])
                                  for ev in
-                                 (sys[name]['data'].update
-                                  ({key: pro for key, pro in
-                                    zip(items[n].pros, pros)
-                                    if pro is not None}) or
-                                  (sys[name]['ctrl'][key]
-                                   for key, out in
-                                   zip(items[n].outs, outs)
+                                 (pros is not None and
+                                  (sys[name]['data'].update
+                                   ({(maps[tag]['data'].get(key, key)
+                                      if maps is not None
+                                      and tag in maps
+                                      else key):
+                                     logging.info('data:%s:%s',
+                                                  key, pro) or pro
+                                     for key, pro
+                                     in zip(items[tag].pros, pros)
+                                     if pro is not None})) or
+                                  (logging.info('ctrl:%s', key) or
+                                   sys[name]['ctrl']
+                                   [maps[tag]['ctrl'].get(key, key)
+                                    if maps is not None
+                                    and tag in maps
+                                    else key]
+                                   for key, out
+                                   in zip(items[tag].outs, outs)
                                    if out)))
             except StopIteration:
                 return
@@ -92,20 +126,36 @@ def PROCESS(name, level=NORMAL, *items):
 
 @PROCESS('core.step', TRIVIAL,
          Item('T',
-              evs=(None,), args=('e',),
+              evs=(), args=('e',),
               ins=(), reqs=(),
               outs=(), pros=()),
          Item('F',
-              evs=(None,), args=('n',),
+              evs=(None, True), args=('n',),
               ins=(), reqs=(),
-              outs=(None,), pros=('n',)))
+              outs=(True,), pros=('n',)))
 def step(T, F):
     e, = T.next()
     n, = F.next()
-    yield
     while True:
-        logging.info('%d', n)
+        #logging.info('%d', n)
         e.clear()
         F = ((n,), (True,)),
-        yield None, F
+        yield {'F': F}
         n += 1
+
+@PROCESS('core.init', CRITICAL,
+         Item('ing',
+              evs=('e',), args=(),
+              ins=(), reqs=(),
+              outs=(), pros=()),
+         Item('egr',
+              evs=(), args=(),
+              ins=(), reqs=(),
+              outs=('e',), pros=()))
+def init(ing, egr):
+    right = yield
+    while True:
+        egr = right['egr']
+        egr = (((), (True,)) for _ in egr)
+        left = {'egr': egr}
+        right = yield left
