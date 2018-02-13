@@ -58,12 +58,12 @@ astro
         sph2geo - geocentric to geodetic coordinate
         geo2sph - geodetic to geocentric coordinate
     orb - orbital dynamics
-        univar - universal variable formulation
+        unikep - universal variable formulation
         tle2sgp - two-line elements to simple general perturbation
         sgp4tle - simple general perturbation for two-line elements
         jpl_de - Jet Propulsion Lab Development Ephemeris
         ephem - Generic ephemeris
-        const - constants of motion
+        inv2law - constants of motion
         rec2kep - vector to Kepler elements
         kep2rec - Kepler elements to vector
     ev - orbital events
@@ -263,23 +263,34 @@ data>???>ctrl
 (Object, ...) <-> { $tuple: [ Object, ... ] }
 
 { name: Object,
-  items: { (None, Object):  {...},
-           (True, Object):  {...},
-           (False, Object):  {...},
-           (String, Object):  { data: { Object: Object,
-                                        ... },
-                                ctrl: [ Object, ... ] },
-           ... },
-  procs: [ { tag: String,
-             keys: { Object: [ (Object, Object), 
-                               ... ], 
-                     ... },
-             maps: { Object: { data: { Object: Object, 
-                                       ... },
-                               ctrl: { Object: Object, 
-                                       ... } },
-                     ... } },
-           ... ] }
+  mem: { (None, Object):  {...},
+         (True, Object):  {...},
+         (False, Object):  {...},
+         (String, Object):  { data: { Object: Object,
+                                      ... },
+                              ctrl: [ Object, ... ] },
+         ... },
+  exe: [ { tag: String,
+           key: { Object: [ (Object, Object), 
+                            ... ], 
+                  ... },
+           map: { Object: { data: { Object: Object, 
+                                    ... },
+                            ctrl: { Object: Object, 
+                                    ... } },
+                  ... } },
+         ... ] }
+         
+time queue for each clock
+queue items are a time and an event
+must be in __init__ or __main__
+all time queues may be scaled
+at runtime, next event in wall time is used
+coroutines send back times instead of true/false for events
+pushed into queue (with event) in __init__
+all clocks are update every time step
+times are stored in memory
+use tornado.gen.sleep
             
 (src, trg, rel)
 ((item,), (item, item, item), (item, item, item))

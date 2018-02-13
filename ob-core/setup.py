@@ -9,5 +9,6 @@ setup(name='ob-core',
       author='shenely',
       description='In the middle of things',
       package_dir={'ouroboros': 'src'},
-      packages=['ouroboros'])
+      packages=['ouroboros'],
+      install_requires=['tornado'])
 
