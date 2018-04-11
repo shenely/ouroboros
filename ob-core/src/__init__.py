@@ -99,8 +99,7 @@ def PROCESS(name, level=NORMAL, *items):
                                  for name, (pros, outs)
                                  in zip(names, left[tag])
                                  for ev in
-                                 (pros is not None and
-                                  (sys[name]['data'].update
+                                 ((sys[name]['data'].update
                                    ({(maps[tag]['data'].get(key, key)
                                       if maps is not None
                                       and tag in maps
@@ -116,10 +115,11 @@ def PROCESS(name, level=NORMAL, *items):
                                     [maps[tag]['ctrl'].get(key, key)
                                      if maps is not None
                                      and tag in maps
-                                     else key], out)
-                                   for key, out
+                                     else key], out) for key, out
                                    in zip(items[tag].outs, outs)
-                                   if out is not False)))
+                                   if out is not None))
+                                 if pros is not None
+                                 and outs is not None)
             except StopIteration:
                 return
             finally:

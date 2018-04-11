@@ -2,14 +2,10 @@ Environment
 System
 Process
 
-time: -[-n]ame -[-a]fter [b]efore [e]very
+time: -[-n]ame -[-a]fter -[-b]efore -[-e]very
 ctlr: -[-n]ame -[-p]roc -[-t]ime -[-d]ata*
 obsr: -[-n]ame -[-p]roc -[-t]ime -[-d]ata*
 data: -[-n]ame (-[-k]ey -[-t]ype -[-v]alue)*
-    null: system
-    true: private
-    false: public
-    str: other
 fact: -[-n]ame -[-p]roc -[-d]ata* -[-r]ule*
 plan: -[-n]ame -[-p]roc -[-d]ata* -[-r]ule*
 rule: -[-n]ame -[-f]act* -[-p]lan*

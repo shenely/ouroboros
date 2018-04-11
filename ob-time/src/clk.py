@@ -142,7 +142,7 @@ def iso8601(sys, usr):
                  .fromtimestamp
                  (sys_t, tz=pytz.utc),), (True,))
                if clk_e is True and usr_e is not True
-               else ((None,), (None,)),)
+               else (None, None))
 
         left = {'usr': usr}
         right = yield left

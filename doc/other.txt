@@ -1,7 +1,8 @@
 time
     clk
-        scaled
-        timer
+        at
+        after
+        every
         relate
         iso8601
 math
@@ -50,11 +51,11 @@ astro
     geo - earth
         jd - Julian date
         st - sidereal time
-        axis - axis of rotation
+        ax - axis of rotation
         rose - compass rose
-        igrf - International Geomagnetic Reference Field
-        wmm - World Magnetic Model
-        egm - Earth Gravitational Model
+        mag - International Geomagnetic Reference Field
+        pot - Earth Gravitational Model
+        atmo - International Standard Atmosphere
         sph2geo - geocentric to geodetic coordinate
         geo2sph - geodetic to geocentric coordinate
     orb - orbital dynamics
@@ -258,7 +259,6 @@ flag>plan>data
 ctrl>???>data
 data>???>ctrl
 
-
 {Object: Object, ...} <-> { $dict: [ { key: Object, value: Object }, ... ] }
 (Object, ...) <-> { $tuple: [ Object, ... ] }
 
@@ -280,6 +280,40 @@ data>???>ctrl
                                     ... } },
                   ... } },
          ... ] }
+         
+//POST   /ob-rest-api/play
+//POST   /ob-rest-api/stop
+//POST   /ob-rest-api/pause
+//POST   /ob-rest-api/resume
+//GET    /ob-rest-api/info
+{ e: Number,
+  q: Number,
+  z: Number,
+  f: Boolean }
+
+//WS     /ob-io-stream/
+[ { name: String,
+    items: [ { tag: String,
+               data: [ { key: String,
+                         value: Object }, ... ],
+               ctrl: [ { key: String,
+                         value: Boolean }, ... ] }, ... ] }, ... ]
+
+//GET    /ob-rest-api/data/<name:String>/<tag:String>
+//PUT    /ob-rest-api/data/<name:String>/<tag:String>
+{ name: String,
+  tag: String,
+  data: [ { key: String,
+            value: Object }, ... ] }
+            
+//POST   /ob-rest-api/ctrl/<name:String>/<tag:String>
+{ name: String,
+  tag: String,
+  ctrl: [ { key: String,
+            value: Boolean }, ... ] }
+
+
+
          
 time queue for each clock
 queue items are a time and an event
@@ -304,7 +338,7 @@ use tornado.gen.sleep
 ((((_bar, _t_bar), (rec,)),),
  (((_bar, _t_bar), (rec,)),
   ((_bar, _t_bar), (rec,)),
-  ((_bar, _t_bar), (rec,))),
+  ((_bar, _t_bar), (rec,))),]
  (((_bar, _t_bar), (rec,)),
   ((_bar, _t_bar), (rec,)),
   ((_bar, _t_bar), (rec,))))
