@@ -1,4 +1,5 @@
 #built-in libraries
+import os.path
 import ctypes
 import logging
 
@@ -7,7 +8,8 @@ import numpy
 import numpy.ctypeslib
 
 #internal libraries
-liborbele = numpy.ctypeslib.load_library('liborbele', '.')
+path = os.path.dirname(__file__)
+liborbele = numpy.ctypeslib.load_library('_liborbele', path)
 
 #exports
 __all__ = ('setmu',

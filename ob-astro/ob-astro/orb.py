@@ -9,8 +9,8 @@ import sgp4.io
 
 #internal libraries
 from ouroboros import HIGH, NORMAL, coroutine, Item, PROCESS
-import ouroboros.ext.unikep as libunikep
-import ouroboros.ext.orbele as liborbele
+from ouroboros.lib import (libunikep,
+                           liborbele)
 
 #exports
 __all__ = ('unikep',

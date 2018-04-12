@@ -138,11 +138,11 @@ def iso8601(sys, usr):
         (sys_t,), _ = sys.next()
         _, (clk_e, usr_e,) = usr.next()
 
-        usr = (((datetime.datetime
-                 .fromtimestamp
-                 (sys_t, tz=pytz.utc),), (True,))
+        usr = ((((datetime.datetime
+                  .fromtimestamp
+                 (sys_t, tz=pytz.utc),), (True,)),)
                if clk_e is True and usr_e is not True
-               else (None, None))
+               else ((None, None),))
 
         left = {'usr': usr}
         right = yield left

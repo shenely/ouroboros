@@ -19,7 +19,7 @@ import tornado.concurrent
 
 #internal libraries
 from ouroboros import CATELOG
-import ouroboros.lib as _
+import ouroboros.ext as _
 
 #constants
 INFINITY = float('inf')
@@ -205,6 +205,6 @@ if __name__ == '__main__':
              (r'/ob-rest-api/data/(\w+)/(\w+)', DataHandler, {'mem': mem}),
              (r'/ob-rest-api/ctrl/(\w+)/(\w+)', CtrlHandler, {'mem': mem}),
              (r'/ob-io-stream/', StreamHandler, {'mem': mem})],
-            websocket_ping_interval=1)
+            websocket_ping_interval=1))
     app.listen(8888)
     loop.run_sync(functools.partial(main, mem, loop))

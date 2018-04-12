@@ -5,15 +5,15 @@ import unittest
 import numpy.testing
 
 #internal libraries
-import ouroboros.ext.unikep as libunikep
+from ouroboros.lib import libunikep
 
 #constants
 MINUTE = 60.0#seconds
 
-class TestUnikep(unittest.TestCase):\
+class TestUnikep(unittest.TestCase):
 
     def test_unikep(self):
-        """Taken from Example 3.7 in
+        """Taken from Example 3.7 in:
 
         Curtis, Howard D. (2005). Orbital Mechanics for Engineering
             Students. Burlington, MA: Elsevier Ltd.

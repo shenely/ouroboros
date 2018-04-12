@@ -8,7 +8,7 @@ setup(name='ouroboros',
       version='0.1',
       author='shenely',
       description='A serpent eating its own tail',
-      packages=['ouroboros.lib'],
+      packages=['ouroboros.ext'],
       install_requires=['ob-core',
                         'ob-time'])
 

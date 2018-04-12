@@ -9,8 +9,7 @@ import numpy.ctypeslib
 
 #internal libraries
 path = os.path.dirname(__file__)
-print path
-libunikep = numpy.ctypeslib.load_library('libunikep', path)
+libunikep = numpy.ctypeslib.load_library('_libunikep', path)
 
 #exports
 __all__ = ('settol', 'setiter',
