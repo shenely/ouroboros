@@ -1,0 +1,110 @@
+$Types
+[ "raw",
+  "lin",
+  "pow",
+  "exp",
+  "log",
+  "poly",
+  "enum",
+  "mask",
+  "date",
+  "str" ]
+
+$Colors
+{ String:  Number,//0xrgba
+  white:   0xffff,
+  black:   0x000f,
+  red:     0xf00f,
+  yellow:  0xff0f, 
+  green:   0x0f0f,
+  aqua:    0x0fff,
+  blue:    0x00ff,
+  magenta: 0xf0ff }
+
+$Datetime
+{ $date: Number, //int
+  $time: Number }//float
+  
+$Period
+{ $period: Number }//float
+
+$Levels
+[ { name: String,
+    color: Number | String,//$Colors
+    ... },
+  { ...,//Level:int
+    lower: Number,  //int
+    upper: Number },//int
+  { ...,//Level:float
+    lower: Number,  //float
+    upper: Number },//float
+  { ...,//Level:date
+    lower: Object,  //$Period
+    upper: Object },//$Period
+  { ...,//Level:dict
+    keys: [ Number, ... ] },//int
+  { ...,//Level:str
+    value: Number } ]//int
+       
+  
+$Packet
+[ Number, ... ]//int
+
+$Telemetry
+[ { key: Number,//int
+    value: Number | String | $Datetime,
+    epoch: $Datetime,
+    words: [ String, ... ],
+    color: Number }, ... ]//0xrgba
+
+$Mnemonics
+[ { key: Number,//int
+    name: String,
+    size: Number,//int
+    type: String,//$Types
+    ...
+  { ...,//$Mnemonic:raw
+    type: "raw",
+    conf: null,
+    levels: [ Object, ... ] },//$Level:int
+  { ...,//$Mnemonic:lin|pow|log
+    type: "lin|pow|log",
+    conf: { lower: Number,  //float
+            upper: Number },//float
+    levels: [ Object, ... ] },//$Level:float
+  { ...,//$Mnemonic:exp
+    type: "exp",
+    conf: { base: Number,  //float
+            rate: Number },//float
+    levels: [ Object, ... ] },//$Level:float
+  { ...,//$Mnemonic:poly
+    type: "poly",
+    conf: [ Number, ... ],//float
+    levels: [ Object, ... ] },//$Level:float
+  { ...,//$Mnemonic:enum
+    type: "enum",
+    conf: [ { key: Number,//int
+              value: String }, ... ],
+    zones: [ Object, ... ] },//$Level:dict
+  { ...,//$Mnemonic:mask
+    type: "mask",
+    conf: [ { key: Number,//int
+              value: String }, ... ],
+    levels: [ Object, ... ] },//$Level:dict
+  { ...,//$Mnemonic:date
+    type: "date",
+    conf: { epoch: $Datetime,
+            scale: $Period },
+    levels: [ Object, ... ] },//$Level:date
+  { ...,//$Mnemonic:str
+    type: "str",
+    size: null,
+    conf: { format: String,
+            keys: [ Number, ... ] },//int
+    level: Object } ,//$Level:str
+  { ...,//$Mnemonic:drv
+    type: "drv",
+    size: null,
+    conf: { script: String,
+            args: [ Number, ... ] },//int
+    levels: [ Object, ... ] } ]//$Levels
