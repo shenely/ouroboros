@@ -25,6 +25,7 @@ int inv2law(double* r_bar, double* v_bar,
              - r_bar[1] / r;
     e_bar[2] = (v_bar[0] * h_bar[1] - v_bar[1] * h_bar[0]) / mu
              - r_bar[2] / r;
+    
     return 0;
 }
 
@@ -65,6 +66,7 @@ int rec2kep(double* r_bar, double* v_bar,
     (*kep).ea = 2.0 * atan2(sqrt(1.0 - (*kep).ecc) * sin(0.5 * (*kep).ta),
                             sqrt(1.0 + (*kep).ecc) * cos(0.5 * (*kep).ta));
     (*kep).ma = (*kep).ea - (*kep).ecc * sin((*kep).ea);
+    
     return 0;
 }
 
@@ -98,6 +100,7 @@ int kep2rec(ob_orbele kep,
     v_bar[0] = v_dot_p * p_dot_i + v_dot_q * q_dot_i;
     v_bar[1] = v_dot_p * p_dot_j + v_dot_q * q_dot_j;
     v_bar[2] = v_dot_p * p_dot_k + v_dot_q * q_dot_k;
-    return 1;
+    
+    return 0;
 }
 

@@ -1,20 +1,20 @@
 time
     clk
-        at
-        after
-        every
-        relate
-        iso8601
+        at*
+        after*
+        every*
+        relate*
+        iso8601*
 math
     vec - vector transforms
-        abs2rel - absolute to relative frame
-        rel2abs - relative to absolute frame
-        nrt2rot - inertial to rotating frame
-        rot2nrt - rotating to inertial frame
-        fun2obl - fundamental to oblique plane
-        obl2fun - oblique to fundamental plane
-        rec2sph - Rectangular to spherical coordinates
-        sph2rec - spherical to rectangular coordinates
+        abs2rel* - absolute to relative frame
+        rel2abs* - relative to absolute frame
+        nrt2rot* - inertial to rotating frame
+        rot2nrt* - rotating to inertial frame
+        fun2obl* - fundamental to oblique plane
+        obl2fun* - oblique to fundamental plane
+        rec2sph* - Rectangular to spherical coordinates
+        sph2rec* - spherical to rectangular coordinates
     rot - spatial rotation
         quat2rec - quaternion to angle-vector
         rec2quat - angle-vector to quaternion
@@ -23,12 +23,12 @@ math
         quat2mat - quaternion to rotation matrix
         mat2quat - rotation matrix to quaternion
     ode - ordinary differential equations
-        euler - Euler method
+        euler* - Euler method
         beuler - backward Euler method
         imid - implicit midpoint
-        heun - Heun method
+        heun* - Heun method
         trap - trapezoidal rule
-        rk4 - Runge-Kutta method
+        rk4* - Runge-Kutta method
         dp45 - Dormand-Prince method
         ab5 - Adams-Bashforth method
         am5 - Adams-Moulton method
@@ -49,26 +49,26 @@ phyx
         point - point mass
 astro
     geo - earth
-        jd - Julian date
-        st - sidereal time
-        ax - axis of rotation
-        rose - compass rose
+        jd* - Julian date
+        st* - sidereal time
+        ax* - axis of rotation
+        rose* - compass rose
         mag - International Geomagnetic Reference Field
         pot - Earth Gravitational Model
         atmo - International Standard Atmosphere
-        sph2geo - geocentric to geodetic coordinate
-        geo2sph - geodetic to geocentric coordinate
+        sph2geo* - geocentric to geodetic coordinate
+        geo2sph* - geodetic to geocentric coordinate
     orb - orbital dynamics
-        unikep - universal variable formulation
-        tle2sgp - two-line elements to simple general perturbation
-        sgp4tle - simple general perturbation for two-line elements
+        unikep* - universal variable formulation
+        tle2sgp* - two-line elements to simple general perturbation
+        sgp4tle* - simple general perturbation for two-line elements
         jpl_de - Jet Propulsion Lab Development Ephemeris
         ephem - Generic ephemeris
-        inv2law - constants of motion
-        rec2kep - vector to Kepler elements
-        kep2rec - Kepler elements to vector
+        inv2law* - constants of motion
+        rec2kep* - vector to Kepler elements
+        kep2rec* - Kepler elements to vector
     ev - orbital events
-        apsis - apsis crossing
+        apsis* - apsis crossing
         node - node crossing
         pole - pole crossing
     sat - satellite hardware

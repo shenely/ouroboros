@@ -1,5 +1,5 @@
-#ifndef UNIKEP_H
-#define UNIKEP_H
+#ifndef LIBUNIKEP_H
+#define LIBUNIKEP_H
 
 int settol(double);
 int setmaxiter(int);

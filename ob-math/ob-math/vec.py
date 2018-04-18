@@ -9,10 +9,10 @@ import scipy.linalg
 from ouroboros import NORMAL, Item, PROCESS
 
 #exports
-__all__= ("abs2rel", "rel2abs",#relative
-          "nrt2rot", "rot2nrt",#rotation
-          "fun2obl", "obl2fun",#plane
-          "rec2sph", "sph2rec")#coordinates
+__all__= ('abs2rel', 'rel2abs',#relative
+          'nrt2rot', 'rot2nrt',#rotation
+          'fun2obl', 'obl2fun',#plane
+          'rec2sph', 'sph2rec')#coordinates
 
 @PROCESS('vec.abs2rel', NORMAL,
          Item('src',
@@ -292,10 +292,10 @@ def obl2fun(fun, obl, node, pole):
         k_hat = numpy.cross(i_hat, j_hat)
         
         n_t = numpy.dot(n_bar, n_t_bar) / n
-        i_t_hat = (n * n_t_bar - n_t * n_bar) / n ** 2
+        i_t_hat = (n * n_t_bar - n_t * n_bar) / (n * n)
         
         t_t = numpy.dot(t_bar, t_t_bar) / t
-        j_t_hat = (t * t_t_bar - t_t * t_bar) / t ** 2
+        j_t_hat = (t * t_t_bar - t_t * t_bar) / (t * t)
         
         k_t_hat = (numpy.cross(i_t_hat, j_hat) +
                    numpy.cross(i_hat, j_t_hat))
@@ -332,7 +332,7 @@ def rec2sph(vec):
         vec = (((r_bar, v_bar, r,
                  numpy.dot(r_bar, v_bar) / r,
                  az, math.asin(r_bar[2] / r),
-                 r ** 2 - r_bar[2] ** 2), _)
+                 r * r - r_bar[2] * r_bar[2]), _)
                for (r_bar, v_bar, r, az), _ in vec)
         vec = (((r, r_t,
                  math.atan2(r_bar[1], r_bar[0]),

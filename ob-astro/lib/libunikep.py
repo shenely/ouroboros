@@ -72,18 +72,4 @@ def unikep(r0_bar, v0_bar, t):
                         r_bar, v_bar,
                         t) != 0:
         raise
-    return r_bar, v_bar
-
-def main():
-    mu = 398600.0
-    r0_bar = numpy.array([7000.0, -12124.0, 0.0])
-    v0_bar = numpy.array([2.6679, 4.6210, 0.0])
-    t = 60 * MINUTE
-
-    setmu(mu)
-    (r_bar, v_bar) = unikep(r0_bar, v0_bar, t)
-    print r_bar
-    print v_bar
-    
-if __name__ == '__main__':
-    main()
+    return (r_bar, v_bar)

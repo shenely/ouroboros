@@ -8,6 +8,7 @@ import numpy
 
 #internal libraries
 from ouroboros import NORMAL, Item, coroutine, PROCESS
+from ouroboros.lib import libgeoid
 
 #exports
 __all__ = ('jd', 'st', 'ax', 'rose',
@@ -172,19 +173,12 @@ def sph2geo(bod, sph, geo):
     while True:
         sph, = right['sph']
         
-        libunikep.setshape(R, f)
-        
-        sph = (((lat_c, lon_c, rad_c,
-                 0.0, 0.0), _)
-               for (lat_c, lon_c, rad_c), _ in sph)
-        geo = ((((lat_d, lon_c, alt_d), (True,))
+        libgeoid.setshape(R, f)
+        geo = (((libgeoid.center2datum
+                 (lat_c, lon_c, rad_c), (True,))
                 if sph_e
-                and libgeo.geoc2d(lat_c, rad_c,
-                                  ctypes.byref(lat_d),
-                                  ctypes.byref(rad_d))
                 else (None, None))
-               for ((lat_c, lon_c, rad_c,
-                     lat_d, alt_d), (sph_e,)) in sph)
+               for ((lat_c, lon_c, rad_c), (sph_e,)) in sph)
 
         left = {'geo': geo}
         right = yield left
@@ -205,36 +199,17 @@ def sph2geo(bod, sph, geo):
 def geo2sph(bod, sph, geo):
     """Geodetic to geocentric coordinates"""
     R, f = bod.next()
-    e__2 = (2 - f) * f
-    fn1__2 = (1 - f) * (1 - f)
     
     right = yield
     while True:
         geo = right['geo']
         
-        geo = (((lon_d, alt_d,
-                 math.cos(lat_d),
-                 math.sin(lat_d)), _)
-               for (lat_d, lon_d, alt_d), _ in geo)
-        geo = (((lon_d, alt_d,
-                 cos_d, sin_d,
-                 math.sqrt(1 - e__2 * sin_d * sin_d)), _)
-               for (lon_d, alt_d,
-                    cos_d, sin_d), _ in geo)
-        geo = (((lon_d,
-                 (R / sqrt_d + alt_d) * cos_d,
-                 (R * fn1__2 / sqrt_d + alt_d) * sin_d), _)
-               for (lon_d, alt_d,
-                    cos_d, sin_d, sqrt_d), _ in geo)
-        geo = (((math.atan2(rad_s, rad_c),#<--lat_c
-                 lon_d,#<--lon_c
-                 math.sqrt(rad_c * rad_c +
-                           rad_s * rad_s)),#<--rad_c
-                _)
-               for (lon_d, rad_c, rad_s), _ in geo)
-        sph = (((_, (True,)) if geo_e
-                else (None, None))
-               for _, (geo_e,) in geo)
+        libgeoid.setshape(R, f)
+        sph = (((libgeoid.datum2center
+                 (lat_d, lon_d, alt_d), (True,))
+                if geo_e else
+                 (None, None))
+               for ((lat_d, lon_d, alt_d), (geo_e,)) in geo)
 
         left = {'sph': sph}
         right = yield left

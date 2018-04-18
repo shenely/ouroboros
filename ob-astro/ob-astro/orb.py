@@ -16,7 +16,8 @@ from ouroboros.lib import (libunikep,
 __all__ = ('unikep',
            'tle2sgp', 'sgp4tle',
            'inv2law',
-           'rec2kep', 'kep2rec')
+           'rec2kep', 'kep2rec',
+           'apsis', 'pole', 'node')
 
 #constants
 MICRO = 1e-6
@@ -72,7 +73,8 @@ def tle2sgp(orb):
     orb = ((((sgp4.io.twolin2rv
               (tle[1], tle[2],
                sgp4.earth_gravity.wgs72),), (True,))
-            if two else (None, None))
+            if two else
+            (None, None))
            for (tle,), (two,) in orb)
     
     left = {'orb': orb}
@@ -123,8 +125,10 @@ def inv2law(bod, orb):
         orb = right['orb']
         
         liborbele.setmu(mu)
-        orb = ((liborbele.inv2law(r_bar, v_bar), (True,))
-               for (r_bar, v_bar), _ in orb)
+        orb = (((liborbele.inv2law(r_bar, v_bar), (True,))
+                if rec_e else
+                (None, None))
+               for (r_bar, v_bar), (rec_e,) in orb)
         
         left = {'orb': orb}
         right = yield left
@@ -152,8 +156,8 @@ def rec2kep(bod, orb):
         liborbele.setmu(mu)
         orb = (((liborbele.rec2kep(r_bar, v_bar,
                                    eps, h_bar, e_bar), (True,))
-                if rec_e and law_e
-                else (None, None))
+                if rec_e and law_e else
+                (None, None))
                for _, (rec_e, law_e) in orb)
         
         left = {'orb': orb}
@@ -180,10 +184,78 @@ def kep2rec(bod, orb):
         liborbele.setmu(mu)
         orb = (((liborbele.rec2kep(sma, ecc, ta,
                                    aop, raan, inc), (True,))
-                if kep_e
-                else (None, None))
+                if kep_e else
+                (None, None))
                for (sma, ecc, ta,
                     aop, raan, inc), (kep_e,) in orb)
+        
+        left = {'orb': orb}
+        right = yield left
+
+@PROCESS('orb.apsis', NORMAL,
+         Item('env',
+              evs=(), args=(),
+              ins=(), reqs=('t',),
+              outs=(), pros=()),
+         Item('orb',
+              evs=('kep',), args=(),
+              ins=('kep',), reqs=('mm', 'ma'),
+              outs=('peri', 'apo'), pros=('t_peri', 't_apo')))
+def apsis(env, orb):
+    """Apsis crossing"""
+    right = yield
+    while True:
+        env, orb = (right['env'],
+                    right['orb'])
+
+        (env_t,), _  = env.next()
+        orb = ((((t + (2 * pi - ma) / mm,
+                  (t + (pi - ma) / mm)
+                  if ma < pi else
+                  (t + (3 * pi - ma) / mm))
+                 (False, False))
+                if kep_e is True else
+                (None, None))
+               for (mm, ma), (kep_e,) in orb)
+        
+        left = {'orb': orb}
+        right = yield left
+
+@PROCESS('orb.node', NORMAL,
+         Item('env',
+              evs=(), args=(),
+              ins=(), reqs=('t',),
+              outs=(), pros=()),
+         Item('orb',
+              evs=('kep',), args=(),
+              ins=('kep',), reqs=('mm', 'ma'),
+              outs=('asc', 'desc'), pros=('t_asc', 't_desc')))
+def node(env, orb):
+    """Node crossing"""
+    mu, = bod.next()
+
+    right = yield
+    while True:
+        env, orb = (right['env'],
+                    right['orb'])
+
+##        ta1 = 2 * pi - aop
+##        ta1 = pi - aop
+##        ea1 = 2 * atan2(sqrt(1 - ecc) * sin(ta1 / 2),
+##                        sqrt(1 + ecc) * cos(ta1 / 2))
+##        ma1 = ea1 - ecc * sin(ea1)
+##        t = (ma1 - ma) / mm
+        
+
+        (env_t,), _  = env.next()
+        orb = ((((t + (2 * pi - ma) / mm,
+                  (t + (pi - ma) / mm)
+                  if ma < pi else
+                  (t + (3 * pi - ma) / mm))
+                 (False, False))
+                if kep_e is True else
+                (None, None))
+               for (mm, ma), (kep_e,) in orb)
         
         left = {'orb': orb}
         right = yield left

@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <math.h>
 #include "unikep.h"
 
@@ -48,8 +47,6 @@ int unikep(double* r0_bar, double* v0_bar,
                      + r0_bar[1] * v0_bar[1]
                      + r0_bar[2] * v0_bar[2];
     double alpha = 2.0 / r0 - (v0 * v0) / (sqrt_mu * sqrt_mu);
-    printf("r0 = %f, v0 = %f\n", r0, v0);
-    printf("alpha = %e\n", alpha);
     
     double chi, chi__2, chi__3;
     chi = sqrt_mu * fabs(alpha) * t;
@@ -59,7 +56,6 @@ int unikep(double* r0_bar, double* v0_bar,
     
     int i;
     for (i = 0; i < maxiter; i++) {
-        printf("i = %d, chi = %f\n", i, chi);
         chi__2 = chi * chi;
         chi__3 = chi * chi__2;
         z = alpha * chi__2;
@@ -77,11 +73,10 @@ int unikep(double* r0_bar, double* v0_bar,
             chi -= delta;
         }
     }
-    if (i == maxiter) return 0;
+    if (i == maxiter) return 1;
     
     double f = 1.0 - chi__2 * C / r0,
            g = t - chi__3 * S / sqrt_mu;
-    printf("f = %f, g = %f\n", f, g);
     r_bar[0] = f * r0_bar[0] + g * v0_bar[0];
     r_bar[1] = f * r0_bar[1] + g * v0_bar[1];
     r_bar[2] = f * r0_bar[2] + g * v0_bar[2];
@@ -90,9 +85,9 @@ int unikep(double* r0_bar, double* v0_bar,
                     r_bar[2] * r_bar[2]);
     double f_dot = sqrt_mu * (alpha * chi__3 * S - chi) / (r * r0),
            g_dot = 1.0 - chi__2 * C / r;
-    printf("f_dot = %f, g_dot = %f\n", f_dot, g_dot);
     v_bar[0] = f_dot * r0_bar[0] + g_dot * v0_bar[0];
     v_bar[1] = f_dot * r0_bar[1] + g_dot * v0_bar[1];
     v_bar[2] = f_dot * r0_bar[2] + g_dot * v0_bar[2];
+    
     return 0;
 }

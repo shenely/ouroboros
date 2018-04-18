@@ -1,5 +1,5 @@
-#ifndef ORBELE_H
-#define ORBELE_H
+#ifndef LIBORBELE_H
+#define LIBORBELE_H
 
 typedef struct ob_orbele_t {
     double sma;
