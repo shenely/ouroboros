@@ -14,7 +14,7 @@ __all__= ('abs2rel', 'rel2abs',#relative
           'fun2obl', 'obl2fun',#plane
           'rec2sph', 'sph2rec')#coordinates
 
-REGISTRY[numpy.ndarray] = lambda x:x.tolist()
+REGISTRY[numpy.ndarray] = ('$vec', lambda x:x.tolist())
 REGISTRY['$vec'] = lambda x:numpy.array(x)
 
 @PROCESS('vec.abs2rel', NORMAL,

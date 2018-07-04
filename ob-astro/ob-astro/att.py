@@ -41,7 +41,7 @@ class rot(base_rot):
                        self.bar * other)
         else:raise TypeError
 
-REGISTRY[rot] = lambda x:[x.quat, x.bar]
+REGISTRY[rot] = ('$rot', lambda x:[x.quat, x.bar])
 REGISTRY['$rot'] = lambda x:rot(*x)
 
 @PROCESS('att.eulrot', NORMAL,

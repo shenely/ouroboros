@@ -17,7 +17,7 @@ __all__= ['quat2rec', 'rec2quat',
 KILO = 1000
 MICRO = 1e-6
 
-REGISTRY[libquat.quat] = lambda x:[x.one, x.bar]
+REGISTRY[libquat.quat] = ('$quat', lambda x:[x.one, x.bar])
 REGISTRY['$quat'] = lambda x:libquat.quat(*x)
 
 def quat2rec():pass

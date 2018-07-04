@@ -17,7 +17,7 @@ __all__ = ('settol', 'setmaxiter',
            'unikep')
 
 #constants
-MINUTE = 60.0#seconds
+#...
 
 #types
 c_double_p = ctypes.POINTER(ctypes.c_double)

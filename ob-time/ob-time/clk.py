@@ -18,9 +18,10 @@ __all__= ('at', 'after', 'every',
 #constants
 UNIX_EPOCH = datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)
 
-REGISTRY[datetime.datetime] = (lambda x:
+REGISTRY[datetime.datetime] = ('$date',
+                               lambda x:
                                int(1000 *
-                                   (value - UNIX_EPOCH)
+                                   (x - UNIX_EPOCH)
                                    .total_seconds()))
 REGISTRY['$date'] = (lambda x:
                      UNIX_EPOCH +

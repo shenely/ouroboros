@@ -8,7 +8,7 @@ import sgp4.earth_gravity
 import sgp4.io
 
 #internal libraries
-from ouroboros import HIGH, NORMAL, coroutine, Item, PROCESS
+from ouroboros import REGISTRY, NORMAL, Item, PROCESS
 from ouroboros.lib import (libunikep,
                            liborbele)
 
@@ -22,7 +22,7 @@ __all__ = ('unikep',
 #constants
 MICRO = 1e-6
 
-@PROCESS('orb.unikep', HIGH,
+@PROCESS('orb.unikep', NORMAL,
          Item('env',
               evs=(), args=('t',),
               ins=(), reqs=('t',),
@@ -60,49 +60,58 @@ def unikep(env, clk, bod, orb):
         left = {'orb': orb}
         right = yield left
         
-@PROCESS('orb.tle2sgp', HIGH,
-         Item('orb',
-              evs=(2,), args=(),
-              ins=(2,), reqs=(2,),
+@PROCESS('orb.tle2sgp', NORMAL,
+         Item('env',
+              evs=(True,), args=(),
+              ins=(), reqs=(),
+              outs=(), pros=()),
+         Item('tle',
+              evs=(), args=(2,),
+              ins=(), reqs=(),
+              outs=(), pros=()),
+         Item('sgp',
+              evs=(), args=(),
+              ins=(), reqs=(),
               outs=(4,), pros=(4,)))
-def tle2sgp(orb):
+def tle2sgp(env, tle, sgp):
     """Two-line elements to simple general perturbation"""
-    right = yield
-    orb = right['orb']
+
+    yield
+    sgp = (((sgp4.io.twoline2rv
+             (tle[1], tle[2],
+              sgp4.earth_gravity.wgs84),), (True,))
+           for (tle,) in tle)
     
-    orb = ((((sgp4.io.twolin2rv
-              (tle[1], tle[2],
-               sgp4.earth_gravity.wgs72),), (True,))
-            if two else
-            (None, None))
-           for (tle,), (two,) in orb)
-    
-    left = {'orb': orb}
+    left = {'sgp': sgp}
     yield left
         
-@PROCESS('orb.sgp4tle', HIGH,
+@PROCESS('orb.sgp4tle', NORMAL,
          Item('clk',
               evs=(8601,), args=(),
               ins=(), reqs=('t_dt',),
               outs=(), pros=()),
+         Item('sgp',
+              evs=(), args=(),
+              ins=(), reqs=(4,),
+              outs=(), pros=()),
          Item('orb',
               evs=(), args=(),
-              ins=('rec',), reqs=(4,),
+              ins=('rec',), reqs=(),
               outs=('rec',), pros=('r_bar', 'v_bar')))
-def sgp4tle(orb):
+def sgp4tle(clk, sgp, orb):
     """Simple general perturbation for two-line elements"""
     right = yield
     while True:
-        clk, orb = (right['clk'],
-                    right['orb'])
+        clk, sgp = (right['clk'],
+                    right['sgp'])
         
         (clk_t,), _ = clk.next()
-        orb = ((map(sgp.propagate
+        orb = ((map(numpy.array,
+                    sgp.propagate
                     (clk_t.year, clk_t.month, clk_t.day,
-                     clk_t.hour, t_dt.minute, clk_t.second +
-                     clk_t.microsecond * MICRO),
-                    numpy.array), (True,))
-               for (sgp,), (orb_e,) in orb)
+                     clk_t.hour, clk_t.minute, clk_t.second +
+                     clk_t.microsecond * MICRO)), (True,))
+               for (sgp,), _ in sgp)
 
         left = {'orb': orb}
         right = yield left
