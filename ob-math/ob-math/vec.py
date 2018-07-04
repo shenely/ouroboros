@@ -6,13 +6,16 @@ import numpy
 import scipy.linalg
 
 #internal libraries
-from ouroboros import NORMAL, Item, PROCESS
+from ouroboros import REGISTRY, NORMAL, Item, PROCESS
 
 #exports
 __all__= ('abs2rel', 'rel2abs',#relative
           'nrt2rot', 'rot2nrt',#rotation
           'fun2obl', 'obl2fun',#plane
           'rec2sph', 'sph2rec')#coordinates
+
+REGISTRY[numpy.ndarray] = lambda x:x.tolist()
+REGISTRY['$vec'] = lambda x:numpy.array(x)
 
 @PROCESS('vec.abs2rel', NORMAL,
          Item('src',

@@ -18,7 +18,7 @@ import tornado.gen
 import tornado.concurrent
 
 #internal libraries
-from ouroboros import CATELOG
+from ouroboros import CATELOG, REGISTRY
 import ouroboros.ext as _
 
 #constants
@@ -28,14 +28,16 @@ UNIX_EPOCH = datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)
 logging.basicConfig(level=logging.INFO)
 
 def default(obj):
-    if isinstance(obj, datetime.datetime):
-        dct = {'$date': int(1000 * (obj - UNIX_EPOCH).total_seconds())}
+    key, default = REGISTRY.get(type(obj))
+    if default is not None:
+        dct = {key: default(obj)}
         return dct
     else:raise TypeError
 
 def object_hook(dct):
-    if '$date' in dct:
-        obj = UNIX_EPOCH + datetime.timedelta(dct['$date'] / 1000.0)
+    object_hook = REGISTRY.get(dct.iterkeys().next())
+    if object_hook is not None:
+        obj = object_hook(dct.getvalues().next())
         return obj
     else:return dct
 
@@ -148,11 +150,13 @@ def main(mem, loop):
             for cb in ev.cbs)#time event
         while len(q) > 0:
             (p, gen) = heapq.heappop(q)
+            #XXX controls how events are recorded
             loop.add_callback(any, (heapq.heappush(z, (s, ev))
                                     if not isinstance(s, types.BooleanType)
-                                    else any(heapq.heappush(q, cb)
-                                             for cb in e.add(ev) or ev.cbs)
-                                    if s is True else None
+                                    else (any(heapq.heappush(q, cb)
+                                              for cb in ev.cbs)
+                                          if ev not in e else None)
+                                    or (e.add(ev) if s is True else None)
                                     for ev, s in gen.send(e)))
             yield
         else:e.clear()

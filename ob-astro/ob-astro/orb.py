@@ -182,7 +182,7 @@ def kep2rec(bod, orb):
         orb = right['orb']
         
         liborbele.setmu(mu)
-        orb = (((liborbele.rec2kep(sma, ecc, ta,
+        orb = (((liborbele.kep2rec(sma, ecc, ta,
                                    aop, raan, inc), (True,))
                 if kep_e else
                 (None, None))

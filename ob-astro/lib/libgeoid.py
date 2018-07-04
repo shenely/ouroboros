@@ -12,7 +12,7 @@ path = os.path.dirname(__file__)
 libgeoid = numpy.ctypeslib.load_library('_libgeoid', path)
 
 #exports
-__all__ = ('settol', 'setiter',
+__all__ = ('settol', 'setmaxiter',
            'setshape',
            'center2datum',
            'datum2center')

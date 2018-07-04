@@ -8,14 +8,23 @@ import logging
 import pytz
 
 #internal libraries
-from ouroboros import NORMAL, Item, PROCESS
+from ouroboros import (REGISTRY,
+                       NORMAL, Item, PROCESS)
 
 #exports
 __all__= ('at', 'after', 'every',
           'relate', 'iso8601')
 
 #constants
-#...
+UNIX_EPOCH = datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)
+
+REGISTRY[datetime.datetime] = (lambda x:
+                               int(1000 *
+                                   (value - UNIX_EPOCH)
+                                   .total_seconds()))
+REGISTRY['$date'] = (lambda x:
+                     UNIX_EPOCH +
+                     datetime.timedelta(seconds=x / 1000.0))
 
 @PROCESS('clock.at', NORMAL,
          Item('sys',

@@ -1,57 +1,24 @@
 #built-in imports
-from math import pi
+#...
 
 #external imports
-from numpy import dot, cross, hstack, hsplit
-from scipy.linalg import inv, norm
-from scipy.integrate import ode
+#...
 
 #internal imports
-from ouroboros import Item, PROCESS
+from ouroboros import REGISTRY
+from ouroboros.lib import libquat
 
 #exports
-__all__= ["model",
-          "quat2rec", "rec2quat",
-          "quat2rpy", "rpy2quat",
-          "quat2mat", "mat2quat"]
+__all__= ['quat2rec', 'rec2quat',
+          'quat2rpy', 'rpy2quat',
+          'quat2mat', 'mat2quat']
 
 #constants
 KILO = 1000
 MICRO = 1e-6
 
-def model(t0_dt, th0_bar, om0_bar, I_mat):
-    I_inv = inv(I_mat)
-
-    def rigid(t, y):
-        th_bar, om_bar = hsplit(y, 2)
-        
-        dy = hstack((om_bar, - dot(I_inv, cross(om_bar, dot(I_mat, om_bar)))))
-        
-        return dy
-    
-    y = hstack((th0_bar, om0_bar))
-    
-    box = ode(rigid)\
-            .set_integrator("dopri5") \
-            .set_initial_value(y, 0)
-    
-    th_bar, om_bar = th0_bar, om0_bar
-    
-    while True:
-        #Input/output
-        t_dt, = yield th_bar, om_bar,#time/position,velocity
-        
-        #Update state
-        y = box.integrate((t_dt - t0_dt).total_seconds())
-        th_bar, om_bar = hsplit(y, 2)
-        
-        th = norm(th_bar)
-        
-        if 0 < abs(th) > 2 * pi:
-            th_hat = th_bar / th
-            th = th % (2 * pi)
-            
-            th_bar = th * th_hat
+REGISTRY[libquat.quat] = lambda x:[x.one, x.bar]
+REGISTRY['$quat'] = lambda x:libquat.quat(*x)
 
 def quat2rec():pass
 def rec2quat():pass

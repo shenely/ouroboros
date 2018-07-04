@@ -12,7 +12,7 @@ path = os.path.dirname(__file__)
 libunikep = numpy.ctypeslib.load_library('_libunikep', path)
 
 #exports
-__all__ = ('settol', 'setiter',
+__all__ = ('settol', 'setmaxiter',
            'setmu',
            'unikep')
 

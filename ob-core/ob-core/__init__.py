@@ -10,12 +10,13 @@ import logging
 #...
 
 #exports
-__all__ = ('CATELOG',
+__all__ = ('CATELOG', 'REGISTRY',
            'CRITICAL', 'HIGH', 'NORMAL', 'LOW', 'TRIVIAL',
            'coroutine', 'Item', 'PROCESS')
 
 #constants
 CATELOG = {}#process catelog
+REGISTRY = {}#object registry
 
 #priorities
 CRITICAL = 1
