@@ -48,9 +48,11 @@ def PROCESS(name, level=NORMAL, *items):
         def wrapper(sys, maps, keys):
             try:
                 #Pull arguments and events from items
+                logging.debug('exec %s init', name)
                 args = {tag:
                         (lambda tag, names:
-                         ((logging.info('data:get:%s:%s', tag, key) or
+                         ((logging.debug('get data: %s.%s',
+                                         tag, key) or
                            sys[name]['data']
                            [maps[tag]['data'].get(key, key)
                             if maps is not None
@@ -60,7 +62,7 @@ def PROCESS(name, level=NORMAL, *items):
                           for name in names))
                         (tag, names)
                         for tag, names in keys.iteritems()}
-                evs = (logging.info('ctrl:get:%s:%s', tag, key) or
+                evs = (logging.debug('get ctrl: %s.%s', tag, key) or
                        sys[name]['ctrl']
                        [maps[tag]['ctrl'].get(key, key)
                         if maps is not None
@@ -74,16 +76,19 @@ def PROCESS(name, level=NORMAL, *items):
                 evs = yield evs
                 while True:
                     #XXX this mess actually calls the function
+                    logging.debug('exec %s main', name)
                     right = {tag:
                              (lambda tag, names:
-                              (((logging.info('data:get:%s:%s', tag, key) or
+                              (((logging.debug('get data: %s.%s',
+                                               tag, key) or
                                  sys[name]['data']
                                  [maps[tag]['data'].get(key, key)
                                   if maps is not None
                                   and tag in maps
                                   else key]
                                  for key in items[tag].reqs),
-                                (logging.info('ctrl:get:%s:%s', tag, key) or
+                                (logging.debug('get ctrl: %s.%s',
+                                               tag, key) or
                                  sys[name]['ctrl']
                                  [maps[tag]['ctrl'].get(key, key)
                                   if maps is not None
@@ -107,13 +112,13 @@ def PROCESS(name, level=NORMAL, *items):
                                       if maps is not None
                                       and tag in maps
                                       else key):
-                                     logging.info('data:set:%s:%s:%s',
-                                                  tag, key, pro) or
+                                     logging.debug('set data: %s.%s=%s',
+                                                   tag, key, pro) or
                                      pro for key, pro
                                      in zip(items[tag].pros, pros)
                                      if pro is not None})) or
-                                  (logging.info('ctrl:set:%s:%s:%s',
-                                                tag, key, out) or
+                                  (logging.debug('set ctrl: %s.%s=%s',
+                                                 tag, key, out) or
                                    (sys[name]['ctrl']
                                     [maps[tag]['ctrl'].get(key, key)
                                      if maps is not None

@@ -25,7 +25,9 @@ import ouroboros.ext as _
 INFINITY = float('inf')
 UNIX_EPOCH = datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(format='[%(levelname)s] (%(asctime)s) %(message)s',
+                    datefmt='%Y-%m-%dT%H:%M:%SL',
+                    level=logging.DEBUG)
 
 def default(obj):
     key, default = REGISTRY.get(type(obj))
@@ -166,10 +168,12 @@ def main(mem, loop):
         T, t0, x = (mem[None][True, None]['data']['t'],
                     mem[None][False, None]['data']['t'],
                     mem[None][False, None]['data']['x'])
+        logging.debug('exec time:%.4f', time.time() - T)
         if len(z) > 0 and x > 0.0:
             t = z[0][0]#wall time
             T += (t - t0) / x#real time
             yield tornado.gen.sleep(T - time.time())
+            logging.debug('wall time:%.4f', t)
         else:
             T = time.time()#real time
             mem[None][True, None]['data']['f'] = tornado.concurrent.Future()
@@ -182,6 +186,8 @@ if __name__ == '__main__':
         mem = {sys.pop('name'):
                {(True, None): sys}
                for sys in pickle.load(pkl)}
+        logging.debug('done 1st pass')
+        
         #second pass - populate internals
         any(mem[_id].setdefault(name, {}).update
             ({'data': item['data'],
@@ -190,11 +196,15 @@ if __name__ == '__main__':
              if item is not None else {})
             for _id in mem for name, item in
             mem[_id][True, None].pop('mem').iteritems())
+        logging.debug('done 2nd pass')
+        
         #third pass - reference externals
         any(mem[_id].update
             ({name: mem[name[0]][False, name[1]]
               for name in mem[_id] if name[0] in mem})
             for _id in mem)
+        logging.debug('done 3rd pass')
+        
         #last pass - start processes
         any(ev.cbs.append((p, gen))
             for _id in mem for p, gen in
@@ -204,6 +214,7 @@ if __name__ == '__main__':
                proc['map'], proc['key']) for proc in
               mem[_id][True, None].pop('exe')))
             for ev in gen.next())
+        logging.debug('done 4th pass')
     
     loop = tornado.ioloop.IOLoop.current()
     app = (tornado.web.Application
