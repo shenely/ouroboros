@@ -50,7 +50,7 @@ def PROCESS(name, level=NORMAL, *items):
                 #Pull arguments and events from items
                 args = {tag:
                         (lambda tag, names:
-                         ((logging.info('data:get:%s', key) or
+                         ((logging.info('data:get:%s:%s', tag, key) or
                            sys[name]['data']
                            [maps[tag]['data'].get(key, key)
                             if maps is not None
@@ -60,7 +60,7 @@ def PROCESS(name, level=NORMAL, *items):
                           for name in names))
                         (tag, names)
                         for tag, names in keys.iteritems()}
-                evs = (logging.info('ctrl:get:%s', key) or
+                evs = (logging.info('ctrl:get:%s:%s', tag, key) or
                        sys[name]['ctrl']
                        [maps[tag]['ctrl'].get(key, key)
                         if maps is not None
@@ -76,14 +76,14 @@ def PROCESS(name, level=NORMAL, *items):
                     #XXX this mess actually calls the function
                     right = {tag:
                              (lambda tag, names:
-                              (((logging.info('data:get:%s', key) or
+                              (((logging.info('data:get:%s:%s', tag, key) or
                                  sys[name]['data']
                                  [maps[tag]['data'].get(key, key)
                                   if maps is not None
                                   and tag in maps
                                   else key]
                                  for key in items[tag].reqs),
-                                (logging.info('ctrl:get:%s', key) or
+                                (logging.info('ctrl:get:%s:%s', tag, key) or
                                  sys[name]['ctrl']
                                  [maps[tag]['ctrl'].get(key, key)
                                   if maps is not None
@@ -99,28 +99,28 @@ def PROCESS(name, level=NORMAL, *items):
                                  if tag in left
                                  for name, (pros, outs)
                                  in zip(names, left[tag])
+                                 if pros is not None
+                                 and outs is not None
                                  for ev in
                                  ((sys[name]['data'].update
                                    ({(maps[tag]['data'].get(key, key)
                                       if maps is not None
                                       and tag in maps
                                       else key):
-                                     logging.info('data:set:%s:%s',
-                                                  key, pro) or
+                                     logging.info('data:set:%s:%s:%s',
+                                                  tag, key, pro) or
                                      pro for key, pro
                                      in zip(items[tag].pros, pros)
                                      if pro is not None})) or
-                                  (logging.info('ctrl:set:%s:%s',
-                                                key, out) or
+                                  (logging.info('ctrl:set:%s:%s:%s',
+                                                tag, key, out) or
                                    (sys[name]['ctrl']
                                     [maps[tag]['ctrl'].get(key, key)
                                      if maps is not None
                                      and tag in maps
                                      else key], out) for key, out
                                    in zip(items[tag].outs, outs)
-                                   if out is not None))
-                                 if pros is not None
-                                 and outs is not None)
+                                   if out is not None)))
             except StopIteration:
                 return
             finally:

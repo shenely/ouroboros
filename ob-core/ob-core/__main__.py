@@ -151,10 +151,13 @@ def main(mem, loop):
         while len(q) > 0:
             (p, gen) = heapq.heappop(q)
             #XXX controls how events are recorded
+            #... events may only occur once per time event
+            #... one instance of callback may be in queue
             loop.add_callback(any, (heapq.heappush(z, (s, ev))
                                     if not isinstance(s, types.BooleanType)
                                     else (any(heapq.heappush(q, cb)
-                                              for cb in ev.cbs)
+                                              for cb in ev.cbs
+                                              if cb not in q)
                                           if ev not in e else None)
                                     or (e.add(ev) if s is True else None)
                                     for ev, s in gen.send(e)))
