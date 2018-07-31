@@ -24,8 +24,8 @@ BYTE = 8#bits
               outs=('eng',), pros=()))
 def parse(mne, usr):
     """Struct parser"""
-    spec = [(byte, byte + (bit + size) // BYTE + ((bit + size) % BYTE > 0),
-             bit, BYTE - (bit + size) % BYTE)
+    spec = [(byte, byte - 1 + (bit + size) // BYTE + ((bit + size) % BYTE > 0),
+             bit, (BYTE - bit - size) % BYTE)
             for (byte, bit, size) in mne]
     
     right = yield
@@ -59,8 +59,8 @@ def parse(mne, usr):
               outs=('raw',), pros=('raw',)))
 def format(mne, usr):
     """Struct formatter"""
-    spec = [(byte, byte + (bit + size) // BYTE + ((bit + size) % BYTE > 0),
-             bit, BYTE - (bit + size) % BYTE)
+    spec = [(byte, byte - 1 + (bit + size) // BYTE + ((bit + size) % BYTE > 0),
+             bit, (BYTE - bit - size) % BYTE)
             for (byte, bit, size) in mne]
     size, = usr.next()
     
@@ -71,19 +71,19 @@ def format(mne, usr):
         right = yield left
         mne = right['mne']
 
-        raw = [0] * (size // BYTE)#bytearray([0] * size)
+        raw = bytearray([0] * size)
         while True:
             for (start, end, left, right) in spec:
-                (blah,), (ev,) = mne.next()
+                (tlm,), (ev,) = mne.next()
                 if not ev:break
                 
-                raw[end-1] |= blah & ((0b1 << right) - 1)
-                blah >>= right
-                for i in xrange(end-2, start+1, -1):
-                    raw[i] |= blah & 0xff
-                    blah >>= BYTE
-                raw[start] |= (blah & ((0b1 << left) - 1)) << (BYTE - left)
-                blah >>= left
+                tlm <<= right
+                for i in xrange(end, start, -1):
+                    raw[i] |= tlm & 0xff
+                    tlm >>= BYTE
+                else:
+                    raw[start] |= tlm & ((0b1 << (BYTE - left)) - 1)
+                    tlm >>= BYTE - left
             else:break
             
             right = yield {}

@@ -152,9 +152,13 @@ def main(mem, loop):
             for cb in ev.cbs)#time event
         while len(q) > 0:
             (p, gen) = heapq.heappop(q)
-            #XXX controls how events are recorded
-            #... events may only occur once per time event
+            #XXX controls events and callbacks
+            #... events may only occur once per clock cycle
             #... one instance of callback may be in queue
+            #... bool events add callbacks to queue
+            #... truthy events are recorded
+            #... falsey events are not recorded
+            #... numeric events are added to clock
             loop.add_callback(any, (heapq.heappush(z, (s, ev))
                                     if not isinstance(s, types.BooleanType)
                                     else (any(heapq.heappush(q, cb)
