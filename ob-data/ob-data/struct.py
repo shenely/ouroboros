@@ -8,12 +8,12 @@
 from ouroboros import NORMAL, Item, PROCESS
 
 #exports
-__all__ = ('parse', 'format')
+__all__ = ('parse', 'format', 'message')
 
 #constants
 BYTE = 8#bits
 
-@PROCESS('mne.struct.parse', NORMAL,
+@PROCESS('data.struct.parse', NORMAL,
          Item('mne',
               evs=('eng',), args=('byte', 'bit', 'size'),
               ins=('eng',), reqs=(),
@@ -48,7 +48,7 @@ def parse(mne, usr):
         left = {'usr': usr}
         right = yield left
 
-@PROCESS('mne.struct.format', NORMAL,
+@PROCESS('data.struct.format', NORMAL,
          Item('mne',
               evs=('raw',), args=('byte', 'bit', 'size'),
               ins=('raw',), reqs=('raw',),
@@ -92,3 +92,28 @@ def format(mne, usr):
         usr = (((raw,), (True,)),)
         left = {'usr': usr}
         yield left
+
+@PROCESS('mne.struct.message', NORMAL,
+         Item('mne',
+              evs=('eng',), args=(),
+              ins=('eng',), reqs=('eng',),
+              outs=(), pros=()),
+         Item('usr',
+              evs=('eng',), args=('fmt',),
+              ins=(), reqs=(),
+              outs=('msg',), pros=('msg',)))
+def message(mne, usr):
+    fmt, = usr.next()
+    
+    right = yield
+    while True:
+        mne = right['mne']
+        while True:
+            try:msg = fmt % (tlm for (tlm,), (ev,) in mne if ev)
+            except TypeError:continue
+            else:break
+
+        
+        usr = (((msg,), (True,)),)
+        left = {'usr': usr}
+        right = yield left

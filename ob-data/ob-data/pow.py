@@ -2,7 +2,7 @@
 #...
 
 #external libraries
-import numpy.polynomial
+#...
 
 #internal libraries
 from ouroboros import NORMAL, Item, PROCESS
@@ -13,15 +13,17 @@ __all__ = ('parse', 'format')
 #constants
 #...
 
-@PROCESS('mne.poly.parse', NORMAL,
+@PROCESS('data.pow.parse', NORMAL,
          Item('usr',
-              evs=(False,), args=('size','coeff'),
+              evs=(False,), args=('size', 'lower', 'upper', 'exp'),
               ins=(), reqs=('raw',),
               outs=(True,), pros=('eng',)))
 def parse(usr):
-    """Polynomial fit parser"""
-    N, coeff = usr.next()
-    P = numpy.polynomial.Polynomial(coeff)
+    """Power law parser"""
+    N, L, U, k = usr.next()
+    
+    base = L
+    rate = U - L
     size = float(2 ** N)
     
     right = yield
@@ -29,21 +31,23 @@ def parse(usr):
         usr = right['usr']
 
         (raw,), _ = usr.next()
-        eng = P(raw / size)
+        eng = base + rate * pow(raw / size, k)
         usr = (((eng,), (True,)),)
 
         left = {'usr': usr}
         right = yield left
 
-@PROCESS('mne.poly.format', NORMAL,
+@PROCESS('data.pow.format', NORMAL,
          Item('usr',
-              evs=(True,), args=('size', 'coeff'),
+              evs=(True,), args=('size', 'lower', 'upper', 'exp'),
               ins=(), reqs=('eng',),
               outs=(False,), pros=('raw',)))
 def format(usr):
-    """Polynomial fit formatter"""
-    N, coeff = usr.next()
-    P = numpy.polynomial.Polynomial(coeff)
+    """Power law formatter"""
+    N, L, U, k = usr.next()
+    
+    base = L
+    rate = U - L
     size = float(2 ** N)
     
     right = yield
@@ -51,11 +55,7 @@ def format(usr):
         usr = right['usr']
 
         (eng,), _ = usr.next()
-        raw = int(next((root for root
-                        in (P - eng).roots()
-                        if root % 1 == 0
-                        and root >= 0
-                        and root < size), None))
+        raw = int(size * pow((eng - base) / rate, 1.0 / k))
         usr = (((raw,), (True,)),)
 
         left = {'usr': usr}

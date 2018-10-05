@@ -25,7 +25,7 @@ import ouroboros.ext as _
 INFINITY = float('inf')
 UNIX_EPOCH = datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)
 
-logging.basicConfig(format='[%(levelname)s] (%(asctime)s) %(message)s',
+logging.basicConfig(format='(%(asctime)s) [%(levelname)s] %(message)s',
                     datefmt='%Y-%m-%dT%H:%M:%SL',
                     level=logging.DEBUG)
 

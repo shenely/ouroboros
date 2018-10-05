@@ -13,7 +13,7 @@ __all__ = ('parse', 'format')
 #constants
 #...
 
-@PROCESS('mne.enum.parse', NORMAL,
+@PROCESS('data.enum.parse', NORMAL,
          Item('usr',
               evs=(False,), args=('size', 'elems'),
               ins=(), reqs=('raw',),
@@ -33,7 +33,7 @@ def parse(usr):
         left = {'usr': usr}
         right = yield left
 
-@PROCESS('mne.enum.format', NORMAL,
+@PROCESS('data.enum.format', NORMAL,
          Item('usr',
               evs=(True,), args=('size', 'elems'),
               ins=(), reqs=('eng',),

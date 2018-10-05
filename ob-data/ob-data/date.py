@@ -15,7 +15,7 @@ __all__ = ('UNIX_TIME', 'REAL_TIME',
 UNIX_TIME = datetime.datetime.fromtimestamp(0, tz=pytz.utc)
 REAL_TIME = datetime.timedelta(microseconds=1000)
 
-@PROCESS('mne.date.parse', NORMAL,
+@PROCESS('data.date.parse', NORMAL,
          Item('usr',
               evs=(False,), args=('size', 't_dt', 'dt_td'),
               ins=(), reqs=('raw',),
@@ -35,7 +35,7 @@ def parse(usr):
         left = {'usr': usr}
         right = yield left
 
-@PROCESS('mne.date.format', NORMAL,
+@PROCESS('data.date.format', NORMAL,
          Item('usr',
               evs=(True,), args=('size', 't_dt', 'dt_td'),
               ins=(), reqs=('eng',),

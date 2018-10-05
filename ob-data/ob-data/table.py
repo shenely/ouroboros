@@ -13,7 +13,7 @@ __all__ = ('parse', 'format')
 #constants
 #...
 
-@PROCESS('cmd.table.parse', NORMAL,
+@PROCESS('data.table.parse', NORMAL,
          Item('head',
               evs=('raw',), args=('size',),
               ins=('raw',), reqs=(),

@@ -1,5 +1,5 @@
 #built-in libraries
-#...
+import operator
 
 #external libraries
 #...
@@ -13,49 +13,45 @@ __all__ = ('parse', 'format')
 #constants
 #...
 
-@PROCESS('mne.lin.parse', NORMAL,
+@PROCESS('data.mask.parse', NORMAL,
          Item('usr',
-              evs=('raw',), args=('size', 'lower', 'upper'),
+              evs=(False,), args=('size', 'fields'),
               ins=(), reqs=('raw',),
-              outs=('eng',), pros=('eng',)))
+              outs=(True,), pros=('eng',)))
 def parse(usr):
-    """Linear relationship parser"""
-    N, L, U = usr.next()
-    
-    base = L
-    rate = U - L
-    size = float((0b1 << N) - 1)
+    """Masking bitfield"""
+    N, fields = usr.next()
     
     right = yield
     while True:
         usr = right['usr']
 
         (raw,), _ = usr.next()
-        eng = base + rate * (raw / size)
+        eng = [value for key, value
+               in enumerate(fields)
+               if raw & key == key]
         usr = (((eng,), (True,)),)
 
         left = {'usr': usr}
         right = yield left
 
-@PROCESS('mne.lin.format', NORMAL,
+@PROCESS('data.mask.format', NORMAL,
          Item('usr',
-              evs=('eng',), args=('size', 'lower', 'upper'),
+              evs=(True,), args=('size', 'fields'),
               ins=(), reqs=('eng',),
-              outs=('raw',), pros=('raw',)))
+              outs=(False,), pros=('raw',)))
 def format(usr):
-    """Linear relationship formatter"""
-    N, L, U = usr.next()
-    
-    base = L
-    rate = U - L
-    size = float((0b1 << N) - 1)
+    """Masking bitfield formatter"""
+    N, fields = usr.next()
     
     right = yield
     while True:
         usr = right['usr']
 
         (eng,), _ = usr.next()
-        raw = int(size * (eng - base) / rate)
+        raw = reduce(operator.__or__,
+                     (fields.get(value, 0)
+                      for value in eng), 0)
         usr = (((raw,), (True,)),)
 
         left = {'usr': usr}

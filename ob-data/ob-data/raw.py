@@ -1,5 +1,5 @@
 #built-in libraries
-import math
+#...
 
 #external libraries
 #...
@@ -11,49 +11,39 @@ from ouroboros import NORMAL, Item, PROCESS
 __all__ = ('parse', 'format')
 
 #constants
-#...
+BYTE = 8#bits
 
-@PROCESS('mne.log.parse', NORMAL,
+@PROCESS('data.raw.parse', NORMAL,
          Item('usr',
-              evs=(False,), args=('size', 'lower', 'upper'),
+              evs=('raw',), args=(),
               ins=(), reqs=('raw',),
-              outs=(True,), pros=('eng',)))
+              outs=('eng',), pros=('eng',)))
 def parse(usr):
-    """Logarithmic scale parser"""
-    N, L, U = usr.next()
-    
-    base = L
-    rate = (U - L) / N
-    
+    """Raw value parser"""
     right = yield
     while True:
         usr = right['usr']
 
         (raw,), _ = usr.next()
-        eng = base + rate * math.log(raw, 2)
+        eng = raw
         usr = (((eng,), (True,)),)
 
         left = {'usr': usr}
         right = yield left
 
-@PROCESS('mne.log.format', NORMAL,
+@PROCESS('data.raw.format', NORMAL,
          Item('usr',
-              evs=(True,), args=('size', 'lower', 'upper'),
+              evs=('eng',), args=(),
               ins=(), reqs=('eng',),
-              outs=(False,), pros=('raw',)))
+              outs=('raw',), pros=('raw',)))
 def format(usr):
-    """Logarithmic scale formatter"""
-    N, L, U = usr.next()
-    
-    base = L
-    rate = (U - L) / N
-    
+    """Raw value formatter"""
     right = yield
     while True:
         usr = right['usr']
 
         (eng,), _ = usr.next()
-        raw = int(2 ** ((eng - base) / rate))
+        raw = eng
         usr = (((raw,), (True,)),)
 
         left = {'usr': usr}

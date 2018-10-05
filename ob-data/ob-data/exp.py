@@ -1,5 +1,5 @@
 #built-in libraries
-#...
+import math
 
 #external libraries
 #...
@@ -13,17 +13,14 @@ __all__ = ('parse', 'format')
 #constants
 #...
 
-@PROCESS('mne.pow.parse', NORMAL,
+@PROCESS('data.exp.parse', NORMAL,
          Item('usr',
-              evs=(False,), args=('size', 'lower', 'upper', 'exp'),
+              evs=(False,), args=('size', 'base', 'rate'),
               ins=(), reqs=('raw',),
               outs=(True,), pros=('eng',)))
 def parse(usr):
-    """Power law parser"""
-    N, L, U, k = usr.next()
-    
-    base = L
-    rate = U - L
+    """Exponential growth parser"""
+    N, base, rate = usr.next()
     size = float(2 ** N)
     
     right = yield
@@ -31,23 +28,20 @@ def parse(usr):
         usr = right['usr']
 
         (raw,), _ = usr.next()
-        eng = base + rate * pow(raw / size, k)
+        eng = rate * base ** (raw / size)
         usr = (((eng,), (True,)),)
 
         left = {'usr': usr}
         right = yield left
 
-@PROCESS('mne.pow.format', NORMAL,
+@PROCESS('data.exp.format', NORMAL,
          Item('usr',
-              evs=(True,), args=('size', 'lower', 'upper', 'exp'),
+              evs=(True,), args=('size', 'base', 'rate'),
               ins=(), reqs=('eng',),
               outs=(False,), pros=('raw',)))
 def format(usr):
-    """Power law formatter"""
-    N, L, U, k = usr.next()
-    
-    base = L
-    rate = U - L
+    """Exponential growth formatter"""
+    N, base, rate = usr.next()
     size = float(2 ** N)
     
     right = yield
@@ -55,7 +49,7 @@ def format(usr):
         usr = right['usr']
 
         (eng,), _ = usr.next()
-        raw = int(size * pow((eng - base) / rate, 1.0 / k))
+        raw = int(size * math.log(eng / rate, base))
         usr = (((raw,), (True,)),)
 
         left = {'usr': usr}

@@ -1,8 +1,7 @@
-cd ./ob-core
 python setup.py sdist
-pip install ./dist/ob-core-0.1.tar.gz
+pip install ./dist/ouroboros-0.1.tar.gz
 
-cd ../ob-time
+cd ./ob-time
 python setup.py sdist
 pip install ./dist/ob-time-0.1.tar.gz
 
@@ -14,10 +13,12 @@ cd ../ob-astro
 python setup.py bdist_wheel
 pip install ./dist/ob_astro-0.1-cp27-cp27mu-linux_x86_64.whl
 
-cd ../ob-mne
+cd ../ob-data
 python setup.py sdist
-pip install ./dist/ob-mne-0.1.tar.gz
+pip install ./dist/ob-data-0.1.tar.gz
 
-cd ../
+cd ../ob-sat
 python setup.py sdist
-pip install ./dist/ouroboros-0.1.tar.gz
+pip install ./dist/ob-sat-0.1.tar.gz
+
+cd ..

@@ -13,43 +13,47 @@ __all__ = ('parse', 'format')
 #constants
 #...
 
-@PROCESS('mne.exp.parse', NORMAL,
+@PROCESS('data.log.parse', NORMAL,
          Item('usr',
-              evs=(False,), args=('size', 'base', 'rate'),
+              evs=(False,), args=('size', 'lower', 'upper'),
               ins=(), reqs=('raw',),
               outs=(True,), pros=('eng',)))
 def parse(usr):
-    """Exponential growth parser"""
-    N, base, rate = usr.next()
-    size = float(2 ** N)
+    """Logarithmic scale parser"""
+    N, L, U = usr.next()
+    
+    base = L
+    rate = (U - L) / N
     
     right = yield
     while True:
         usr = right['usr']
 
         (raw,), _ = usr.next()
-        eng = rate * base ** (raw / size)
+        eng = base + rate * math.log(raw, 2)
         usr = (((eng,), (True,)),)
 
         left = {'usr': usr}
         right = yield left
 
-@PROCESS('mne.exp.format', NORMAL,
+@PROCESS('data.log.format', NORMAL,
          Item('usr',
-              evs=(True,), args=('size', 'base', 'rate'),
+              evs=(True,), args=('size', 'lower', 'upper'),
               ins=(), reqs=('eng',),
               outs=(False,), pros=('raw',)))
 def format(usr):
-    """Exponential growth formatter"""
-    N, base, rate = usr.next()
-    size = float(2 ** N)
+    """Logarithmic scale formatter"""
+    N, L, U = usr.next()
+    
+    base = L
+    rate = (U - L) / N
     
     right = yield
     while True:
         usr = right['usr']
 
         (eng,), _ = usr.next()
-        raw = int(size * math.log(eng / rate, base))
+        raw = int(2 ** ((eng - base) / rate))
         usr = (((raw,), (True,)),)
 
         left = {'usr': usr}

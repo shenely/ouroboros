@@ -13,7 +13,7 @@ __all__ = ('ser', 'des')
 #constants
 BYTE = 8#bits
 
-@PROCESS('mne.ser', NORMAL,
+@PROCESS('data.ser', NORMAL,
          Item('head',
               evs=('raw',), args=(),
               ins=('raw',), reqs=('raw',),
@@ -68,7 +68,7 @@ def ser(head, body, foot, usr):
         left = {'usr': usr}
         right = yield left
 
-@PROCESS('mne.des', NORMAL,
+@PROCESS('data.des', NORMAL,
          Item('head',
               evs=('eng',), args=(),
               ins=('eng',), reqs=('eng',),

@@ -1,8 +1,8 @@
 #built-in libraries
-import operator
+#...
 
 #external libraries
-#...
+import numpy.polynomial
 
 #internal libraries
 from ouroboros import NORMAL, Item, PROCESS
@@ -13,45 +13,49 @@ __all__ = ('parse', 'format')
 #constants
 #...
 
-@PROCESS('mne.mask.parse', NORMAL,
+@PROCESS('data.poly.parse', NORMAL,
          Item('usr',
-              evs=(False,), args=('size', 'fields'),
+              evs=(False,), args=('size','coeff'),
               ins=(), reqs=('raw',),
               outs=(True,), pros=('eng',)))
 def parse(usr):
-    """Masking bitfield"""
-    N, fields = usr.next()
+    """Polynomial fit parser"""
+    N, coeff = usr.next()
+    P = numpy.polynomial.Polynomial(coeff)
+    size = float(2 ** N)
     
     right = yield
     while True:
         usr = right['usr']
 
         (raw,), _ = usr.next()
-        eng = [value for key, value
-               in enumerate(fields)
-               if raw & key == key]
+        eng = P(raw / size)
         usr = (((eng,), (True,)),)
 
         left = {'usr': usr}
         right = yield left
 
-@PROCESS('mne.mask.format', NORMAL,
+@PROCESS('data.poly.format', NORMAL,
          Item('usr',
-              evs=(True,), args=('size', 'fields'),
+              evs=(True,), args=('size', 'coeff'),
               ins=(), reqs=('eng',),
               outs=(False,), pros=('raw',)))
 def format(usr):
-    """Masking bitfield formatter"""
-    N, fields = usr.next()
+    """Polynomial fit formatter"""
+    N, coeff = usr.next()
+    P = numpy.polynomial.Polynomial(coeff)
+    size = float(2 ** N)
     
     right = yield
     while True:
         usr = right['usr']
 
         (eng,), _ = usr.next()
-        raw = reduce(operator.__or__,
-                     (fields.get(value, 0)
-                      for value in eng), 0)
+        raw = int(next((root for root
+                        in (P - eng).roots()
+                        if root % 1 == 0
+                        and root >= 0
+                        and root < size), None))
         usr = (((raw,), (True,)),)
 
         left = {'usr': usr}

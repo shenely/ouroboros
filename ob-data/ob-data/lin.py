@@ -11,39 +11,51 @@ from ouroboros import NORMAL, Item, PROCESS
 __all__ = ('parse', 'format')
 
 #constants
-BYTE = 8#bits
+#...
 
-@PROCESS('mne.raw.parse', NORMAL,
+@PROCESS('data.lin.parse', NORMAL,
          Item('usr',
-              evs=('raw',), args=(),
+              evs=('raw',), args=('size', 'lower', 'upper'),
               ins=(), reqs=('raw',),
               outs=('eng',), pros=('eng',)))
 def parse(usr):
-    """Raw value parser"""
+    """Linear relationship parser"""
+    N, L, U = usr.next()
+    
+    base = L
+    rate = U - L
+    size = float((0b1 << N) - 1)
+    
     right = yield
     while True:
         usr = right['usr']
 
         (raw,), _ = usr.next()
-        eng = raw
+        eng = base + rate * (raw / size)
         usr = (((eng,), (True,)),)
 
         left = {'usr': usr}
         right = yield left
 
-@PROCESS('mne.raw.format', NORMAL,
+@PROCESS('data.lin.format', NORMAL,
          Item('usr',
-              evs=('eng',), args=(),
+              evs=('eng',), args=('size', 'lower', 'upper'),
               ins=(), reqs=('eng',),
               outs=('raw',), pros=('raw',)))
 def format(usr):
-    """Raw value formatter"""
+    """Linear relationship formatter"""
+    N, L, U = usr.next()
+    
+    base = L
+    rate = U - L
+    size = float((0b1 << N) - 1)
+    
     right = yield
     while True:
         usr = right['usr']
 
         (eng,), _ = usr.next()
-        raw = eng
+        raw = int(size * (eng - base) / rate)
         usr = (((raw,), (True,)),)
 
         left = {'usr': usr}
