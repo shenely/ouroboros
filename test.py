@@ -1,96 +1,141 @@
+import math
 import time
 import pickle
 
-args = [{'name': None,
-         'mem': {(None, None): {'data': {},
-                                'ctrl': []},
-                 (True, None): {'data': {'t': None},
-                                'ctrl': []},
-                 (False, None): {'data': {'t': 0.0,
-                                          'x': 1.0},
-                                 'ctrl': [False, True]}},
-         'exe': []},
-        {'name': 'clock',
-         'mem': {(None, None): None,
-                 (True, 'time'): {'data': {'delta_t': 1.0},
-                                  'ctrl': ['tick']},
-                 (False, 2): {'data': {'delta_t': 2.0},
-                             'ctrl': ['tick']},
-                 (False, 3): {'data': {'delta_t': 3.0},
-                             'ctrl': ['tick']},
-                 (False, 5): {'data': {'delta_t': 5.0},
-                             'ctrl': ['tick']},
-                 (False, 'time'): {'data': {'t_dt': None},
-                                   'ctrl': ['tock', 8601]}},
-         'exe': [{'tag': 'clock.every',
-                  'map': {'env': {'data': {},
-                                  'ctrl': {'tick': True}}},
-                  'key': {'env': [(None, None)],
-                          'sys': [(True, 'time')],
-                          'usr': [(False, 'time')]}},
-                 {'tag': 'clock.iso8601',
-                  'map': None,
-                  'key': {'sys': [(None, None)],
-                          'usr': [(False, 'time')]}}]},
-        {'name': 'test',
-         'mem': {(None, None): None,
-                 ('clock', 'time'): None,
-                 ('clock', 2): None,
-                 ('clock', 3): None,
-                 ('clock', 5): None,
-                 (False, 'inc'): {'data': {'byte': 0, 'bit': 0,
-                                           'size': 8,
-                                           'raw': None, 'eng': 0},
-                                  'ctrl': ['inc', 'raw', 'eng']},
-                 (False, 'rand'): {'data': {'byte': 1, 'bit': 0,
-                                            'size': 8,
-                                            'lower': 0.0, 'upper': 1.0,
-                                            'raw': None, 'eng': None},
-                                   'ctrl': ['rand', 'raw', 'eng']},
-                 (False, 'test'): {'data': {'size': 16,
-                                            'raw': None},
-                                   'ctrl': ['raw', 'eng']},},
-         'exe': [{'tag': 'clock.every',
-                  'map': {'env': {'data': {},
-                                  'ctrl': {'tick': True}},
-                          'usr': {'data': {},
-                                  'ctrl': {'tock': 'inc'}}},
-                  'key': {'env': [(None, None)],
-                          'sys': [('clock', 2)],
-                          'usr': [(False, 'inc')]}},
-                 {'tag': 'clock.every',
-                  'map': {'env': {'data': {},
-                                  'ctrl': {'tick': True}},
-                          'usr': {'data': {},
-                                  'ctrl': {'tock': 'rand'}}},
-                  'key': {'env': [(None, None)],
-                          'sys': [('clock', 3)],
-                          'usr': [(False, 'rand')]}},
-                 {'tag': 'clock.every',
-                  'map': {'env': {'data': {},
-                                  'ctrl': {'tick': True}},
-                          'usr': {'data': {},
-                                  'ctrl': {'tock': 'eng'}}},
-                  'key': {'env': [(None, None)],
-                          'sys': [('clock', 5)],
-                          'usr': [(False, 'test')]}},
-                 {'tag': 'tlm.inc',
-                  'map': None,
-                  'key': {'usr': [(False, 'inc')]}},
-                 {'tag': 'tlm.rand',
-                  'map': None,
-                  'key': {'usr': [(False, 'rand')]}},
-                 {'tag': 'mne.raw.format',
-                  'map': None,
-                  'key': {'usr': [(False, 'inc')]}},
-                 {'tag': 'mne.lin.format',
-                  'map': None,
-                  'key': {'usr': [(False, 'rand')]}},
-                 {'tag': 'mne.struct.format',
-                  'map': None,
-                  'key': {'mne': [(False, 'inc'),
-                                  (False, 'rand')],
-                          'usr': [(False, 'test')]}},]},]
+args = [
+    {
+        'name': None,
+        'items': {
+            (None, None): {
+                'data': {},
+                'ctrl': []
+            },
+            (True, None): {
+                'data': {'t': None},
+                'ctrl': []
+            },
+            (False, None): {
+                'data': {'t': 0.0, 'x': 1.0},
+                'ctrl': [False, True]
+            }
+        },
+        'procs': []
+    },
+    {
+        'name': 'clock',
+        'items': {
+            (None, None): None,
+            (False, 1): {
+                'data': {'delta_t': 1.0},
+                'ctrl': [True]
+            },
+            (False, 'time'): {
+                'data': {'t_dt': None},
+                'ctrl': [True, 8601]
+            }
+        },
+        'procs': [
+            {
+                'p': 100,
+                'tag': 'clock.every',
+                'keys': {
+                    'env': (None, None),
+                    'sys': (False, 1),
+                    'usr': (False, 'time')
+                },
+                'maps': {
+                    'env': {
+                        'data': {},
+                        'ctrl': {'tick': True}
+                    },
+                    'sys': {
+                        'data': {},
+                        'ctrl': {'tick': True}
+                    },
+                    'usr': {
+                        'data': {},
+                        'ctrl': {'tock': True}
+                    }
+                }
+            },
+            {
+                'p': 100,
+                'tag': 'clock.iso8601',
+                'keys': {
+                    'sys': (None, None),
+                    'usr': (False, 'time')
+                },
+                'maps': {
+                    'usr': {
+                        'data': {},
+                        'ctrl': {'tock': True}
+                    }
+                }
+            }
+        ]
+    }
+]
+##        {'name': 'test',
+##         'mem': {(None, None): None,
+##                 ('clock', 'time'): None,
+##                 ('clock', 2): None,
+##                 ('clock', 3): None,
+##                 ('clock', 5): None,
+##                 (False, 'inc'): {'data': {'byte': 0, 'bit': 0,
+##                                           'size': 6,
+##                                           'raw': None, 'eng': 0},
+##                                  'ctrl': ['inc', 'raw', 'eng']},
+##                 (False, 'rand'): {'data': {'byte': 0, 'bit': 6,
+##                                            'size': 10,
+##                                            'lower': 0.0, 'upper': 1.0,
+##                                            'raw': None, 'eng': None},
+##                                   'ctrl': ['rand', 'raw', 'eng']},
+##                 (False, 'test'): {'data': {'size': 16,
+##                                            'raw': None},
+##                                   'ctrl': ['raw', 'eng']},},
+##         'exe': [{'tag': 'clock.every',
+##                  'map': {'env': {'data': {},
+##                                  'ctrl': {'tick': True}},
+##                          'usr': {'data': {},
+##                                  'ctrl': {'tock': 'inc'}}},
+##                  'key': {'env': [(None, None)],
+##                          'sys': [('clock', 2)],
+##                          'usr': [(False, 'inc')]}},
+##                 {'tag': 'clock.every',
+##                  'map': {'env': {'data': {},
+##                                  'ctrl': {'tick': True}},
+##                          'usr': {'data': {},
+##                                  'ctrl': {'tock': 'rand'}}},
+##                  'key': {'env': [(None, None)],
+##                          'sys': [('clock', 3)],
+##                          'usr': [(False, 'rand')]}},
+##                 {'tag': 'clock.every',
+##                  'map': {'env': {'data': {},
+##                                  'ctrl': {'tick': True}},
+##                          'usr': {'data': {},
+##                                  'ctrl': {'tock': 'eng'}}},
+##                  'key': {'env': [(None, None)],
+##                          'sys': [('clock', 5)],
+##                          'usr': [(False, 'test')]}},
+##                 {'tag': 'fun.inc',
+##                  'map': {'usr': {'data': {'x': 'eng'},
+##                                  'ctrl': {}}},
+##                  'key': {'usr': [(False, 'inc')]}},
+##                 {'tag': 'fun.rand',
+##                  'map': {'usr': {'data': {'x': 'eng'},
+##                                  'ctrl': {}}},
+##                  'key': {'usr': [(False, 'rand')]}},
+##                 {'tag': 'data.raw.format',
+##                  'map': None,
+##                  'key': {'usr': [(False, 'inc')]}},
+##                 {'tag': 'data.lin.format',
+##                  'map': None,
+##                  'key': {'usr': [(False, 'rand')]}},
+##                 {'tag': 'data.struct.format',
+##                  'map': None,
+##                  'key': {'mne': [(False, 'inc'),
+##                                  (False, 'rand')],
+##                          'usr': [(False, 'test')]}},]},]
 ##        {'name': 'iss',
 ##         'mem': {(None, None): None,
 ##                 ('clock', 'time'): None,
@@ -135,5 +180,5 @@ args = [{'name': None,
 ##                  'key': {'fun': [(True, 'fun')]}}]}]
 
 if __name__ == '__main__':
-    with open('test.pkl', 'wb') as pkl:
+    with open('../test.pkl', 'wb') as pkl:
         pickle.dump(args, pkl)

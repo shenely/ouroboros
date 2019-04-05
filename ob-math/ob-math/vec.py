@@ -1,218 +1,185 @@
-#built-in libraries
+# built-in libraries
 import math
+import itertools
 
-#external libraries
+# external libraries
 import numpy
 import scipy.linalg
 
-#internal libraries
-from ouroboros import REGISTRY, NORMAL, Item, PROCESS
+# internal libraries
+from ouroboros import (
+    ENCODE, DECODE,
+    Image, Node
+)
 
-#exports
-__all__= ('abs2rel', 'rel2abs',#relative
-          'nrt2rot', 'rot2nrt',#rotation
-          'fun2obl', 'obl2fun',#plane
-          'rec2sph', 'sph2rec')#coordinates
+# exports
+__all__= ("abs2rel", "rel2abs",  # absolute <-> relative frame
+          "nrt2rot", "rot2nrt",  # inertial <-> rotating frame
+          "fun2obl", "obl2fun",  # fundamental <-> oblique plane
+          "rec2sph", "sph2rec")  # rectangular to spherical coordinates
 
-REGISTRY[numpy.ndarray] = ('$vec', lambda x:x.tolist())
-REGISTRY['$vec'] = lambda x:numpy.array(x)
+# numpy.ndarray <-> JSON
+ENCODE[numpy.ndarray] = "@vector", lambda x: x.tolist()
+DECODE["@vector"] = lambda x: numpy.array(x)
 
-@PROCESS('vec.abs2rel', NORMAL,
-         Item('src',
-              evs=('rec',), args=(),
-              ins=('rec',), reqs=('_bar', '_t_bar'),
-              outs=(), pros=()),
-         Item('trg',
-              evs=(), args=(),
-              ins=(), reqs=(),
-              outs=('rec',), pros=('_bar', '_t_bar')),
-         Item('ref',
-              evs=(), args=(),
-              ins=(), reqs=('_bar', '_t_bar'),
-              outs=(), pros=()))
+
+@Image("vec.abs2rel",
+       src=Item(evs=(True,), args=(),
+                ins=(True,), reqs=("_bar", "_t_bar"),
+                outs=(), pros=()),
+       trg=Item(evs=(), args=(),
+                ins=(), reqs=(),
+                outs=(True,), pros=("_bar", "_t_bar")),
+       ref=Item(evs=(), args=(),
+                ins=(), reqs=("_bar", "_t_bar"),
+                outs=(), pros=()))
 def abs2rel(src, trg, ref):
     """Absolute to relative origin"""
-    right = yield
+    yield
     while True:
-        src, ref = (right['src'],
-                    right['ref'])
-
-        (_r_bar, _r_t_bar), _ = ref.next()
-        trg = ((((_s_bar - _r_bar, _s_t_bar - _r_t_bar), (src_e,))
-                if src_e else (None, None))
-               for (_s_bar, _s_t_bar), (src_e,) in src)
+        ref_bar, ref_t_bar = ref.data.next()
+        src_bar, src_t_bar = src.data.next()
         
-        left = {'trg': trg}
-        right = yield left
-    
-@PROCESS('vec.rel2abs', NORMAL,
-         Item('src',
-              evs=(), args=(),
-              ins=(), reqs=(),
-              outs=('rec',), pros=('_bar', '_t_bar')),
-         Item('trg',
-              evs=('rec',), args=(),
-              ins=('rec',), reqs=('_bar', '_t_bar'),
-              outs=(), pros=()),
-         Item('ref',
-              evs=(), args=(),
-              ins=(), reqs=('_bar', '_t_bar'),
-              outs=(), pros=()))
+        trg_bar = src_bar - ref_bar
+        trg_t_bar = src_t_bar - ref_t_bar
+
+        trg.data.send((trg_bar, trg_t_bar))
+        yield (trg.ctrl.send((True,)),)
+
+
+@Image("vec.rel2abs",
+       src=Node(evs=(), args=(),
+                ins=(), reqs=(),
+                outs=(True,), pros=("_bar", "_t_bar")),
+       trg=Node(evs=(True,), args=(),
+                ins=(True,), reqs=("_bar", "_t_bar"),
+                outs=(), pros=()),
+       ref=Node(evs=(), args=(),
+                ins=(), reqs=("_bar", "_t_bar"),
+                outs=(), pros=()))
 def rel2abs(src, trg, ref):
     """Relative to absolute origin"""
-    right = yield
+    yield
     while True:
-        trg, ref = (right['trg'],
-                    right['ref'])
-
-        (_r_bar, _r_t_bar), (ref_e,) = ref.next()
-        src = ((((_t_bar + _r_bar, _t_t_bar + _r_t_bar), (trg_e,))
-                if trg_e else (None, None))
-               for (_t_bar, _t_t_bar), (trg_e,) in src)
+        ref_bar, ref_t_bar = ref.data.next()
+        trg_bar, trg_t_bar = trg.data.next()
         
-        left = {'src': src}
-        right = yield left
-    
-@PROCESS('vec.nrt2rot', NORMAL,
-         Item('nrt',
-              evs=('rec',), args=(),
-              ins=('rec',), reqs=('_bar', '_t_bar'),
-              outs=(), pros=()),
-         Item('rot',
-              evs=(), args=(),
-              ins=(), reqs=(),
-              outs=('rec',), pros=('_bar', '_t_bar')),
-         Item('ax',
-              evs=(), args=(),
-              ins=(), reqs=('_bar', '_t_bar'),
-              outs=(), pros=()))
+        src_bar = trg_bar + ref_bar
+        src_t_bar = trg_t_bar + ref_t_bar
+
+        src.data.send((src_bar, src_t_bar))
+        yield (src.ctrl.send((True,)),)
+
+   
+@Image("vec.nrt2rot",
+       nrt=Node(evs=(True,), args=(),
+                ins=(True,), reqs=("_bar", "_t_bar"),
+                outs=(), pros=()),
+       rot=Node(evs=(), args=(),
+                ins=(), reqs=(),
+                outs=(True,), pros=("_bar", "_t_bar")),
+       ax=Node(evs=(), args=(),
+               ins=(), reqs=("_bar", "_t_bar"),
+               outs=(), pros=()))
 def nrt2rot(nrt, rot, ax):
     """Inertial to rotating frame"""
-    right = yield
+    yield
     while True:
-        nrt, ax = (right['nrt'],
-                   right['ax'])
-        (_bar, _t_bar), _ = ax.next()
+        ax_bar, ax_t_bar = ax.data.next()
+        nrt_bar, nrt_t_bar = nrt.data.next()
         
         #sin and cos
         th = scipy.linalg.norm(_bar)
-        _hat = _bar / th
+        ax_hat = ax_bar / th
         cos_th = math.cos(th)
         sin_th = math.sin(th)
         th_t = numpy.dot(_bar, _t_bar) / th
-        _t_hat = (th * _t_bar - th_t * _bar) / th ** 2
+        ax_t_hat = (th * ax_t_bar - th_t * ax_bar) / th ** 2
         
         #dot and cross products
-        nrt = (((i_bar, i_t_bar,
-                 numpy.dot(_hat, i_bar),
-                 numpy.cross(_hat, i_bar)), (rec_i,))
-               for (i_bar, i_t_bar), (rec_i,) in nrt)
+        dot_th = numpy.dot(ax_hat, nrt_bar)
+        cross_th = numpy.cross(ax_hat, nrt_bar)
         
         #XXX there still might be a sign wrong here somewhere...
-        rot = ((((cos_th * i_bar -
-                  sin_th * cross_th +
-                  (1 - cos_th) * dot_th * _hat,
-                  #
-                  cos_th * i_t_bar -
-                  sin_th * numpy.cross(th_hat, i_t_bar) +
-                  (1 - cos_th) * numpy.dot(th_hat, i_t_bar) * th_hat
-                  +#
-                  th_t * (sin_th * (dot_th * th_hat - i_bar) -
-                          cos_th * cross_th)
-                  -#
-                  sin_th * numpy.cross(_t_hat, i_bar) +
-                  (1 - cos_th) * (_hat * numpy.dot(_t_hat, i_bar) +
-                                  _t_hat * dot_th)), (nrt_e,))
-                if nrt_e else (None, None))
-               for (i_bar, i_t_bar,
-                    dot_th, cross_th), (nrt_e,) in nrt)
+        rot_bar = (cos_th * nrt_bar
+                   - sin_th * cross_th
+                   + (1 - cos_th) * dot_th * ax_hat)
+        rot_t_bar = (cos_th * (nrt_t_bar - th_t * cross_th)
+                     - sin_th * (numpy.cross(ax_t_hat, nrt_bar) +
+                                 numpy.cross(ax_hat, nrt_t_bar) +
+                                 th_t * (nrt_bar - dot_th * ax_hat))
+                     + (1 - cos_th) * (ax_hat * (numpy.dot(ax_t_hat, nrt_bar) +
+                                                 numpy.dot(ax_hat, nrt_t_bar)) +
+                                       dot_th * ax_t_hat))
 
-        left = {'rot': rot}
-        right = yield left
+        rot.data.send((rot_bar, rot_t_bar))
+        yield (rot.ctrl.send((True,)),)
 
-@PROCESS('vec.rot2nrt', NORMAL,
-         Item('nrt',
-              evs=(), args=(),
-              ins=(), reqs=(),
-              outs=('rec',), pros=('_bar', '_t_bar')),
-         Item('rot',
-              evs=('rec',), args=(),
-              ins=('rec',), reqs=('_bar', '_t_bar'),
-              outs=(), pros=()),
-         Item('ax',
-              evs=(), args=(),
-              ins=(), reqs=('_bar', '_t_bar'),
-              outs=(), pros=()))
+
+@Image("vec.rot2nrt",
+       nrt=Node(evs=(), args=(),
+                ins=(), reqs=(),
+                outs=(True,), pros=("_bar", "_t_bar")),
+       rot=Node(evs=(True,), args=(),
+                ins=(True,), reqs=("_bar", "_t_bar"),
+                outs=(), pros=()),
+       ax=Node(evs=(), args=(),
+               ins=(), reqs=("_bar", "_t_bar"),outs=(), pros=()))
 def rot2nrt(nrt, rot, ax):
     """Rotating to inertial frame"""
-    right = yield
+    yield
     while True:
-        rot, ax = (right['rot'],
-                   right['ax'])
-        (_bar, _t_bar), _ = ax.next()
+        ax_bar, ax_t_bar = ax.data.next()
+        rot_bar, rot_t_bar = rot.data.next()
         
         #sin and cos
         th = scipy.linalg.norm(_bar)
-        _hat = _bar / th
+        ax_hat = ax_bar / th
         cos_th = math.cos(th)
         sin_th = math.sin(th)
         th_t = numpy.dot(_bar, _t_bar) / th
-        _t_hat = (th * _t_bar - th_t * _bar) / th ** 2
+        ax_t_hat = (th * ax_t_bar - th_t * ax_bar) / th ** 2
         
         #dot and cross products
-        rot = (((r_bar, r_t_bar,
-                 numpy.dot(_hat, r_bar),
-                 numpy.cross(_hat, r_bar)), (rot_e,))
-                for (r_bar, r_t_bar), (rot_e,) in rot)
+        dot_th = numpy.dot(ax_hat, rot_bar)
+        cross_th = numpy.cross(ax_hat, rot_bar)
         
         #XXX there still might be a sign wrong here somewhere...
-        nrt = ((((cos_th * r_bar +
-                  sin_th * cross_th +
-                  (1 - cos_th) * dot_th * _hat,
-                  #
-                  cos_th * r_t_bar +
-                  sin_th * cross(th_hat, r_t_bar) +
-                  (1 - cos_th) * numpy.dot(th_hat, r_t_bar) * th_hat
-                  +#
-                  th_t * (sin_th * (dot_th * th_hat - r_bar) +
-                          cos_th * cross_th)
-                  +#
-                  sin_th * numpy.cross(_t_hat, r_bar) +
-                  (1 - cos_th) * (_hat * numpy.dot(_t_hat, r_bar) +
-                                  _t_hat * dot_th)), (rot_e,))
-                if rot_e else (None, None))
-               for (r_bar, r_t_bar,
-                    dot_th, cross_th), (rot_e,) in rot)
+        rot_bar = (cos_th * nrt_bar
+                   + sin_th * cross_th
+                   + (1 - cos_th) * dot_th * ax_hat)
+        rot_t_bar = (cos_th * (nrt_t_bar + th_h * cross_th)
+                     + sin_th * (numpy.cross(ax_t_hat, rot_bar) +
+                                 numpy.cross(ax_hat, rot_t_bar) -
+                                 th_t * (nrt_bar - dot_th * ax_hat))
+                     + (1 - cos_th) * (ax_hat * (numpy.dot(ax_t_hat, rot_bar) +
+                                                 numpy.dot(ax_hat, rot_t_bar)) +
+                                       dot_th * ax_t_hat))
 
-        left = {'nrt': nrt}
-        right = yield left
+        rot.data.send((rot_bar, rot_t_bar))
+        yield (rot.ctrl.send((True,)),)
 
-@PROCESS('vec.fun2obl', NORMAL,
-         Item('fun',
-              evs=('rec',), args=(),
-              ins=('rec',), reqs=('_bar', '_t_bar'),
-              outs=(), pros=()),
-         Item('obl',
-              evs=(), args=(),
-              ins=(), reqs=(),
-              outs=('rec',), pros=('_bar', '_t_bar')),
-         Item('node',
-              evs=(), args=(),
-              ins=(), reqs=('_bar', '_t_bar'),
-              outs=(), pros=()),
-         Item('pole',
-              evs=(), args=(),
-              ins=(), reqs=('_bar', '_t_bar'),
-              outs=(), pros=()))
+
+@Image("vec.fun2obl",
+       fun=Node(evs=("rec",), args=(),
+                ins=("rec",), reqs=("_bar", "_t_bar"),
+                outs=(), pros=()),
+       obl=Node(evs=(), args=(),
+                ins=(), reqs=(),
+                outs=("rec",), pros=("_bar", "_t_bar")),
+       node=Node(evs=(), args=(),
+                 ins=(), reqs=("_bar", "_t_bar"),
+                 outs=(), pros=()),
+       pole=Node(evs=(), args=(),
+                 ins=(), reqs=("_bar", "_t_bar"),
+                 outs=(), pros=()))
 def fun2obl(fun, obl, node, pole):
     """Fundamental to oblique plane"""
-    right = yield
+    yield
     while True:
-        fun, node, pole = (right['fun'],
-                           right['node'],
-                           right['pole'])
-        (n_bar, n_t_bar), _ = node.next()
-        (p_bar, p_t_bar), _ = pole.next()
+        n_bar, n_t_bar = node.data.next()
+        p_bar, p_t_bar = pole.data.next()
+        fun_bar, fun_t_bar = fun.data.next()
         
         #vector triad
         t_bar = numpy.cross(p_bar, n_bar)
@@ -237,55 +204,48 @@ def fun2obl(fun, obl, node, pole):
         j_t_hat = (t_t_bar - t_t * j_hat) / t
         k_t_hat = (numpy.cross(i_t_hat, j_hat) +
                    numpy.cross(i_hat, j_t_hat))
-        
-        obl = ((((numpy.array([numpy.dot(_bar, i_hat),
-                               numpy.dot(_bar, j_hat),
-                               numpy.dot(_bar, k_hat)]),
-                  numpy.array([numpy.dot(f_t_bar, i_hat) +
-                               numpy.dot(f_bar, i_t_hat),
-                               numpy.dot(f_t_bar, j_hat) +
-                               numpy.dot(f_bar, j_t_hat),
-                               numpy.dot(f_t_bar, k_hat) +
-                               numpy.dot(f_bar, k_t_hat)])), (fun_e,))
-                if fun_e else (None, None))
-               for (f_bar, f_t_bar), (fun_e,) in fun)
 
-        left = {'obl': obl}
-        right = yield left
+        obl_bar = numpy.array([numpy.dot(fun_bar, i_hat),
+                               numpy.dot(fun_bar, j_hat),
+                               numpy.dot(fun_bar, k_hat)])
+        obl_t_bar = numpy.array([numpy.dot(fun_t_bar, i_hat) +
+                                 numpy.dot(fun_bar, i_t_hat),
+                                 numpy.dot(fun_t_bar, j_hat) +
+                                 numpy.dot(fun_bar, j_t_hat),
+                                 numpy.dot(fun_t_bar, k_hat) +
+                                 numpy.dot(fun_bar, k_t_hat)])
+
+        obl.data.send((obl_bar, obl_t_bar))
+        yield (obl.ctrl.send((True,)),)
+
     
-@PROCESS('vec.obl2fun', NORMAL,
-         Item('fun',
-              evs=(), args=(),
-              ins=(), reqs=(),
-              outs=('rec',), pros=('_bar', '_t_bar')),
-         Item('obl',
-              evs=('rec',), args=(),
-              ins=('rec',), reqs=('_bar', '_t_bar'),
-              outs=(), pros=()),
-         Item('node',
-              evs=(), args=(),
-              ins=(), reqs=('_bar', '_t_bar'),
-              outs=(), pros=()),
-         Item('pole',
-              evs=(), args=(),
-              ins=(), reqs=('_bar', '_t_bar'),
-              outs=(), pros=()))
+@Image("vec.obl2fun",
+       fun=Node(evs=(), args=(),
+                ins=(), reqs=(),
+                outs=("rec",), pros=("_bar", "_t_bar")),
+       obl=Node(evs=("rec",), args=(),
+                ins=("rec",), reqs=("_bar", "_t_bar"),
+                outs=(), pros=()),
+       node=Node(evs=(), args=(),
+                 ins=(), reqs=("_bar", "_t_bar"),
+                 outs=(), pros=()),
+       pole=Node(evs=(), args=(),
+                 ins=(), reqs=("_bar", "_t_bar"),
+                 outs=(), pros=()))
 def obl2fun(fun, obl, node, pole):
     """Oblique to fundamental plane"""
-    right = yield
+    yield
     while True:
-        obl, node, pole = (right['obl'],
-                           right['node'],
-                           right['pole'])
-        (n_bar, n_t_bar), _ = node.next()
-        (p_bar, p_t_bar), _ = pole.next()
+        n_bar, n_t_bar = node.next()
+        p_bar, p_t_bar = pole.next()
+        obl_bar, obl_t_bar = obl.data.next()
         
         #vector triad
         t_bar = numpy.cross(p_bar, n_bar)
         t_t_bar = (numpy.cross(p_t_bar, n_bar) +
                    numpy.cross(p_bar, n_t_bar))
         
-        #vector lengths
+        #vector normal
         n = scipy.linalg.norm(n_bar)
         t = scipy.linalg.norm(t_bar)
         
@@ -294,98 +254,63 @@ def obl2fun(fun, obl, node, pole):
         i_hat = n_bar / n
         k_hat = numpy.cross(i_hat, j_hat)
         
+        #vector normal rates
         n_t = numpy.dot(n_bar, n_t_bar) / n
-        i_t_hat = (n * n_t_bar - n_t * n_bar) / (n * n)
-        
         t_t = numpy.dot(t_bar, t_t_bar) / t
-        j_t_hat = (t * t_t_bar - t_t * t_bar) / (t * t)
         
+        #unit vector rates
+        i_t_hat = (n * n_t_bar - n_t * n_bar) / (n * n)
+        j_t_hat = (t * t_t_bar - t_t * t_bar) / (t * t)
         k_t_hat = (numpy.cross(i_t_hat, j_hat) +
                    numpy.cross(i_hat, j_t_hat))
-        
-        fun = ((((o_bar[0] * i_hat + 
-                  o_bar[1] * j_hat +
-                  o_bar[2] * k_hat,
-                  o_t_bar[0] * i_hat + o_bar[0] * i_t_hat +
-                  o_t_bar[1] * j_hat + o_bar[1] * j_t_hat +
-                  o_t_bar[2] * k_hat + o_bar[2] * k_t_hat), (obl_e,))
-                if obl_e else (None, None))
-               for (o_bar, o_t_bar), (obl_e,) in obl)
 
-        left = {'fun': fun}
-        right = yield left
+        fun_bar = (obl_bar[0] * i_hat +
+                   obl_bar[1] * j_hat +
+                   obl_bar[2] * k_hat)
+        fun_t_bar = (obl_t_bar[0] * i_hat + obl_bar[0] * i_t_hat +
+                     obl_t_bar[1] * j_hat + obl_bar[1] * j_t_hat +
+                     obl_t_bar[2] * k_hat + obl_bar[2] * k_t_hat)
+
+        fun.data.send((fun_bar, fun_t_bar))
+        yield (fun.ctrl.send((True,)),)
+
     
-@PROCESS('vec.rec2sph', NORMAL,
-         Item('vec',
-              evs=('rec',), args=(),
-              ins=('rec', 'sph'), reqs=('_bar', '_t_bar'),
-              outs=('sph',), pros=('r', 'r_t',
-                                   'az', 'az_t',
-                                   'el', 'el_t')))
+@Image("vec.rec2sph",
+       vec=Item(evs=("rec",), args=(),
+                ins=(), reqs=("_bar"),
+                outs=("sph",), pros=("r", "az", "el")))
 def rec2sph(vec):
     """Rectangular to spherical coordinates"""
-    right = yield
+    yield
     while True:
-        vec = right['vec']
+        _bar, = vec.data.next()
         
-        vec = (((r_bar, v_bar,
-                 scipy.linalg.norm(r_bar),
-                 math.atan2(r_bar[1], r_bar[0])), _)
-               for (r_bar, v_bar), _ in vec)
-        vec = (((r_bar, v_bar, r,
-                 numpy.dot(r_bar, v_bar) / r,
-                 az, math.asin(r_bar[2] / r),
-                 r * r - r_bar[2] * r_bar[2]), _)
-               for (r_bar, v_bar, r, az), _ in vec)
-        vec = (((r, r_t,
-                 math.atan2(r_bar[1], r_bar[0]),
-                 az, (r_bar[0] * v_bar[1] - 
-                      r_bar[1] * v_bar[0]) / xy__2,
-                 el, (v_bar[2] - 
-                      r_bar[2] * r_t / r) / xy__2), 
-                _)
-               for (_bar, _t_bar, r, r_t, az, el, xy__2), _ in vec)
-        vec = (((_, (rec,)) if rec ^ sph
-                else (None, None))
-               for _, (rec, sph) in vec)
+        r = scipy.linalg.norm(_bar)
+        az = math.atan2(_bar[1], _bar[0])
+        el = math.asin(_bar[2] / r)
 
-        left = {'vec': vec}
-        right = yield left
+        vec.data.send((r, az, el))
+        yield (vec.ctrl.send((True,)),)
+
     
-@PROCESS('vec.sph2rec', NORMAL,
-         Item('vec',
-              evs=('sph',), args=(),
-              ins=('sph', 'rec'), reqs=('r', 'r_t',
-                                        'az', 'az_t',
-                                        'el', 'el_t'),
-              outs=('rec',), pros=('_bar', '_t_bar')))
+@Image("vec.sph2rec",
+       vec=Item(evs=("sph",), args=(),
+                ins=(), reqs=("r", "az", "el"),
+                outs=("rec",), pros=("_bar")))
 def sph2rec(vec):
     """Spherical to rectangular coordinates"""
-    right = yield
+    yield
     while True:
-        vec = right['vec']
+        r, az, el = vec.data.next()
         
-        vec = (((r, r_t, az_t, el_t,
-                 math.cos(az), math.sin(az),
-                 math.cos(el), math.sin(el)), _)
-               for (r, r_t, az, az_t, el, el_t), _ in vec)
-        vec = (((numpy.array([r * cos_az * cos_el,
-                              r * sin_az * cos_el,
-                              r * sin_el]),
-                 numpy.array([r_t * cos_az * cos_el -
-                              r * (az_t * sin_az * cos_el +
-                                   el_t * cos_az * sin_el),
-                              r_t * sin_az * cos_el +
-                              r * (az_t * cos_az * cos_el -
-                                   el_t * sin_az * sin_el),
-                              r_t * sin_el +
-                              r * el_t * cos_el])), _)
-               for (r, r_t, az_t, el_t,
-                    cos_az, sin_az,
-                    cos_el, sin_el), _ in vec)
-        vec = (((_, (sph,)) if sph ^ rec
-                 else (None, None))
-               for _, (sph, rec) in vec)
+        cos_az = math.cos(az)
+        sin_az = math.sin(az)
+        cos_el = math.cos(el)
+        sin_el = math.sin(el)
+        
+        _bar = numpy.array([r * cos_az * cos_el,
+                            r * sin_az * cos_el,
+                            r * sin_el])
 
-        left = {'vec': vec}
-        right = yield left
+        vec.data.send((_bar,))
+        yield (vec.ctrl.send((True,)),)

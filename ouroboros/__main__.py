@@ -1,15 +1,17 @@
-#built-in libraries
+# built-in libraries
 import sys
 import time
 import datetime
+import collections
 import functools
+import itertools
 import types
 import heapq
 import json
 import pickle
 import logging
 
-#external libraries
+# external libraries
 import pytz
 import tornado.web
 import tornado.websocket
@@ -17,216 +19,205 @@ import tornado.ioloop
 import tornado.gen
 import tornado.concurrent
 
-#internal libraries
-from ouroboros import CATELOG, REGISTRY
+# internal libraries
+from ouroboros import (Item, run, encoder, decoder)
 import ouroboros.ext as _
 
-#constants
-INFINITY = float('inf')
+# constants
+INFINITY = float("inf")
 UNIX_EPOCH = datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)
 
-logging.basicConfig(format='(%(asctime)s) [%(levelname)s] %(message)s',
-                    datefmt='%Y-%m-%dT%H:%M:%SL',
+# priorities
+CRITICAL = 1
+HIGH     = 10
+NORMAL   = 100
+LOW      = 1000
+TRIVIAL  = 10000
+
+logging.basicConfig(format="(%(asctime)s) [%(levelname)s] %(message)s",
+                    datefmt="%Y-%m-%dT%H:%M:%SL",
                     level=logging.DEBUG)
-
-def default(obj):
-    key, default = REGISTRY.get(type(obj))
-    if default is not None:
-        dct = {key: default(obj)}
-        return dct
-    else:raise TypeError
-
-def object_hook(dct):
-    object_hook = REGISTRY.get(dct.iterkeys().next())
-    if object_hook is not None:
-        obj = object_hook(dct.getvalues().next())
-        return obj
-    else:return dct
-
-class Event(object):
-    __slots__ = ('cbs',)
-    def __init__(self, cbs=None):
-        self.cbs = (cbs if cbs is not None else [])
+    
 
 class ObRequestHandler(tornado.web.RequestHandler):
 
-    def initialize(self, mem):
-        self.mem = mem
+    def initialize(self, lake):
+        self.lake = lake
+
 
 class FlagHandler(ObRequestHandler):
         
     def post(self):
-        d = self.mem[None][True, None]['data']
-        if d['f'].done():#pause
-            d['f'] = tornado.concurrent.Future()
-        else:#resume
-            d['t'] = time.time()#real time
-            d['f'].set_result(True)
+        d = self.lake[None][True, None].data
+        if d["f"].done():  # pause
+            d["f"] = tornado.concurrent.Future()
+        else:  # resume
+            d["t"] = time.time()  # real time
+            d["f"].set_result(True)
+
 
 class InfoHandler(ObRequestHandler):
         
     def get(self):
-        d = self.mem[None][True, None]['data']
-        obj = {'e': len(d['e']),
-               'q': len(d['q']),
-               'z': len(d['z']),
-               'f': d['f'].done()}
+        d = self.lake[None][True, None].data
+        obj = {"e": len(d["e"]),
+               "q": len(d["q"]),
+               "z": len(d["z"]),
+               "f": d["f"].done()}
         s = json.dumps(obj)
         self.write(s)
 
+
 class DataHandler(ObRequestHandler):
         
-    def get(self, name, tag):
-        item = self.mem[name][False, tag]
-        obj = [{'key': key,
-                'value': value}
+    def get(self, _id, name):
+        item = self.lake[_id][False, name]
+        obj = [{"key": key,
+                "value": value}
                for (key, value)
-               in item['data'].iteritems()]
-        s = json.dumps(obj, default=default)
+               in item.data.iteritems()]
+        s = encoder.dumps(obs)
         self.write(s)
 
-    def put(self, name, tag):
-        item = self.mem[name][False, tag]
+    def put(self, _id, name):
         s = self.request.body
-        obj = json.loads(s, object_hook=object_hook)
-        item['data'].update({pair['key']: pair['value']
+        obj = decoder.loads(s)
+        item = self.lake[_id][False, name]
+        item["data"].update({pair["key"]: pair["value"]
                              for pair in obj
-                             if pair['key'] in item['data']})
+                             if pair["key"] in item.data})
+
 
 class CtrlHandler(ObRequestHandler):
 
-    def post(self, name, tag):
-        e = self.mem[None][True, None]['data']['e']
-        item = self.mem[name][False, tag]
+    def post(self, _id, name):
         s = self.request.body
-        obj = json.loads(s, object_hook=object_hook)
-        any(e.add(item['ctrl'][pair['key']])
+        obj = decoder.loads(s)
+        e = self.lake[None][True, None].data["e"]
+        item = self.lake[_id][False, name]
+        any(e.add(item.data[pair["key"]])
             for pair in obj
-            if pair['value'] is True
-            and pair['key'] in item['ctrl'])
+            if pair["value"] is True
+            and pair["key"] in item.ctrl)
 
 class StreamHandler(tornado.websocket.WebSocketHandler,
                     ObRequestHandler):
         
-    def on_pong(self, stream, address):
-        d = self.mem[None][True, None]['data']
-        if d['f'].done():
-            e = d['e']
-            obj = [{'name': name,
-                    'items': [{'key': tag[1],
-                               'data': [{'key': key,
-                                         'value': value}
+    def on_pong(self, io, addr):
+        d = self.lake[None][True, None].data
+        if d["f"].done():
+            e = d["e"]
+            obj = [{"_id": _id,
+                    "items": [{"key": name[1],
+                               "data": [{"key": key, "value": value}
                                         for (key, value)
-                                        in item['data'].iteritems()],
-                               'ctrl': [{'key': key,
-                                         'value': ev in e}
+                                        in item.data.iteritems()],
+                               "ctrl": [{"key": key, "value": ev in e}
                                         for (key, ev)
-                                        in item['ctrl'].iteritems()]}
-                              for (tag, item) in sys.iteritems()
-                              if tag[0] is False]}
-                   for (name, sys) in self.mem.iteritems()
+                                        in item.ctrl.iteritems()]}
+                              for (name, item) in model[True, None].iteritems()
+                              if name[0] is False]}
+                   for (_id, model) in self.lake.iteritems()
                    if name is not None]
-        s = json.dumps(obj, default=default)
+        s = encoder.dumps(obj)
         self.write_message(s)
+
     
 @tornado.gen.coroutine
-def main(mem, loop):
+def main(pool, loop):
     """main loop"""
-    mem[None][True, None]['data']['e'] = e = set()#event set
-    mem[None][True, None]['data']['q'] = q = []#task queue
-    mem[None][True, None]['data']['z'] = z = []#clock time
-    mem[None][True, None]['data']['f'] = tornado.concurrent.Future()
+    pool[True, None].data["e"] = e = set()  # event set
+    pool[True, None].data["q"] = q = collections.deque()  # task queue
+    pool[True, None].data["z"] = z = []  # clock time
+    pool[True, None].data["f"] = tornado.concurrent.Future()
 
-    t = mem[None][False, None]['data']['t']#wall time
-    heapq.heappush(z, (-INFINITY,#init event
-                       mem[None][False, None]['ctrl'][False]))
-    heapq.heappush(z, (t + sys.float_info.epsilon,#main event
-                       mem[None][False, None]['ctrl'][True]))
+    any(task.gen.send(e)
+        for task in tasks)
+
+    t = pool[False, None].data["t"]  # wall time
+    heapq.heappush(z, (-INFINITY,  # init event
+                       pool[False, None].ctrl[False]))
+    heapq.heappush(z, (t + sys.float_info.epsilon,  # main event
+                       pool[False, None].ctrl[True]))
         
     while True:
-        yield mem[None][True, None]['data']['f']
+        yield pool[True, None].data["f"]
         any(e.add(heapq.heappop(z)[1])
-            for _ in z if z[0][0] <= t)
-        any(heapq.heappush(q, cb)
+            for _ in z
+            if z[0][0] <= t)
+        any(q.append(cb)
             for ev in e
-            for cb in ev.cbs)#time event
+            for cb in ev.cbs)  # time event
         while len(q) > 0:
-            (p, gen) = heapq.heappop(q)
-            #XXX controls events and callbacks
-            #... events may only occur once per clock cycle
-            #... one instance of callback may be in queue
-            #... bool events add callbacks to queue
-            #... truthy events are recorded
-            #... falsey events are not recorded
-            #... numeric events are added to clock
-            loop.add_callback(any, (heapq.heappush(z, (s, ev))
-                                    if not isinstance(s, types.BooleanType)
-                                    else (any(heapq.heappush(q, cb)
-                                              for cb in ev.cbs
-                                              if cb not in q)
-                                          if ev not in e else None)
-                                    or (e.add(ev) if s is True else None)
-                                    for ev, s in gen.send(e)))
+            task = q.popleft()
+            # XXX controls events and callbacks
+            # ... events may only occur once per clock cycle
+            # ... one instance of callback may be in queue
+            # ... bool events add callbacks to queue
+            # ... truthy events are recorded
+            # ... falsey events are not recorded
+            # ... numeric events are added to clock
+            loop.add_callback(any, (
+                heapq.heappush(z, (s, ev))
+                if not isinstance(s, types.BooleanType)
+                else (any(q.append(cb)
+                          for cb in ev.cbs)
+                      if ev not in e
+                      else None)
+                or (not s or e.add(ev))
+                for (ev, s) in itertools.chain(*task.gen.send(e))))
             yield
         else:e.clear()
-        T, t0, x = (mem[None][True, None]['data']['t'],
-                    mem[None][False, None]['data']['t'],
-                    mem[None][False, None]['data']['x'])
-        logging.debug('exec time:%.4f', time.time() - T)
+        T, t0, x = (pool[True, None].data["t"],
+                    pool[False, None].data["t"],
+                    pool[False, None].data["x"])
+        logging.debug("exec time: %.4f", time.time() - T)
         if len(z) > 0 and x > 0.0:
-            t = z[0][0]#wall time
-            T += (t - t0) / x#real time
+            t = z[0][0]  # wall time
+            T += (t - t0) / x  # real time
             yield tornado.gen.sleep(T - time.time())
-            logging.debug('wall time:%.4f', t)
+            logging.debug("wall time: %.4f", t)
         else:
-            T = time.time()#real time
-            mem[None][True, None]['data']['f'] = tornado.concurrent.Future()
-        mem[None][True, None]['data']['t'] = T#real time
-        mem[None][False, None]['data']['t'] = t#wall time
+            T = time.time()  # real time
+            pool[True, None].data["f"] = tornado.concurrent.Future()
+        pool[True, None].data["t"] = T  # real time
+        pool[False, None].data["t"] = t  # wall time
 
-if __name__ == '__main__':
-    with open('test.pkl', 'rb') as pkl:
-        #first pass - initialize systems
-        mem = {sys.pop('name'):
-               {(True, None): sys}
-               for sys in pickle.load(pkl)}
-        logging.debug('done 1st pass')
+if __name__ == "__main__":
+    with open("test.pkl", "rb") as pkl:
+        # first pass - initialize models
+        sim = pickle.load(pkl)
+        logging.debug("done 1st pass")
         
-        #second pass - populate internals
-        any(mem[_id].setdefault(name, {}).update
-            ({'data': item['data'],
-              'ctrl': {key: Event()
-                       for key in item['ctrl']}}
-             if item is not None else {})
-            for _id in mem for name, item in
-            mem[_id][True, None].pop('mem').iteritems())
-        logging.debug('done 2nd pass')
+        # second pass - populate internals
+        lake = {model["name"]: {name: (Item(**item)
+                                       if item is not None
+                                       else None)
+                                for (name, item)
+                                in model["items"].iteritems()}
+                for model in sim}
+        logging.debug("done 2nd pass")
         
-        #third pass - reference externals
-        any(mem[_id].update
-            ({name: mem[name[0]][False, name[1]]
-              for name in mem[_id] if name[0] in mem})
-            for _id in mem)
-        logging.debug('done 3rd pass')
+        # third pass - reference externals
+        any(lake[_id].update({name: lake[name[0]].get((False, name[1]))
+                              for name in lake[_id].iterkeys()
+                              if name[0] in lake})
+            for _id in lake)
+        logging.debug("done 3rd pass")
         
-        #last pass - start processes
-        any(ev.cbs.append((p, gen))
-            for _id in mem for p, gen in
-            ((p, wrap(mem[_id], maps, keys))
-             for (p, wrap), maps, keys in
-             ((CATELOG[proc['tag']],
-               proc['map'], proc['key']) for proc in
-              mem[_id][True, None].pop('exe')))
-            for ev in gen.next())
-        logging.debug('done 4th pass')
+        # fourth pass - start tasks
+        tasks = tuple(run(task, lake[model["name"]])
+                      for model in sim
+                      for task in model["procs"])
+        logging.debug("done 4th pass")
     
     loop = tornado.ioloop.IOLoop.current()
-    app = (tornado.web.Application
-           ([(r'/ob-rest-api/flag', FlagHandler, {'mem': mem}),
-             (r'/ob-rest-api/info', InfoHandler, {'mem': mem}),
-             (r'/ob-rest-api/data/(\w+)/(\w+)', DataHandler, {'mem': mem}),
-             (r'/ob-rest-api/ctrl/(\w+)/(\w+)', CtrlHandler, {'mem': mem}),
-             (r'/ob-io-stream/', StreamHandler, {'mem': mem})],
-            websocket_ping_interval=1))
+    app = tornado.web.Application([
+        (r"/ob-rest-api/flag", FlagHandler, {"lake": lake}),
+        (r"/ob-rest-api/info", InfoHandler, {"lake": lake}),
+        (r"/ob-rest-api/data/(\w+)/(\w+)", DataHandler, {"lake": lake}),
+        (r"/ob-rest-api/ctrl/(\w+)/(\w+)", CtrlHandler, {"lake": lake}),
+        (r"/ob-io-stream/", StreamHandler, {"lake": lake})
+        ], websocket_ping_interval=1)
     app.listen(8888)
-    loop.run_sync(functools.partial(main, mem, loop))
+    loop.run_sync(functools.partial(main, lake[None], loop))

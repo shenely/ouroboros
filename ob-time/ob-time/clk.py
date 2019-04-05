@@ -8,151 +8,123 @@ import logging
 import pytz
 
 #internal libraries
-from ouroboros import (REGISTRY,
-                       NORMAL, Item, PROCESS)
+from ouroboros import (
+    ENCODE, DECODE,
+    Image, Node
+)
 
 #exports
-__all__= ('at', 'after', 'every',
-          'relate', 'iso8601')
+__all__= (
+    "at", "after", "every",
+    "relate", "iso8601"
+)
 
 #constants
+MILLI = 1e-3  # seconds
+
 UNIX_EPOCH = datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)
 
-REGISTRY[datetime.datetime] = ('$date',
-                               lambda x:
-                               int(1000 *
-                                   (x - UNIX_EPOCH)
-                                   .total_seconds()))
-REGISTRY['$date'] = (lambda x:
-                     UNIX_EPOCH +
-                     datetime.timedelta(seconds=x / 1000.0))
+# datetime.datetime <-> JSON
+ENCODE[datetime.datetime] = (
+    "@dt", lambda x: int((x - UNIX_EPOCH).total_seconds() / MILLI)
+)
+DECODE["@dt"] = (
+    lambda x: UNIX_EPOCH + datetime.timedelta(seconds=x * MILLI)
+)
 
-@PROCESS('clock.at', NORMAL,
-         Item('sys',
-              evs=('tick',), args=(),
-              ins=(), reqs=('t',),
-              outs=(), pros=()),
-         Item('usr',
-              evs=(), args=(),
-              ins=(), reqs=(),
-              outs=('tock',), pros=()))
+# datetime.timedelta <-> JSON
+ENCODE[datetime.timedelta] = (
+    "@td", lambda x: int(x.total_seconds() / MILLI)
+)
+DECODE["@td"] = (
+    lambda x: datetime.timedelta(seconds=x * MILLI)
+)
+
+
+@Image("clock.at",
+       sys=Node(evs=("tick",), args=(),
+                ins=(), reqs=("t",),
+                outs=(), pros=()),
+       usr=Node(evs=(), args=(),
+                ins=(), reqs=(),
+                outs=("tock",), pros=()))
 def at(sys, usr):
-    """at"""
-    sys_t, = sys.next()
-    
-    right = yield
+    """at"""    
+    yield
     while True:
-        sys, usr = (right['sys'],
-                    right['usr'])
-        (sys_t,), _ = sys.next()
-        usr = (((), (sys_t,))
-               for _ in usr)
-        left = {'usr': usr}
-        right = yield left
+        sys_t, = sys.data.next()
+        yield (usr.ctrl.send((sys_t,)),)
 
-@PROCESS('clock.after', NORMAL,
-         Item('env',
-              evs=(), args=(),
-              ins=(), reqs=('t',),
-              outs=(), pros=()),
-         Item('sys',
-              evs=('tick',), args=(),
-              ins=(), reqs=('delta_t',),
-              outs=(), pros=()),
-         Item('usr',
-              evs=(), args=(),
-              ins=(), reqs=(),
-              outs=('tock',), pros=()))
+@Image("clock.after",
+       env=Node(evs=(), args=(),
+                ins=(), reqs=("t",),
+                outs=(), pros=()),
+       sys=Node(evs=("tick",), args=(),
+                ins=(), reqs=("delta_t",),
+                outs=(), pros=()),
+       usr=Node(evs=(), args=(),
+                ins=(), reqs=(),
+                outs=("tock",), pros=()))
 def after(env, sys, usr):
     """after"""
-    
-    right = yield
+    yield
     while True:
-        env, sys, usr = (right['env'],
-                         right['sys'],
-                         right['usr'])
-        (env_t,), _ = env.next()
-        (delta_t,), _ = sys.next()
-        usr = (((), (env_t + delta_t,))
-               for _ in usr)
-        left = {'usr': usr}
-        right = yield left
+        env_t, = env.data.next()
+        delta_t, = sys.data.next()
+        yield (usr.ctrl.send((env_t + delta_t,)),)
 
-@PROCESS('clock.every', NORMAL,
-         Item('env',
-              evs=('tick',), args=('t',),
-              ins=(), reqs=(),
-              outs=(), pros=()),
-         Item('sys',
-              evs=('tick',), args=('delta_t',),
-              ins=(), reqs=(),
-              outs=('tick',), pros=()),
-         Item('usr',
-              evs=(), args=(),
-              ins=(), reqs=(),
-              outs=('tock',), pros=()))
+@Image("clock.every",
+       env=Node(evs=("tick",), args=("t",),
+                ins=(), reqs=(),
+                outs=(), pros=()),
+       sys=Node(evs=("tick",), args=("delta_t",),
+                ins=(), reqs=(),
+                outs=("tick",), pros=()),
+       usr=Node(evs=(), args=(),
+                ins=(), reqs=(),
+                outs=("tock",), pros=()))
 def every(env, sys, usr):
     """every"""
-    env_t, = env.next()
-    delta_t, = sys.next()
+    env_t, = env.data.next()
+    delta_t, = sys.data.next()
     
-    right = yield
+    yield
     while True:
-        usr = right['usr']
         env_t += delta_t
-        sys = (((), (env_t,)),)
-        usr = (((), (True,))
-               for _ in usr)
-        left = {'sys': sys, 'usr': usr}
-        right = yield left
+        yield (sys.ctrl.send((env_t,)),
+               usr.ctrl.send((True,)))
 
-@PROCESS('clock.relate', NORMAL,
-         Item('sys',
-              evs=('tick',), args=(),
-              ins=('tick',), reqs=('t',),
-              outs=(), pros=()),
-         Item('usr',
-              evs=(), args=(),
-              ins=('<', '=', '>'), reqs=('t',),
-              outs=('<', '=', '>'), pros=()))
+@Image("clock.relate",
+       sys=Node(evs=("tock",), args=(),
+                ins=(), reqs=("t",),
+                outs=(), pros=()),
+       usr=Node(evs=(), args=(),
+                ins=("<", "=", ">"), reqs=("t",),
+                outs=("<", "=", ">"), pros=()))
 def relate(sys, usr):
     """relate"""
-    right = yield
+    evs = yield
     while True:
-        sys, usr = (right['sys'],
-                    right['usr'])
-        
-        (sys_t,), (sys_e,) = sys.next()
-        usr = (((), ((sys_t < usr_t) if usr_lt is not True else None,
-                     (sys_t == usr_t) if usr_eq is not True else None,
-                     (sys_t > usr_t) if usr_gt is not True else None))
-               for ((usr_t,), (usr_lt, usr_eq, usr_gt)) in usr)
+        sys_t, = env.data.next()
+        usr_t, = usr.data.next()
+        yield (usr.ctrl.send((sys_t < usr_t,
+                              sys_t == usr_t,
+                              sys_t > usr_t)),)
 
-        left = {'usr': usr}
-        right = yield left
-
-@PROCESS('clock.iso8601', NORMAL,
-         Item('sys',
-              evs=(), args=(),
-              ins=(), reqs=('t',),
-              outs=(), pros=()),
-         Item('usr',
-              evs=('tock',), args=(),
-              ins=('tock', 8601,), reqs=(),
-              outs=(8601,), pros=('t_dt',)))
+@Image("clock.iso8601",
+       sys=Node(evs=(), args=(),
+                ins=(), reqs=("t",),
+                outs=(), pros=()),
+       usr=Node(evs=("tock",), args=(),
+                ins=("tock", 8601,), reqs=(),
+                outs=(8601,), pros=("t_dt",)))
 def iso8601(sys, usr):
-    right = yield
+    evs = yield
     while True:
-        sys, usr = (right['sys'],
-                    right['usr'])
-        (sys_t,), _ = sys.next()
-        _, (clk_e, usr_e,) = usr.next()
-
-        usr = ((((datetime.datetime
-                  .fromtimestamp
-                 (sys_t, tz=pytz.utc),), (True,)),)
-               if clk_e is True and usr_e is not True
-               else ((None, None),))
-
-        left = {'usr': usr}
-        right = yield left
+        sys_t, = sys.data.next()
+        clk_e, usr_e = usr.ctrl.next()
+        flag = usr_e not in evs
+        usr.data.send((datetime.datetime.fromtimestamp
+                       (sys_t, tz=pytz.utc)
+                       if flag else None,))
+        yield (usr.ctrl.send((flag or None,)),)
