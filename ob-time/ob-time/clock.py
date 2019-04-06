@@ -8,16 +8,12 @@ import logging
 import pytz
 
 #internal libraries
-from ouroboros import (
-    ENCODE, DECODE,
-    Image, Node
-)
+from ouroboros import Type, Image, Node
 
 #exports
-__all__= (
-    "at", "after", "every",
-    "relate", "iso8601"
-)
+__all__= ("dt", "td",
+          "at", "after", "every",
+          "relate", "iso8601")
 
 #constants
 MILLI = 1e-3  # seconds
@@ -25,23 +21,17 @@ MILLI = 1e-3  # seconds
 UNIX_EPOCH = datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)
 
 # datetime.datetime <-> JSON
-ENCODE[datetime.datetime] = (
-    "@dt", lambda x: int((x - UNIX_EPOCH).total_seconds() / MILLI)
-)
-DECODE["@dt"] = (
-    lambda x: UNIX_EPOCH + datetime.timedelta(seconds=x * MILLI)
-)
+dt = Type(".clock#dt", datetime.datetime,
+          lambda x: int((x - UNIX_EPOCH).total_seconds() / MILLI),
+          lambda x: UNIX_EPOCH + datetime.timedelta(seconds=x * MILLI))
 
 # datetime.timedelta <-> JSON
-ENCODE[datetime.timedelta] = (
-    "@td", lambda x: int(x.total_seconds() / MILLI)
-)
-DECODE["@td"] = (
-    lambda x: datetime.timedelta(seconds=x * MILLI)
-)
+td = Type(".clock#td", datetime.timedelta,
+          lambda x: int(x.total_seconds() / MILLI),
+          lambda x: datetime.timedelta(seconds=x * MILLI))
 
 
-@Image("clock.at",
+@Image(".clock@at",
        sys=Node(evs=("tick",), args=(),
                 ins=(), reqs=("t",),
                 outs=(), pros=()),
@@ -55,7 +45,8 @@ def at(sys, usr):
         sys_t, = sys.data.next()
         yield (usr.ctrl.send((sys_t,)),)
 
-@Image("clock.after",
+
+@Image(".clock@after",
        env=Node(evs=(), args=(),
                 ins=(), reqs=("t",),
                 outs=(), pros=()),
@@ -73,7 +64,8 @@ def after(env, sys, usr):
         delta_t, = sys.data.next()
         yield (usr.ctrl.send((env_t + delta_t,)),)
 
-@Image("clock.every",
+
+@Image(".clock@every",
        env=Node(evs=("tick",), args=("t",),
                 ins=(), reqs=(),
                 outs=(), pros=()),
@@ -94,7 +86,8 @@ def every(env, sys, usr):
         yield (sys.ctrl.send((env_t,)),
                usr.ctrl.send((True,)))
 
-@Image("clock.relate",
+
+@Image(".clock@relate",
        sys=Node(evs=("tock",), args=(),
                 ins=(), reqs=("t",),
                 outs=(), pros=()),
@@ -111,7 +104,8 @@ def relate(sys, usr):
                               sys_t == usr_t,
                               sys_t > usr_t)),)
 
-@Image("clock.iso8601",
+
+@Image(".clock@iso8601",
        sys=Node(evs=(), args=(),
                 ins=(), reqs=("t",),
                 outs=(), pros=()),

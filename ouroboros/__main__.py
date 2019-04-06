@@ -20,7 +20,7 @@ import tornado.gen
 import tornado.concurrent
 
 # internal libraries
-from ouroboros import (Item, run, encoder, decoder)
+from ouroboros import default, object_hook, Item, run
 import ouroboros.ext as _
 
 # constants
@@ -76,12 +76,12 @@ class DataHandler(ObRequestHandler):
                 "value": value}
                for (key, value)
                in item.data.iteritems()]
-        s = encoder.dumps(obs)
+        s = json.dumps(obj, default=default)
         self.write(s)
 
     def put(self, _id, name):
         s = self.request.body
-        obj = decoder.loads(s)
+        obj = json.loads(s, object_hook=object_hook)
         item = self.lake[_id][False, name]
         item["data"].update({pair["key"]: pair["value"]
                              for pair in obj
@@ -92,7 +92,7 @@ class CtrlHandler(ObRequestHandler):
 
     def post(self, _id, name):
         s = self.request.body
-        obj = decoder.loads(s)
+        obj = json.loads(s, object_hook=object_hook)
         e = self.lake[None][True, None].data["e"]
         item = self.lake[_id][False, name]
         any(e.add(item.data[pair["key"]])
@@ -119,7 +119,7 @@ class StreamHandler(tornado.websocket.WebSocketHandler,
                               if name[0] is False]}
                    for (_id, model) in self.lake.iteritems()
                    if name is not None]
-        s = encoder.dumps(obj)
+        s = json.dumps(obj, default=default)
         self.write_message(s)
 
     

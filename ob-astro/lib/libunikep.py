@@ -9,13 +9,11 @@ import numpy.ctypeslib
 
 # internal libraries
 path = os.path.dirname(__file__)
-libunikep = numpy.ctypeslib.load_library('_libunikep', path)
+libunikep = numpy.ctypeslib.load_library("_libunikep", path)
 
 # exports
-__all__ = (
-    'settol', 'setmaxiter',
-    'setmu', 'unikep'
-)
+__all__ = ("settol", "setmaxiter",
+           "setmu", "unikep")
 
 # constants
 #  ...
@@ -24,7 +22,7 @@ __all__ = (
 c_double_p = ctypes.POINTER(ctypes.c_double)
 np_vector3 = numpy.ctypeslib.ndpointer(dtype=numpy.float64,
                                        ndim=1, shape=(3,),
-                                       flags='C')
+                                       flags="C")
 
 
 # int settol(double)
@@ -52,9 +50,7 @@ def setmu(mu):
 
 
 # int stumpff(double, double*, double*)
-libunikep.stumpff.argtypes = [
-    ctypes.c_double, c_double_p, c_double_p
-]
+libunikep.stumpff.argtypes = [ctypes.c_double, c_double_p, c_double_p]
 libunikep.stumpff.restype = ctypes.c_int
 def stumpff(z):
     C = ctypes.c_double()
@@ -67,17 +63,13 @@ def stumpff(z):
 
 
 # int unikep(double*, double*, double*, double*, double)
-libunikep.unikep.argtypes = [
-    np_vector3, np_vector3,
-    np_vector3, np_vector3,
-    ctypes.c_double
-]
+libunikep.unikep.argtypes = [np_vector3, np_vector3,
+                             np_vector3, np_vector3,
+                             ctypes.c_double]
 libunikep.unikep.restype = ctypes.c_int
 def unikep(r0_bar, v0_bar, t):
     r_bar = numpy.empty_like(r0_bar)
     v_bar = numpy.empty_like(v0_bar)
-    if libunikep.unikep(
-        r0_bar, v0_bar, r_bar, v_bar, t
-    ) != 0:
+    if libunikep.unikep(r0_bar, v0_bar, r_bar, v_bar, t) != 0:
         raise
     return (r_bar, v_bar)

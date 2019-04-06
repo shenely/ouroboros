@@ -15,7 +15,7 @@ args = [
                 'ctrl': []
             },
             (False, None): {
-                'data': {'t': 0.0, 'x': 1.0},
+                'data': {'t': time.time(), 'x': 1.0},
                 'ctrl': [False, True]
             }
         },
@@ -37,7 +37,7 @@ args = [
         'procs': [
             {
                 'p': 100,
-                'tag': 'clock.every',
+                'tag': '.clock@every',
                 'keys': {
                     'env': (None, None),
                     'sys': (False, 1),
@@ -60,7 +60,7 @@ args = [
             },
             {
                 'p': 100,
-                'tag': 'clock.iso8601',
+                'tag': '.clock@iso8601',
                 'keys': {
                     'sys': (None, None),
                     'usr': (False, 'time')
@@ -73,8 +73,7 @@ args = [
                 }
             }
         ]
-    }
-]
+    },
 ##        {'name': 'test',
 ##         'mem': {(None, None): None,
 ##                 ('clock', 'time'): None,
@@ -136,28 +135,58 @@ args = [
 ##                  'key': {'mne': [(False, 'inc'),
 ##                                  (False, 'rand')],
 ##                          'usr': [(False, 'test')]}},]},]
-##        {'name': 'iss',
-##         'mem': {(None, None): None,
-##                 ('clock', 'time'): None,
-##                 (False, 2): {'data': {2: ['ISS (ZARYA)',
-##                                           '1 25544U 98067A   18184.80969102  .00001614  00000-0  31745-4 0  9993',
-##                                           '2 25544  51.6414 295.8524 0003435 262.6267 204.2868 15.54005638121106']},
-##                              'ctrl': []},
-##                 (True, 4): {'data': {4: None},
-##                             'ctrl': [4]},
-##                 (False, 'rec'): {'data': {'r_bar': None,
-##                                           'v_bar': None},
-##                                  'ctrl': ['rec']}},
-##         'exe': [{'tag': 'orb.tle2sgp',
-##                  'map': None,
-##                  'key': {'env': [(None, None)],
-##                          'tle': [(False, 2)],
-##                          'sgp': [(True, 4)]}},
-##                 {'tag': 'orb.sgp4tle',
-##                  'map': None,
-##                  'key': {'clk': [('clock', 'time')],
-##                          'sgp': [(True, 4)],
-##                          'orb': [(False, 'rec')]}}]},]
+    {
+        'name': 'iss',
+        'items': {
+            (None, None): None,
+            ('clock', 'time'): None,
+            (False, 2): {
+                'data': {
+                    2: [
+                        'ISS (ZARYA)',
+                        '1 25544U 98067A   19095.80969102  .00001614  00000-0  31745-4 0  9993',
+                        '2 25544  51.6414 295.8524 0003435 262.6267 204.2868 15.54005638121106']},
+                'ctrl': []
+            },
+            (True, 4): {
+                'data': {4: None},
+                'ctrl': [4]
+            },
+            (False, 'rec'): {
+                'data': {'r_bar': None,
+                         'v_bar': None},
+                'ctrl': ['rec']
+            }
+        },
+        'procs': [
+            {
+                'p': 100,
+                'tag': '.orb@tle2sgp',
+                'keys': {
+                    'env': (None, None),
+                    'tle': (False, 2),
+                    'sgp': (True, 4)
+                },
+                'maps': {}
+            },
+            {
+                'p': 100,
+                'tag': '.orb@sgp4tle',
+                'keys': {
+                    'clk': ('clock', 'time'),
+                    'sgp': (True, 4),
+                    'orb': (False, 'rec')
+                },
+                'maps': {
+                    'orb': {
+                        'data': {},
+                        'ctrl': {True: 'rec'}
+                    }
+                }
+            }
+        ]
+    }
+]
 ##        {'name': 'test',
 ##         'mem': {(None, None): None,
 ##                 (True, 'fun'): {'data': {'k': 1.0,

@@ -7,30 +7,29 @@ import numpy
 import scipy.linalg
 
 # internal libraries
-from ouroboros import (
-    ENCODE, DECODE,
-    Image, Node
-)
+from ouroboros import Type, Image, Node
 
 # exports
-__all__= ("abs2rel", "rel2abs",  # absolute <-> relative frame
+__all__= ("vector",
+          "abs2rel", "rel2abs",  # absolute <-> relative frame
           "nrt2rot", "rot2nrt",  # inertial <-> rotating frame
           "fun2obl", "obl2fun",  # fundamental <-> oblique plane
           "rec2sph", "sph2rec")  # rectangular to spherical coordinates
 
 # numpy.ndarray <-> JSON
-ENCODE[numpy.ndarray] = "@vector", lambda x: x.tolist()
-DECODE["@vector"] = lambda x: numpy.array(x)
+vector = Type(".vec@vector", numpy.ndarray,
+              numpy.ndarray.tolist,
+              numpy.array)
 
 
-@Image("vec.abs2rel",
-       src=Item(evs=(True,), args=(),
+@Image(".vec@abs2rel",
+       src=Node(evs=(True,), args=(),
                 ins=(True,), reqs=("_bar", "_t_bar"),
                 outs=(), pros=()),
-       trg=Item(evs=(), args=(),
+       trg=Node(evs=(), args=(),
                 ins=(), reqs=(),
                 outs=(True,), pros=("_bar", "_t_bar")),
-       ref=Item(evs=(), args=(),
+       ref=Node(evs=(), args=(),
                 ins=(), reqs=("_bar", "_t_bar"),
                 outs=(), pros=()))
 def abs2rel(src, trg, ref):
@@ -47,7 +46,7 @@ def abs2rel(src, trg, ref):
         yield (trg.ctrl.send((True,)),)
 
 
-@Image("vec.rel2abs",
+@Image(".vec@rel2abs",
        src=Node(evs=(), args=(),
                 ins=(), reqs=(),
                 outs=(True,), pros=("_bar", "_t_bar")),
@@ -71,7 +70,7 @@ def rel2abs(src, trg, ref):
         yield (src.ctrl.send((True,)),)
 
    
-@Image("vec.nrt2rot",
+@Image(".vec@nrt2rot",
        nrt=Node(evs=(True,), args=(),
                 ins=(True,), reqs=("_bar", "_t_bar"),
                 outs=(), pros=()),
@@ -116,7 +115,7 @@ def nrt2rot(nrt, rot, ax):
         yield (rot.ctrl.send((True,)),)
 
 
-@Image("vec.rot2nrt",
+@Image(".vec@rot2nrt",
        nrt=Node(evs=(), args=(),
                 ins=(), reqs=(),
                 outs=(True,), pros=("_bar", "_t_bar")),
@@ -160,7 +159,7 @@ def rot2nrt(nrt, rot, ax):
         yield (rot.ctrl.send((True,)),)
 
 
-@Image("vec.fun2obl",
+@Image(".vec@fun2obl",
        fun=Node(evs=("rec",), args=(),
                 ins=("rec",), reqs=("_bar", "_t_bar"),
                 outs=(), pros=()),
@@ -219,7 +218,7 @@ def fun2obl(fun, obl, node, pole):
         yield (obl.ctrl.send((True,)),)
 
     
-@Image("vec.obl2fun",
+@Image(".vec@obl2fun",
        fun=Node(evs=(), args=(),
                 ins=(), reqs=(),
                 outs=("rec",), pros=("_bar", "_t_bar")),
@@ -275,8 +274,8 @@ def obl2fun(fun, obl, node, pole):
         yield (fun.ctrl.send((True,)),)
 
     
-@Image("vec.rec2sph",
-       vec=Item(evs=("rec",), args=(),
+@Image(".vec@rec2sph",
+       vec=Node(evs=("rec",), args=(),
                 ins=(), reqs=("_bar"),
                 outs=("sph",), pros=("r", "az", "el")))
 def rec2sph(vec):
@@ -293,8 +292,8 @@ def rec2sph(vec):
         yield (vec.ctrl.send((True,)),)
 
     
-@Image("vec.sph2rec",
-       vec=Item(evs=("sph",), args=(),
+@Image(".vec@sph2rec",
+       vec=Node(evs=("sph",), args=(),
                 ins=(), reqs=("r", "az", "el"),
                 outs=("rec",), pros=("_bar")))
 def sph2rec(vec):

@@ -10,7 +10,7 @@ import sgp4.earth_gravity
 import sgp4.io
 
 # internal libraries
-from ouroboros import Image, Node
+from ouroboros import Type, Image, Node
 from ouroboros.lib import libunikep, liborbele
 
 # exports
@@ -23,16 +23,22 @@ __all__ = ("unikep",
 # constants
 MICRO = 1e-6
 
-# orb.ele <-> JSON
-ele = collections.namedtuple("ele",
-                             ("sma", "mm", "ecc",
-                              "inc", "aop", "raan",
-                              "ta", "ea", "ma"))
-ENCODE[ele] = ("orb.ele", lambda x: x._asdict())
-DECODE["orb.ele"] = lambda x: ele(**x)
+
+class Elements(collections.namedtuple
+               ("Elements",
+                ("sma", "mm", "ecc",
+                 "inc", "aop", "raan",
+                 "ta", "ea", "ma"))):
+    pass
 
 
-@Image("orb.unikep",
+# ele <-> JSON
+ele = Type(".orb#ele", Elements,
+           Elements._asdict,
+           lambda x: Elements(**x))
+
+
+@Image(".orb@unikep",
        env=Node(evs=(), args=("t",),
                 ins=(), reqs=("t",),
                 outs=(), pros=()),
@@ -65,7 +71,7 @@ def unikep(env, clk, bod, orb):
         env_t0 = env_t
 
  
-@Image("orb.tle2sgp",
+@Image(".orb@tle2sgp",
        env=Node(evs=(True,), args=(),
                 ins=(), reqs=(),
                 outs=(), pros=()),
@@ -85,7 +91,7 @@ def tle2sgp(env, tle, sgp):
     yield (sgp.ctrl.send((True,)),)
 
       
-@Image("orb.sgp4tle",
+@Image(".orb@sgp4tle",
        clk=Node(evs=(8601,), args=(),
                 ins=(), reqs=("t_dt",),
                 outs=(), pros=()),
@@ -108,7 +114,7 @@ def sgp4tle(clk, sgp, orb):
         yield (orb.ctrl.send((True,)),)
 
         
-@Image("orb.inv2law",
+@Image(".orb@inv2law",
        bod=Node(evs=(), args=("mu",),
                 ins=(), reqs=(),
                 outs=(), pros=()),
@@ -129,7 +135,7 @@ def inv2law(bod, orb):
         yield (orb.ctrl.send((True,)),)
 
 
-@Image("orb.rec2kep",
+@Image(".orb@rec2kep",
        bod=Node(evs=(), args=("mu",),
                 ins=(), reqs=(),
                 outs=(), pros=()),
@@ -148,8 +154,9 @@ def rec2kep(bod, orb):
         orb_e, inv_e = orb.ctrl.next()
         if orb_e in evs and inv_e in evs:
             r_bar, v_bar, eps, h_bar, e_bar = orb.data.next()
-            kep = ele(*liborbele.rec2kep(r_bar, v_bar,
-                                         eps, h_bar, e_bar))
+            kep = Elements(*liborbele.rec2kep
+                           (r_bar, v_bar,
+                            eps, h_bar, e_bar))
             orb.data.send((kep,))
             yield (orb.ctrl.send((True,)),)
         else:
@@ -157,7 +164,7 @@ def rec2kep(bod, orb):
             yield (orb.ctrl.send(None),)
 
 
-@Image("orb.kep2rec",
+@Image(".orb@kep2rec",
        bod=Node(evs=(), args=("mu",),
                 ins=(), reqs=(),
                 outs=(), pros=()),
@@ -172,8 +179,9 @@ def kep2rec(bod, orb):
     while True:
         liborbele.setmu(mu)
 
-        kep, orb.data.next()
-        r_bar, v_bar = liborbele.kep2rec(**kep)
+        kep, = orb.data.next()
+        r_bar, v_bar = liborbele.kep2rec(kep.sma, kep.ecc, kep.ta,
+                                         kep.aop, kep.raan, kep.inc)
         orb.data.send((r_bar, v_bar))
         yield (orb.ctrl.send((True,)),)
 
