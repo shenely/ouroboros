@@ -32,6 +32,7 @@ def coroutine(func):
 
 
 def default(obj):
+    """Return a serializable version of `object`"""
     try:
         return next({key: type.default(obj)}
                     for ((key, cls), type)
@@ -42,6 +43,7 @@ def default(obj):
 
 
 def object_hook(dct):
+    """Return value instead of the `dict`"""
     return next(({key: type.object_hook(obj)}
                 for ((key, cls), type)
                 in STONE.iteritems()

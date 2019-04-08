@@ -9,23 +9,24 @@ import types
 import heapq
 import json
 import pickle
+import argparse
 import logging
 
 # external libraries
-import pytz
+import tornado.gen
 import tornado.web
 import tornado.websocket
-import tornado.ioloop
-import tornado.gen
 import tornado.concurrent
+import tornado.ioloop
 
 # internal libraries
 from ouroboros import default, object_hook, Item, run
 import ouroboros.ext as _
 
 # constants
+MILLI = 1e-3
 INFINITY = float("inf")
-UNIX_EPOCH = datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)
+UNIX_EPOCH = datetime.datetime.utcfromtimestamp(0)
 
 # priorities
 CRITICAL = 1
@@ -37,6 +38,28 @@ TRIVIAL  = 10000
 logging.basicConfig(format="(%(asctime)s) [%(levelname)s] %(message)s",
                     datefmt="%Y-%m-%dT%H:%M:%SL",
                     level=logging.DEBUG)
+
+
+def parse_time(s):
+    assert isinstance(s, types.StringTypes)
+    if s.lower() == "now":
+        t = time.time()
+    elif s.isdigit():
+        t = int(s)
+    else:
+        dt = datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%fZ")
+        t = int((dt - UNIX_EPOCH).total_seconds() / MILLI)
+    return t
+
+
+def parse_rate(s):
+    assert isinstance(s, types.BaseString)
+    if s.lower() in "rt":
+        x = 1.0
+    else:
+        x = float(x)
+        assert x > 0.0
+    return x
     
 
 class ObRequestHandler(tornado.web.RequestHandler):
@@ -107,7 +130,7 @@ class StreamHandler(tornado.websocket.WebSocketHandler,
         d = self.lake[None][True, None].data
         if d["f"].done():
             e = d["e"]
-            obj = [{"_id": _id,
+            obj = [{"name": _id,
                     "items": [{"key": name[1],
                                "data": [{"key": key, "value": value}
                                         for (key, value)
@@ -115,7 +138,8 @@ class StreamHandler(tornado.websocket.WebSocketHandler,
                                "ctrl": [{"key": key, "value": ev in e}
                                         for (key, ev)
                                         in item.ctrl.iteritems()]}
-                              for (name, item) in model[True, None].iteritems()
+                              for (name, item)
+                              in model[True, None].iteritems()
                               if name[0] is False]}
                    for (_id, model) in self.lake.iteritems()
                    if name is not None]
@@ -184,32 +208,39 @@ def main(pool, loop):
         pool[False, None].data["t"] = t  # wall time
 
 if __name__ == "__main__":
-    with open("test.pkl", "rb") as pkl:
-        # first pass - initialize models
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-t", "--time", type=parse_time, default=0.0)
+    parser.add_argument("-x", "--rate", type=parse_rate, default=1.0)
+    parser.add_argument("filename")
+    ns = parser.parse_args()
+    
+    with open(ns.filename, "rb") as pkl:
         sim = pickle.load(pkl)
-        logging.debug("done 1st pass")
         
-        # second pass - populate internals
+        # first pass - populate internals
         lake = {model["name"]: {name: (Item(**item)
                                        if item is not None
                                        else None)
                                 for (name, item)
                                 in model["items"].iteritems()}
                 for model in sim}
-        logging.debug("done 2nd pass")
+        logging.debug("done 1st pass")
         
-        # third pass - reference externals
+        # second pass - reference externals
         any(lake[_id].update({name: lake[name[0]].get((False, name[1]))
                               for name in lake[_id].iterkeys()
                               if name[0] in lake})
             for _id in lake)
-        logging.debug("done 3rd pass")
+        logging.debug("done 2nd pass")
         
-        # fourth pass - start tasks
+        # third pass - start tasks
         tasks = tuple(run(task, lake[model["name"]])
                       for model in sim
                       for task in model["procs"])
-        logging.debug("done 4th pass")
+        logging.debug("done 3rd pass")
+
+    lake[None][False, None].data["t"] = ns.time
+    lake[None][False, None].data["x"] = ns.rate
     
     loop = tornado.ioloop.IOLoop.current()
     app = tornado.web.Application([

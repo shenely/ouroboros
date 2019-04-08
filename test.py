@@ -15,7 +15,7 @@ args = [
                 'ctrl': []
             },
             (False, None): {
-                'data': {'t': time.time(), 'x': 1.0},
+                'data': {'t': None, 'x': None},
                 'ctrl': [False, True]
             }
         },
