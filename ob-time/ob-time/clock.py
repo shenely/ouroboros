@@ -1,9 +1,5 @@
 #built-in libraries
-import sys
-import time
 import datetime
-import heapq
-import logging
 
 #external libraries
 import pytz

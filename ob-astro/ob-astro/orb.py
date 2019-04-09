@@ -14,28 +14,29 @@ from ouroboros import Type, Image, Node
 from ouroboros.lib import libunikep, liborbele
 
 # exports
-__all__ = ("unikep",
+__all__ = ("ele",
+           "unikep",
            "tle2sgp", "sgp4tle",
            "inv2law",
            "rec2kep", "kep2rec",)
-##           "apsis", "pole", "node")
+           "apsis", "node", "pole")
 
 # constants
 MICRO = 1e-6
 
 
-class Elements(collections.namedtuple
-               ("Elements",
-                ("sma", "mm", "ecc",
-                 "inc", "aop", "raan",
-                 "ta", "ea", "ma"))):
+class OrbitalElements(collections.namedtuple
+                      ("OrbitalElements",
+                       ("sma", "mm", "ecc",
+                        "inc", "aop", "raan",
+                        "ta", "ea", "ma"))):
     pass
 
 
 # ele <-> JSON
-ele = Type(".orb#ele", Elements,
-           Elements._asdict,
-           lambda x: Elements(**x))
+ele = Type(".orb#ele", OrbitalElements,
+           OrbitalElements._asdict,
+           lambda x: OrbitalElements(**x))
 
 
 @Image(".orb@unikep",
@@ -154,9 +155,9 @@ def rec2kep(bod, orb):
         orb_e, inv_e = orb.ctrl.next()
         if orb_e in evs and inv_e in evs:
             r_bar, v_bar, eps, h_bar, e_bar = orb.data.next()
-            kep = Elements(*liborbele.rec2kep
-                           (r_bar, v_bar,
-                            eps, h_bar, e_bar))
+            kep = OrbitalElements(*liborbele.rec2kep
+                                  (r_bar, v_bar,
+                                   eps, h_bar, e_bar))
             orb.data.send((kep,))
             yield (orb.ctrl.send((True,)),)
         else:
@@ -169,13 +170,13 @@ def rec2kep(bod, orb):
                 ins=(), reqs=(),
                 outs=(), pros=()),
        orb=Node(evs=(6,), args=(),
-                ins=(6,), reqs=("kep",),
+                ins=(), reqs=("kep",),
                 outs=(True,), pros=("r_bar", "v_bar")))
 def kep2rec(bod, orb):
     """Kepler elements to state vectors"""
     mu, = bod.data.next()
 
-    evs = yield
+    yield
     while True:
         liborbele.setmu(mu)
 
@@ -186,75 +187,182 @@ def kep2rec(bod, orb):
         yield (orb.ctrl.send((True,)),)
 
 
-##@Image(
-##    "orb.apsis",
-##    env=Node(
-##        evs=(), args=(),
-##        ins=(), reqs=("t",),
-##        outs=(), pros=()),
-##    orb=Node(
-##        evs=(6,), args=(),
-##        ins=(6,), reqs=("mm", "ma"),
-##        outs=("peri", "apo"), pros=("peri", "apo")))
-##def apsis(env, orb):
-##    """Apsis crossing"""
-##    evs = yield
-##    while True:
-##        env_t,  = env.data.next() 
-##        
-##        yield (
-##            orb.data.send(
-##                (
-##                    env_t + (2 * pi - ma) / mm,
-##                    (env_t + (pi - ma) / mm)
-##                    if ma < pi else
-##                    (env_t + (3 * pi - ma) / mm)
-##                )
-##                if kep_e in evs
-##                else None
-##            ) or
-##            orb.ctrl.send(None)
-##            for _, (mm, ma), (kep_e,) in itertools.izip(orb)
-##        )
-##
-##
-##@Image(
-##    "orb.node",
-##    env=Node(
-##        evs=(), args=(),
-##        ins=(), reqs=("t",),
-##        outs=(), pros=()
-##    ),
-##    orb=Node(
-##        evs=("kep",), args=(),
-##        ins=("kep",), reqs=("mm", "ma"),
-##        outs=("asc", "desc"), pros=("t_asc", "t_desc")
-##    )
-##)
-##def node(env, orb):
-##    """Node crossing"""
-##    mu, = bod.next()
-##
-##    evs = yield
-##    while True:
-##
-####        ta1 = 2 * pi - aop
-####        ta1 = pi - aop
-####        ea1 = 2 * atan2(sqrt(1 - ecc) * sin(ta1 / 2),
-####                        sqrt(1 + ecc) * cos(ta1 / 2))
-####        ma1 = ea1 - ecc * sin(ea1)
-####        t = (ma1 - ma) / mm
-##        
-##
-##        (env_t,), _  = env.next()
-##        orb = ((((t + (2 * pi - ma) / mm,
-##                  (t + (pi - ma) / mm)
-##                  if ma < pi else
-##                  (t + (3 * pi - ma) / mm))
-##                 (False, False))
-##                if kep_e is True else
-##                (None, None))
-##               for (mm, ma), (kep_e,) in orb)
-##        
-##        left = {"orb": orb}
-##        right = yield left
+@Image(".orb@apsis",
+       env=Node(evs=(), args=(),
+                ins=(), reqs=("t",),
+                outs=(), pros=()),
+       sys=Node(evs=(), args=("lim", "tol"),
+                ins=(), reqs=(),
+                outs=(), pros=()),
+       clk=Node(evs=(), args=(),
+                ins=(), reqs=(),
+                outs=(False,), pros=("t",)),
+       orb=Node(evs=(6,), args=(),
+                ins=(), reqs=("kep",),
+                outs=("peri", "apo"),
+                pros=("tperi", "tapo")))
+def apsis(env, sys, clk, orb):
+    """Apsis crossing"""
+    lim, tol = env.data.next()
+
+    yield
+    while True:
+        t0,  = env.data.next() 
+        kep, = orb.data.next()
+
+        # periapsis and apoapsis
+        tp = t0 + (2 * math.pi - kep.ma) / kep.mm
+        ta = ((t0 + (math.pi - kep.ma) / kep.mm)
+              if kep.ma < math.pi else
+              (t0 + (3 * math.pi - kep.ma) / kep.mm))
+        
+        if min(abs(tp - t0), abs((ta - t0) - (tp + t0) / 2)) < tol:
+            t1 = ta  # at periapsis
+            p, a = True, None
+        elif min(abs(ta - t0), abs((tp - t0) - (ta + t0) / 2)) < tol:
+            t1 = tp  # at apoapsis
+            p, a = None, True
+        else:
+            t1 = min(tp, ta)
+            p, a = None, None
+            
+        t = t1 if abs(t1 - t0) < lim else None
+        e = t is not None
+        
+        orb.data.send((t,))
+        orb.data.send((tp, ta))
+        yield (clk.ctrl.send((e,)),
+               orb.ctrl.send((p, a)))
+
+
+@Image(".orb@node",
+       env=Node(evs=(), args=(),
+                ins=(), reqs=("t",),
+                outs=(), pros=()),
+       sys=Node(evs=(), args=("lim", "tol"),
+                ins=(), reqs=(),
+                outs=(), pros=()),
+       clk=Node(evs=(), args=(),
+                ins=(), reqs=(),
+                outs=(False,), pros=("t",)),
+       orb=Node(evs=(6,), args=(),
+                ins=(), reqs=("kep",),
+                outs=("asc", "desc"),
+                pros=("tasc", "tdesc")))
+def node(env, sys, clk, orb):
+    """Node crossing"""
+    lim, tol = env.data.next()
+
+    yield
+    while True:
+        t0,  = env.data.next() 
+        kep, = orb.data.next()
+
+        # ascending node
+        ta1 = 2 * (2 * math.pi - kep.aop
+                   if kep.ta + kep.aop < 2 * math.pi  else
+                   4 * math.pi - kep.aop)
+        ea1 = 2 * math.atan2(math.sqrt(1 - kep.ecc) * math.sin(ta1 / 2),
+                             math.sqrt(1 + kep.ecc) * math.cos(ta1 / 2))
+        ma1 = ea1 - kep.ecc * math.sin(ea1)
+        ta = (ma1 - kep.ma) / kep.mm
+
+        # descending node
+        ta1 = (math.pi - kep.aop
+               if kep.ta + kep.aop < math.pi else
+               3 * math.pi - kep.aop
+               if kep.ta + kep.aop < 3 * math.pi else
+               5 * math.pi - kep.aop)
+        ea1 = 2 * math.atan2(math.sqrt(1 - kep.ecc) * math.sin(ta1 / 2),
+                             math.sqrt(1 + kep.ecc) * math.cos(ta1 / 2))
+        ma1 = ea1 - kep.ecc * math.sin(ea1)
+        td = (ma1 - kep.ma) / kep.mm
+
+        if kep.inc > math.pi / 2:
+            td, ta = ta, td
+        
+        if min(abs(ta - t0), abs((td - t0) - (ta + t0) / 2)) < tol:
+            t1 = td  # at ascending node
+            a, d = True, None
+        elif min(abs(td - t0), abs((ta - t0) - (td + t0) / 2)) < tol:
+            t1 = ta  # at descending node
+            a, d = None, True
+        else:
+            t1 = min(ta, td)
+            a, d = None, None
+            
+        t = t1 if abs(t1 - t0) < lim else None
+        e = t is not None
+        
+        orb.data.send((t,))
+        orb.data.send((ta, td))
+        yield (clk.ctrl.send((e,)),
+               orb.ctrl.send((a, d)))
+
+
+@Image(".orb@pole",
+       env=Node(evs=(), args=(),
+                ins=(), reqs=("t",),
+                outs=(), pros=()),
+       sys=Node(evs=(), args=("lim", "tol"),
+                ins=(), reqs=(),
+                outs=(), pros=()),
+       clk=Node(evs=(), args=(),
+                ins=(), reqs=(),
+                outs=(False,), pros=("t",)),
+       orb=Node(evs=(6,), args=(),
+                ins=(), reqs=("kep",),
+                outs=("north", "south"),
+                pros=("tnorth", "tsouth")))
+def pole(env, sys, clk, orb):
+    """Pole crossing"""
+    lim, tol = env.data.next()
+
+    yield
+    while True:
+        t0,  = env.data.next() 
+        kep, = orb.data.next()
+        mm, ecc, aop, inc, ma = kep.mm, kep.ecc, kep.aop, kep.inc, kep.ma
+
+        # north pole
+        ta1 = 2 * (math.pi / 2 - kep.aop
+                   if kep.ta + kep.aop < math.pi / 2 else
+                   5 * math.pi / 2 - kep.aop
+                   if kep.ta + kep.aop < 5 * math.pi / 2 else
+                   9 * math.pi / 2 - kep.aop)
+        ea1 = 2 * math.atan2(math.sqrt(1 - ecc) * math.sin(ta1 / 2),
+                             math.sqrt(1 + ecc) * math.cos(ta1 / 2))
+        ma1 = ea1 - ecc * math.sin(ea1)
+        ta = (ma1 - ma) / mm
+
+        # south pole
+        ta1 = (math.pi - kep.aop
+               if kep.ta + kep.aop < 3 * math.pi / 2 else
+               3 * math.pi / 2 - kep.aop
+               if kep.ta + kep.aop < 7 * math.pi / 2 else
+               7 * math.pi - kep.aop)
+        ea1 = 2 * math.atan2(math.sqrt(1 - ecc) * math.sin(ta1 / 2),
+                             math.sqrt(1 + ecc) * math.cos(ta1 / 2))
+        ma1 = ea1 - ecc * math.sin(ea1)
+        td = (ma1 - ma) / mm
+
+        if kep.inc > math.pi / 2:
+            ts, tn = tn, ts
+        
+        if min(abs(tn - t0), abs((ts - t0) - (tn + t0) / 2)) < tol:
+            t1 = ts  # at north pole
+            n, s = True, None
+        elif min(abs(ts - t0), abs((tn - t0) - (ts + t0) / 2)) < tol:
+            t1 = tn  # at south pole
+            n, s = None, True
+        else:
+            t1 = min(tn, ts)
+            n, s = None, None
+            
+        t = t1 if abs(t1 - t0) < lim else None
+        e = t is not None
+        
+        orb.data.send((t,))
+        orb.data.send((tn, ts))
+        yield (clk.ctrl.send((e,)),
+               orb.ctrl.send((n, s)))

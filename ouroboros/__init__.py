@@ -44,10 +44,10 @@ def default(obj):
 
 def object_hook(dct):
     """Return value instead of the `dict`"""
-    return next(({key: type.object_hook(obj)}
-                for ((key, cls), type)
-                in STONE.iteritems()
-                if key in dct), dct)
+    return next((type.object_hook(obj)
+                 for ((key, cls), type)
+                 in STONE.iteritems()
+                 if key in dct), dct)
 
 
 class Type(collections.namedtuple
