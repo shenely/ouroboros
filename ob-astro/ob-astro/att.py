@@ -1,7 +1,5 @@
 # built-in libraries
-import math
-import collections
-import logging
+# ...
 
 # external libraries
 import numpy
@@ -12,15 +10,16 @@ from ouroboros import Type, Image, Node
 from ouroboros.lib import libquat
 
 # exports
-__all__ = ("eulrot", "triad")
+__all__ = ("rot",
+           "eulrot", "triad")
 
 # constants
 # ...
 
 
 rot = Type(".att#rot", libquat.rot,
-           lambda x: [x.quat, x.bar],
-           libquat.rot)
+           libquat._asdict,
+           lambda x: libquat.rot(**x))
 
 
 @Image(".att@eulrot",
@@ -47,7 +46,7 @@ def eulrot(bod, fun):
                 om, numpy.dot(eye, om)
             )
         )
-        y_dot = rot(q_dot, om_dot)
+        y_dot = libquat.rot(q_dot, om_dot)
         
         fun.data.send((y_dot,))
         yield (fun.ctrl.send((False,)),)
