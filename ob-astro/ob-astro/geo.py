@@ -61,7 +61,7 @@ def jd(clk, bod):
     """Julian date"""
     yield
     while True:
-        t_dt, = clk.data.next()
+        t_dt, = next(clk.data)
         
         s = (t_td - JD_EPOCH).total_seconds()
         rjd, ut = divmod(s / 3600, 24)
@@ -83,7 +83,7 @@ def st(bod, usr):
     """Sidereal time"""
     yield
     while True:
-        jc, ut = bod.data.next()
+        jc, ut = next(bod.data)
         
         gst0 = (100.4606184 +
                 (36000.77004 +
@@ -105,7 +105,7 @@ def ax(bod):
     """Rotation axis"""
     yield
     while True:
-        jc, gst = bod.data.next()
+        jc, gst = next(bod.data)
         
         obl = (dms2deg(23, 26, 21.45) -
                (dms2deg(s=46.815) +
@@ -127,7 +127,7 @@ def rose(usr):
     """Compass rose"""
     yield
     while True:
-        lat, lon = usr.data.next()
+        lat, lon = next(usr.data)
         clon = math.cos(lon)
         slon = math.sin(lon)
         clat = math.cos(lat)
@@ -154,13 +154,13 @@ def rose(usr):
                 outs=("geo",), pros=("lat", "lon", "alt")))
 def sph2geo(bod, sph, geo):
     """Geocentric to geodetic coordinates"""
-    R, f = bod.data.next()
+    R, f = next(bod.data)
     
     yield
     while True:
         libgeoid.setshape(R, f)
 
-        lat_c, lon_c, rad_c = sph.data.next()
+        lat_c, lon_c, rad_c = next(sph.data)
         lat_d, lon_d, alt_d = libgeoid.center2datum(lat_c, lon_c, rad_c)
         geo.data.send((lat_d, lon_d, alt_d))
         yield (geo.ctrl.send((True,)),)
@@ -178,13 +178,13 @@ def sph2geo(bod, sph, geo):
                 outs=(), pros=()))
 def geo2sph(bod, sph, geo):
     """Geodetic to geocentric coordinates"""
-    R, f = bod.data.next()
+    R, f = next(bod.data)
     
     yield
     while True:
         libgeoid.setshape(R, f)
 
-        lat_d, lon_d, alt_d = geo.data.next()
+        lat_d, lon_d, alt_d = next(geo.data)
         lat_c, lon_c, rad_c = libgeoid.datum2center(lat_d, lon_d, alt_d)
         sph.data.send((lat_c, lon_c, rad_c))
         yield (sph.ctrl.send((True,)),)

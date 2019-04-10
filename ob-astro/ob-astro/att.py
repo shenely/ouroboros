@@ -32,12 +32,12 @@ rot = Type(".att#rot", libquat.rot,
                 outs=("o",), pros=("y_dot",)))
 def eulrot(bod, fun):
     """Euler"s rotation equations"""
-    eye, = bod.data.next()
+    eye, = next(bod.data)
     inv_eye = scipy.linalg.inv(eye)
 
     yield
     while True:
-        t, y = fun.data.next()
+        t, y = next(fun.data)
         
         (q, om) = y
         q_dot = libquat.mul(q, om / 2)
@@ -67,8 +67,8 @@ def triad(src, trg, rot):
     """Triad method"""
     yield
     while True:
-        r1_bar, r2_bar = src.data.next()
-        R1_bar, R2_bar = trg.data.next()
+        r1_bar, r2_bar = next(src.data)
+        R1_bar, R2_bar = next(trg.data)
         
         r3_bar = numpy.cross(r1_bar, r2_bar)
         R3_bar = numpy.cross(R1_bar, R2_bar)

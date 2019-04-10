@@ -23,7 +23,7 @@ def coroutine(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         gen = func(*args, **kwargs)
-        gen.next()
+        next(gen)
         return gen
     wrapper.__name__ = func.__name__
     wrapper.__dict__ = func.__dict__
@@ -36,7 +36,7 @@ def default(obj):
     try:
         return next({key: type.default(obj)}
                     for ((key, cls), type)
-                    in STONE.iteritems()
+                    in STONE.items()
                     if isinstance(obj, cls))
     except StopIteration:
         raise TypeError
@@ -46,7 +46,7 @@ def object_hook(dct):
     """Return value instead of the `dict`"""
     return next((type.object_hook(obj)
                  for ((key, cls), type)
-                 in STONE.iteritems()
+                 in STONE.items()
                  if key in dct), dct)
 
 
@@ -141,7 +141,7 @@ def iterdata(node, edge, item):
                               logging.debug("set data: %s=%s", key, pro)
                               or pro
                               for key, pro
-                              in itertools.izip(mode.data.sets, pros)
+                              in zip(mode.data.sets, pros)
                               if pro is not None}
                              if pros is not None
                              else {})
@@ -171,7 +171,7 @@ def iterctrl(node, edge, item):
         if len(mode.ctrl.sets) > 0:
             evs = (((logging.debug("set ctrl: %s=%s", key, out)
                      or item.ctrl.get(edge.ctrl.get(key, key)), out)
-                    for key, out in itertools.izip(mode.ctrl.sets, outs)
+                    for key, out in zip(mode.ctrl.sets, outs)
                     if out is not None)
                    if outs is not None
                    else ())
@@ -220,12 +220,12 @@ def run(task, model):
                        Edge(**task["maps"].get(arg, {})),
                        model[task["keys"][arg]])
              for (arg, node)
-             in img.nodes.iteritems()}
+             in img.nodes.items()}
     gen = img.proc(**faces)
     obj = Task(task["p"], gen)
     any(ev.cbs.append(obj)
-        for face in faces.itervalues()
-        for ev in face.ctrl.next() or ())
+        for face in faces.values()
+        for ev in next(face.ctrl) or ())
     return obj
 
 

@@ -36,8 +36,8 @@ def abs2rel(src, trg, ref):
     """Absolute to relative origin"""
     yield
     while True:
-        ref_bar, ref_t_bar = ref.data.next()
-        src_bar, src_t_bar = src.data.next()
+        ref_bar, ref_t_bar = next(ref.data)
+        src_bar, src_t_bar = next(src.data)
         
         trg_bar = src_bar - ref_bar
         trg_t_bar = src_t_bar - ref_t_bar
@@ -60,8 +60,8 @@ def rel2abs(src, trg, ref):
     """Relative to absolute origin"""
     yield
     while True:
-        ref_bar, ref_t_bar = ref.data.next()
-        trg_bar, trg_t_bar = trg.data.next()
+        ref_bar, ref_t_bar = next(ref.data)
+        trg_bar, trg_t_bar = next(trg.data)
         
         src_bar = trg_bar + ref_bar
         src_t_bar = trg_t_bar + ref_t_bar
@@ -84,8 +84,8 @@ def nrt2rot(nrt, rot, ax):
     """Inertial to rotating frame"""
     yield
     while True:
-        ax_bar, ax_t_bar = ax.data.next()
-        nrt_bar, nrt_t_bar = nrt.data.next()
+        ax_bar, ax_t_bar = next(ax.data)
+        nrt_bar, nrt_t_bar = next(nrt.data)
         
         #sin and cos
         th = scipy.linalg.norm(_bar)
@@ -128,8 +128,8 @@ def rot2nrt(nrt, rot, ax):
     """Rotating to inertial frame"""
     yield
     while True:
-        ax_bar, ax_t_bar = ax.data.next()
-        rot_bar, rot_t_bar = rot.data.next()
+        ax_bar, ax_t_bar = next(ax.data)
+        rot_bar, rot_t_bar = next(rot.data)
         
         #sin and cos
         th = scipy.linalg.norm(_bar)
@@ -176,9 +176,9 @@ def fun2obl(fun, obl, node, pole):
     """Fundamental to oblique plane"""
     yield
     while True:
-        n_bar, n_t_bar = node.data.next()
-        p_bar, p_t_bar = pole.data.next()
-        fun_bar, fun_t_bar = fun.data.next()
+        n_bar, n_t_bar = next(node.data)
+        p_bar, p_t_bar = next(pole.data)
+        fun_bar, fun_t_bar = next(fun.data)
         
         #vector triad
         t_bar = numpy.cross(p_bar, n_bar)
@@ -235,9 +235,9 @@ def obl2fun(fun, obl, node, pole):
     """Oblique to fundamental plane"""
     yield
     while True:
-        n_bar, n_t_bar = node.next()
-        p_bar, p_t_bar = pole.next()
-        obl_bar, obl_t_bar = obl.data.next()
+        n_bar, n_t_bar = next(node)
+        p_bar, p_t_bar = next(pole)
+        obl_bar, obl_t_bar = next(obl.data)
         
         #vector triad
         t_bar = numpy.cross(p_bar, n_bar)
@@ -282,7 +282,7 @@ def rec2sph(vec):
     """Rectangular to spherical coordinates"""
     yield
     while True:
-        _bar, = vec.data.next()
+        _bar, = next(vec.data)
         
         r = scipy.linalg.norm(_bar)
         az = math.atan2(_bar[1], _bar[0])
@@ -300,7 +300,7 @@ def sph2rec(vec):
     """Spherical to rectangular coordinates"""
     yield
     while True:
-        r, az, el = vec.data.next()
+        r, az, el = next(vec.data)
         
         cos_az = math.cos(az)
         sin_az = math.sin(az)

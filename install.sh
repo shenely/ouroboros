@@ -11,7 +11,7 @@ pip install ./dist/ob-math-0.1.tar.gz
 
 cd ../ob-astro
 python setup.py bdist_wheel
-pip install ./dist/ob_astro-0.1-cp27-cp27mu-linux_x86_64.whl
+pip install ./dist/ob_astro-0.1-cp35-cp35m-linux_x86_64.whl
 
 #cd ../ob-data
 #python setup.py sdist

@@ -39,7 +39,7 @@ def at(sys, usr):
     """at"""    
     yield
     while True:
-        sys_t, = sys.data.next()
+        sys_t, = next(sys.data)
         yield (usr.ctrl.send((sys_t,)),)
 
 
@@ -57,8 +57,8 @@ def after(env, sys, usr):
     """after"""
     yield
     while True:
-        env_t, = env.data.next()
-        delta_t, = sys.data.next()
+        env_t, = next(env.data)
+        delta_t, = next(sys.data)
         yield (usr.ctrl.send((env_t + delta_t,)),)
 
 
@@ -74,8 +74,8 @@ def after(env, sys, usr):
                 outs=("tock",), pros=()))
 def every(env, sys, usr):
     """every"""
-    env_t, = env.data.next()
-    delta_t, = sys.data.next()
+    env_t, = next(env.data)
+    delta_t, = next(sys.data)
     
     yield
     while True:
@@ -95,8 +95,8 @@ def relate(sys, usr):
     """relate"""
     evs = yield
     while True:
-        sys_t, = env.data.next()
-        usr_t, = usr.data.next()
+        sys_t, = next(env.data)
+        usr_t, = next(usr.data)
         yield (usr.ctrl.send((sys_t < usr_t,
                               sys_t == usr_t,
                               sys_t > usr_t)),)
@@ -112,8 +112,8 @@ def relate(sys, usr):
 def iso8601(sys, usr):
     evs = yield
     while True:
-        sys_t, = sys.data.next()
-        clk_e, usr_e = usr.ctrl.next()
+        sys_t, = next(sys.data)
+        clk_e, usr_e = next(usr.ctrl)
         flag = usr_e not in evs
         usr.data.send((datetime.datetime.fromtimestamp
                        (sys_t, tz=pytz.utc)

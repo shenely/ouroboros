@@ -41,7 +41,7 @@ logging.basicConfig(format="(%(asctime)s) [%(levelname)s] %(message)s",
 
 
 def parse_time(s):
-    assert isinstance(s, types.StringTypes)
+    assert isinstance(s, str)
     if s.lower() == "now":
         t = time.time()
     elif s.isdigit():
@@ -53,7 +53,7 @@ def parse_time(s):
 
 
 def parse_rate(s):
-    assert isinstance(s, types.BaseString)
+    assert isinstance(s, str)
     if s.lower() in "rt":
         x = 1.0
     else:
@@ -98,7 +98,7 @@ class DataHandler(ObRequestHandler):
         obj = [{"key": key,
                 "value": value}
                for (key, value)
-               in item.data.iteritems()]
+               in list(item.data.items())]
         s = json.dumps(obj, default=default)
         self.write(s)
 
@@ -134,14 +134,14 @@ class StreamHandler(tornado.websocket.WebSocketHandler,
                     "items": [{"key": name[1],
                                "data": [{"key": key, "value": value}
                                         for (key, value)
-                                        in item.data.iteritems()],
+                                        in list(item.data.items())],
                                "ctrl": [{"key": key, "value": ev in e}
                                         for (key, ev)
-                                        in item.ctrl.iteritems()]}
+                                        in list(item.ctrl.items())]}
                               for (name, item)
-                              in model[True, None].iteritems()
+                              in list(model[True, None].items())
                               if name[0] is False]}
-                   for (_id, model) in self.lake.iteritems()
+                   for (_id, model) in list(self.lake.items())
                    if name is not None]
         s = json.dumps(obj, default=default)
         self.write_message(s)
@@ -183,7 +183,7 @@ def main(pool, loop):
             # ... numeric events are added to clock
             loop.add_callback(any, (
                 heapq.heappush(z, (s, ev))
-                if not isinstance(s, types.BooleanType)
+                if not isinstance(s, bool)
                 else (any(q.append(cb)
                           for cb in ev.cbs)
                       if ev not in e
@@ -223,13 +223,13 @@ if __name__ == "__main__":
                                        if item is not None
                                        else None)
                                 for (name, item)
-                                in model["items"].iteritems()}
+                                in list(model["items"].items())}
                 for model in sim}
         logging.debug("done 1st pass")
         
         # second pass - reference externals
         any(lake[_id].update({name: lake[name[0]].get((False, name[1]))
-                              for name in lake[_id].iterkeys()
+                              for name in list(lake[_id].keys())
                               if name[0] in lake})
             for _id in lake)
         logging.debug("done 2nd pass")

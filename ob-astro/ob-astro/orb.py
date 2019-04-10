@@ -18,7 +18,7 @@ __all__ = ("ele",
            "unikep",
            "tle2sgp", "sgp4tle",
            "inv2law",
-           "rec2kep", "kep2rec",)
+           "rec2kep", "kep2rec",
            "apsis", "node", "pole")
 
 # constants
@@ -54,15 +54,15 @@ ele = Type(".orb#ele", OrbitalElements,
                 outs=(True,), pros=("r_bar", "v_bar")))
 def unikep(env, clk, bod, orb):
     """Universal Kepler formulation"""
-    env_t0, = env.data.next()
-    mu, = bod.data.next()
+    env_t0, = next(env.data)
+    mu, = next(bod.data)
 
     yield
     while True:
         libunikep.setmu(mu)
         
-        env_t, = env.data.next()
-        r_bar, v_bar = orb.data.next()
+        env_t, = next(env.data)
+        r_bar, v_bar = next(orb.data)
         
         r_bar, v_bar = libunikep.unikep(r_bar, v_bar, env_t - env_t0)
 
@@ -85,7 +85,7 @@ def unikep(env, clk, bod, orb):
 def tle2sgp(env, tle, sgp):
     """Two-line elements to simple general perturbation"""
     yield
-    two, = tle.data.next()
+    two, = next(tle.data)
     four = sgp4.io.twoline2rv(two[1], two[2],
                               sgp4.earth_gravity.wgs84)
     sgp.data.send((four,))
@@ -106,8 +106,8 @@ def sgp4tle(clk, sgp, orb):
     """Simple general perturbation for two-line elements"""
     yield
     while True:        
-        clk_t, = clk.data.next()
-        four, = sgp.data.next()
+        clk_t, = next(clk.data)
+        four, = next(sgp.data)
         r_bar, v_bar = four.propagate(clk_t.year, clk_t.month, clk_t.day,
                                       clk_t.hour, clk_t.minute,
                                       clk_t.second + clk_t.microsecond * MICRO)
@@ -124,13 +124,13 @@ def sgp4tle(clk, sgp, orb):
                 outs=(-2,), pros=("eps", "h_bar", "e_bar")))
 def inv2law(bod, orb):
     """Constants of motion"""
-    mu, = bod.data.next()
+    mu, = next(bod.data)
 
     yield
     while True:
         liborbele.setmu(mu)
 
-        r_bar, v_bar = orb.data.next()
+        r_bar, v_bar = next(orb.data)
         eps, h_bar, e_bar = liborbele.inv2law(r_bar, v_bar)
         orb.data.send((eps, h_bar, e_bar))
         yield (orb.ctrl.send((True,)),)
@@ -146,15 +146,15 @@ def inv2law(bod, orb):
                 outs=(6,), pros=("kep",)))
 def rec2kep(bod, orb):
     """State vectors to Kepler elements"""
-    mu, = bod.data.next()
+    mu, = next(bod.data)
 
     evs = yield
     while True:
         liborbele.setmu(mu)
 
-        orb_e, inv_e = orb.ctrl.next()
+        orb_e, inv_e = next(orb.ctrl)
         if orb_e in evs and inv_e in evs:
-            r_bar, v_bar, eps, h_bar, e_bar = orb.data.next()
+            r_bar, v_bar, eps, h_bar, e_bar = next(orb.data)
             kep = OrbitalElements(*liborbele.rec2kep
                                   (r_bar, v_bar,
                                    eps, h_bar, e_bar))
@@ -174,13 +174,13 @@ def rec2kep(bod, orb):
                 outs=(True,), pros=("r_bar", "v_bar")))
 def kep2rec(bod, orb):
     """Kepler elements to state vectors"""
-    mu, = bod.data.next()
+    mu, = next(bod.data)
 
     yield
     while True:
         liborbele.setmu(mu)
 
-        kep, = orb.data.next()
+        kep, = next(orb.data)
         r_bar, v_bar = liborbele.kep2rec(kep.sma, kep.ecc, kep.ta,
                                          kep.aop, kep.raan, kep.inc)
         orb.data.send((r_bar, v_bar))
@@ -203,12 +203,12 @@ def kep2rec(bod, orb):
                 pros=("tperi", "tapo")))
 def apsis(env, sys, clk, orb):
     """Apsis crossing"""
-    lim, tol = env.data.next()
+    lim, tol = next(env.data)
 
     yield
     while True:
-        t0,  = env.data.next() 
-        kep, = orb.data.next()
+        t0,  = next(env.data) 
+        kep, = next(orb.data)
 
         # periapsis and apoapsis
         tp = t0 + (2 * math.pi - kep.ma) / kep.mm
@@ -251,12 +251,12 @@ def apsis(env, sys, clk, orb):
                 pros=("tasc", "tdesc")))
 def node(env, sys, clk, orb):
     """Node crossing"""
-    lim, tol = env.data.next()
+    lim, tol = next(env.data)
 
     yield
     while True:
-        t0,  = env.data.next() 
-        kep, = orb.data.next()
+        t0,  = next(env.data) 
+        kep, = next(orb.data)
 
         # ascending node
         ta1 = 2 * (2 * math.pi - kep.aop
@@ -316,12 +316,12 @@ def node(env, sys, clk, orb):
                 pros=("tnorth", "tsouth")))
 def pole(env, sys, clk, orb):
     """Pole crossing"""
-    lim, tol = env.data.next()
+    lim, tol = next(env.data)
 
     yield
     while True:
-        t0,  = env.data.next() 
-        kep, = orb.data.next()
+        t0,  = next(env.data) 
+        kep, = next(orb.data)
         mm, ecc, aop, inc, ma = kep.mm, kep.ecc, kep.aop, kep.inc, kep.ma
 
         # north pole
