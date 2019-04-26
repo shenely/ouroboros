@@ -18,7 +18,7 @@ __all__ = ("rot",
 
 
 rot = Type(".att#rot", libquat.rot,
-           libquat._asdict,
+           libquat.rot._asdict,
            lambda x: libquat.rot(**x))
 
 

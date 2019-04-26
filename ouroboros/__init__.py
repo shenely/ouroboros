@@ -227,5 +227,3 @@ def run(task, model):
         for face in faces.values()
         for ev in next(face.ctrl) or ())
     return obj
-
-

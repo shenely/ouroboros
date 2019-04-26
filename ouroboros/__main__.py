@@ -2,22 +2,20 @@
 import sys
 import time
 import datetime
+import types
+import heapq
 import collections
 import functools
 import itertools
-import types
-import heapq
-import json
-import pickle
 import argparse
+import json
+import asyncio
 import logging
 
 # external libraries
-import tornado.gen
+import yaml
 import tornado.web
 import tornado.websocket
-import tornado.concurrent
-import tornado.ioloop
 
 # internal libraries
 from ouroboros import default, object_hook, Item, run
@@ -34,10 +32,6 @@ HIGH     = 10
 NORMAL   = 100
 LOW      = 1000
 TRIVIAL  = 10000
-
-logging.basicConfig(format="(%(asctime)s) [%(levelname)s] %(message)s",
-                    datefmt="%Y-%m-%dT%H:%M:%SL",
-                    level=logging.DEBUG)
 
 
 def parse_time(s):
@@ -58,7 +52,7 @@ def parse_rate(s):
         x = 1.0
     else:
         x = float(x)
-        assert x > 0.0
+        assert x >= 0.0
     return x
     
 
@@ -73,7 +67,7 @@ class FlagHandler(ObRequestHandler):
     def post(self):
         d = self.lake[None][True, None].data
         if d["f"].done():  # pause
-            d["f"] = tornado.concurrent.Future()
+            d["f"] = asyncio.Future()
         else:  # resume
             d["t"] = time.time()  # real time
             d["f"].set_result(True)
@@ -98,7 +92,7 @@ class DataHandler(ObRequestHandler):
         obj = [{"key": key,
                 "value": value}
                for (key, value)
-               in list(item.data.items())]
+               in item.data.items()]
         s = json.dumps(obj, default=default)
         self.write(s)
 
@@ -134,26 +128,29 @@ class StreamHandler(tornado.websocket.WebSocketHandler,
                     "items": [{"key": name[1],
                                "data": [{"key": key, "value": value}
                                         for (key, value)
-                                        in list(item.data.items())],
+                                        in item.data.items()],
                                "ctrl": [{"key": key, "value": ev in e}
                                         for (key, ev)
-                                        in list(item.ctrl.items())]}
+                                        in item.ctrl.items()]}
                               for (name, item)
-                              in list(model[True, None].items())
+                              in model[True, None].items()
                               if name[0] is False]}
-                   for (_id, model) in list(self.lake.items())
+                   for (_id, model) in self.lake.items()
                    if name is not None]
         s = json.dumps(obj, default=default)
         self.write_message(s)
 
-    
-@tornado.gen.coroutine
-def main(pool, loop):
+
+async def main(pool):
     """main loop"""
     pool[True, None].data["e"] = e = set()  # event set
     pool[True, None].data["q"] = q = collections.deque()  # task queue
     pool[True, None].data["z"] = z = []  # clock time
-    pool[True, None].data["f"] = tornado.concurrent.Future()
+    pool[True, None].data["f"] = asyncio.Future()
+    if pool[False, None].data["a"]:  # auto start
+        pool[True, None].data["t"] = time.time()
+        pool[True, None].data["f"].set_result(True)
+    await pool[True, None].data["f"]
 
     any(task.gen.send(e)
         for task in tasks)
@@ -163,9 +160,8 @@ def main(pool, loop):
                        pool[False, None].ctrl[False]))
     heapq.heappush(z, (t + sys.float_info.epsilon,  # main event
                        pool[False, None].ctrl[True]))
-        
+
     while True:
-        yield pool[True, None].data["f"]
         any(e.add(heapq.heappop(z)[1])
             for _ in z
             if z[0][0] <= t)
@@ -181,17 +177,17 @@ def main(pool, loop):
             # ... truthy events are recorded
             # ... falsey events are not recorded
             # ... numeric events are added to clock
-            loop.add_callback(any, (
-                heapq.heappush(z, (s, ev))
+            any(heapq.heappush(z, (s, ev))
                 if not isinstance(s, bool)
                 else (any(q.append(cb)
                           for cb in ev.cbs)
                       if ev not in e
                       else None)
                 or (not s or e.add(ev))
-                for (ev, s) in itertools.chain(*task.gen.send(e))))
-            yield
-        else:e.clear()
+                for (ev, s) in itertools.chain(*task.gen.send(e)))
+            await pool[True, None].data["f"]
+        else:
+            e.clear()
         T, t0, x = (pool[True, None].data["t"],
                     pool[False, None].data["t"],
                     pool[False, None].data["x"])
@@ -199,26 +195,36 @@ def main(pool, loop):
         if len(z) > 0 and x > 0.0:
             t = z[0][0]  # wall time
             T += (t - t0) / x  # real time
-            yield tornado.gen.sleep(T - time.time())
+            await asyncio.sleep(T - time.time())
             logging.debug("wall time: %.4f", t)
         else:
             T = time.time()  # real time
-            pool[True, None].data["f"] = tornado.concurrent.Future()
+            pool[True, None].data["f"] = asyncio.Future()
         pool[True, None].data["t"] = T  # real time
         pool[False, None].data["t"] = t  # wall time
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-t", "--time", type=parse_time, default=0.0)
-    parser.add_argument("-x", "--rate", type=parse_rate, default=1.0)
-    parser.add_argument("filename")
+    logging.basicConfig(format="(%(asctime)s) [%(levelname)s] %(message)s",
+                        datefmt="%Y-%m-%dT%H:%M:%SL",
+                        level=logging.DEBUG)
+
+    parser = argparse.ArgumentParser(prog="ouroboros")
+    parser.add_argument("-a", "--auto", action="store_true",
+                        help="auto start")
+    parser.add_argument("-t", "--time", type=parse_time, default=0.0,
+                        help="wall time")
+    parser.add_argument("-x", "--rate", type=parse_rate, default=1.0,
+                        help="clock rate")
+    parser.add_argument("filename",
+                        help="simulation definition (yaml)")
     ns = parser.parse_args()
-    
-    with open(ns.filename, "rb") as pkl:
-        sim = pickle.load(pkl)
+   
+    with open(ns.filename, "r") as stream:
+        sim = yaml.load(stream, Loader=yaml.Loader)
         
         # first pass - populate internals
+        logging.debug("1st pass - populate internals")
         lake = {model["name"]: {name: (Item(**item)
                                        if item is not None
                                        else None)
@@ -228,6 +234,7 @@ if __name__ == "__main__":
         logging.debug("done 1st pass")
         
         # second pass - reference externals
+        logging.debug("2nd pass - reference externals")
         any(lake[_id].update({name: lake[name[0]].get((False, name[1]))
                               for name in list(lake[_id].keys())
                               if name[0] in lake})
@@ -235,15 +242,16 @@ if __name__ == "__main__":
         logging.debug("done 2nd pass")
         
         # third pass - start tasks
+        logging.debug("3rd pass - start tasks")
         tasks = tuple(run(task, lake[model["name"]])
                       for model in sim
                       for task in model["procs"])
         logging.debug("done 3rd pass")
 
+    lake[None][False, None].data["a"] = ns.auto
     lake[None][False, None].data["t"] = ns.time
     lake[None][False, None].data["x"] = ns.rate
     
-    loop = tornado.ioloop.IOLoop.current()
     app = tornado.web.Application([
         (r"/ob-rest-api/flag", FlagHandler, {"lake": lake}),
         (r"/ob-rest-api/info", InfoHandler, {"lake": lake}),
@@ -252,4 +260,11 @@ if __name__ == "__main__":
         (r"/ob-io-stream/", StreamHandler, {"lake": lake})
         ], websocket_ping_interval=1)
     app.listen(8888)
-    loop.run_sync(functools.partial(main, lake[None], loop))
+
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(main(lake[None]))
+    except KeyboardInterrupt:
+        pass
+    finally:
+        loop.close()

@@ -26,6 +26,7 @@ setup(name='ob-astro',
                    libgeoid],
       install_requires=['ouroboros',
                         'ob-time',
+                        'ob-math',
                         'numpy',
                         'scipy',
                         'sgp4'])

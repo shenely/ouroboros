@@ -11,5 +11,6 @@ setup(name="ouroboros",
       package_dir={"ouroboros": "ouroboros"},
       packages=["ouroboros",
                 "ouroboros.ext"],
-      install_requires=["tornado"])
+      install_requires=["pyyaml",
+                        "tornado"])
 
