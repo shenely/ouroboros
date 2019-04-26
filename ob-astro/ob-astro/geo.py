@@ -139,8 +139,8 @@ def rose(usr):
 
 
         usr.data.send((E, N, Z))
-        yield usr.ctrl.send((True,))\
-
+        yield usr.ctrl.send((True,))
+        
 
 @Image("geo.sph2geo",
        bod=Node(evs=(), args=("R", "f"),

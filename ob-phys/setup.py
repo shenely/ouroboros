@@ -8,7 +8,7 @@ setup(name='ob-phys',
                    'ouroboros.lib': 'lib',
                    'ouroboros.test': 'test'},
       packages=['ouroboros.ext.phys',
-                'ouroboros.lib'
+                'ouroboros.lib',
                 'ouroboros.test'],
       install_requires=['ouroboros',
                         'ob-math',

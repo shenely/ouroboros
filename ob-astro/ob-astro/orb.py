@@ -1,5 +1,6 @@
 # built-in libraries
 import math
+import datetime
 import itertools
 import collections
 import logging
@@ -37,39 +38,6 @@ class OrbitalElements(collections.namedtuple
 ele = Type(".orb#ele", OrbitalElements,
            OrbitalElements._asdict,
            lambda x: OrbitalElements(**x))
-
-
-@Image(".orb@unikep",
-       env=Node(evs=(), args=("t",),
-                ins=(), reqs=("t",),
-                outs=(), pros=()),
-       clk=Node(evs=(True,), args=(),
-                ins=(), reqs=(),
-                outs=(), pros=()),
-       bod=Node(evs=(), args=("mu",),
-                ins=(), reqs=(),
-                outs=(), pros=()),
-       orb=Node(evs=(), args=(),
-                ins=(), reqs=("r_bar", "v_bar"),
-                outs=(True,), pros=("r_bar", "v_bar")))
-def unikep(env, clk, bod, orb):
-    """Universal Kepler formulation"""
-    env_t0, = next(env.data)
-    mu, = next(bod.data)
-
-    yield
-    while True:
-        libunikep.setmu(mu)
-        
-        env_t, = next(env.data)
-        r_bar, v_bar = next(orb.data)
-        
-        r_bar, v_bar = libunikep.unikep(r_bar, v_bar, env_t - env_t0)
-
-        orb.data.send((r_bar, v_bar))
-        yield (orb.ctrl.send((True,)),)
-        
-        env_t0 = env_t
 
  
 @Image(".orb@tle2sgp",
@@ -112,6 +80,38 @@ def sgp4tle(clk, sgp, orb):
                                       clk_t.hour, clk_t.minute,
                                       clk_t.second + clk_t.microsecond * MICRO)
         orb.data.send((r_bar, v_bar))
+        yield (orb.ctrl.send((True,)),)
+
+        
+@Image(".orb@ephem",
+       bod=Node(evs=(), args=(),
+                ins=(), reqs=(),
+                outs=(), pros=()),
+       orb=Node(evs=(), args=(),
+                ins=(), reqs=(),
+                outs=(), pros=()))
+def ephem(bod, orb):
+    """Constants of motion"""
+    f, = next(usr.data)
+    with open(f, "r") as ephem:
+        for line in ephem:
+            data = line.split()
+            
+            t1_dt = datetime.datetime.strptime(data[0], "%Y-%m-%dT%H:%M:%S.%f")
+            r1_bar = numpy.array(map(float, data[1:4]))
+            v1_bar = numpy.array(map(float, data[4:7]))
+
+            t0_dt, r0_bar, v0_bar = t1_dt, r1_bar, v1_bar
+            
+    mu, = next(bod.data)
+
+    yield
+    while True:
+        liborbele.setmu(mu)
+
+        r_bar, v_bar = next(orb.data)
+        eps, h_bar, e_bar = liborbele.inv2law(r_bar, v_bar)
+        orb.data.send((eps, h_bar, e_bar))
         yield (orb.ctrl.send((True,)),)
 
         

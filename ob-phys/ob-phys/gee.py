@@ -19,17 +19,18 @@ kin = Type(".gee#kin", libkin.kin,
            libkin.kin._asdict,
            lambda x: libkin.kin(**x))
 
+
 @Image(".gee@point",
        one=Node(evs=(), args=("m",),
                 ins=(), reqs=(),
                 outs=(), pros=()),
        two=Node(evs=(), args=("m",),
-                ins=(), reqs=(),
+                ins=(), reqs=("r_bar",),
                 outs=(), pros=()),
-       fun=Node(evs=("i",), args=(),
-                ins=(), reqs=("t", "y"),
-                outs=("o",), pros=("y_dot",)))
-def point(env, clk, bod, orb):
+       func=Node(evs=("i",), args=(),
+                 ins=(), reqs=("t", "y"),
+                 outs=("o",), pros=("y_dot",)))
+def point(one, two, func):
     """Point gravity"""
     m1, = next(one.data)
     m2, = next(two.data)
@@ -37,12 +38,14 @@ def point(env, clk, bod, orb):
 
     yield
     while True:
+        r2, = next(two.data)
         t, y = next(fun.data)
         
-        (r, v) = y
-        r_dot = v
-        v_dot = - mu * r / scipy.linalg.norm(r) ** 3
-        y_dot = libkin.kin(r_dot, v_dot)
+        (r1, v1) = y
+        d = r1 - r2
+        r1_dot = v1
+        v1_dot = - mu * d / scipy.linalg.norm(d) ** 3
+        y_dot = libkin.kin(r1_dot, v1_dot)
         
         fun.data.send((y_dot,))
         yield (fun.ctrl.send((False,)),)
