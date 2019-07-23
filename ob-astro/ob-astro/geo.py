@@ -2,7 +2,6 @@
 import math
 import datetime
 import itertools
-import logging
 
 # external libraries
 import numpy
@@ -25,6 +24,8 @@ O_BAR = numpy.array([0,0,0])
 I_HAT = numpy.array([1,0,0])
 J_HAT = numpy.array([0,1,0])
 K_HAT = numpy.array([0,0,1])
+
+GAS_CONSTANT = 8.314462618  # J/K/mol
 
 
 def dms2deg(d=0.0, m=0.0, s=0.0):
@@ -140,6 +141,64 @@ def rose(usr):
 
         usr.data.send((E, N, Z))
         yield usr.ctrl.send((True,))
+
+
+@Image("geo.std_atmo",
+       clk=Node(evs=(8601,), args=(),
+                ins=(), reqs=("t_dt",),
+                outs=(), pros=()),
+       sun=Node(evs=(), args=(),
+                ins=(), reqs=("f10p7",),
+                outs=(), pros=()),
+       geo=Node(evs=(), args=("R", "mu"),
+                ins=(), reqs=(),
+                outs=(), pros=("jdn", "ut",
+                               "jd", "jc")),
+       atmo=Node(evs=(), args=("M",),
+                ins=(), reqs=("f10p7",),
+                outs=(), pros=()),
+       usr=Node(evs=(), args=(),
+                ins=(), reqs=("alt",),
+                outs=(), pros=()))
+def std_atmo(clk, sun, geo, atmo, usr):
+    """Standard atmosphere"""
+    r, mu = next(geo.data)
+    M, = next(atmo.data)
+    R = GAS_CONSTANT / M
+    g0 = mu / r ** 2
+    C = g0 / R
+    
+    yield
+    while True:
+        alt, = next(usr.data)
+        h = alt * r / (alt + r)
+
+        h_base = 0.0  # tabulated
+        T_base = 0.0  # tabulated
+        T_grad = 0.0  # tabulated
+        p_base = 0.0  # tabulated
+        
+        delta_h = h - h_base
+        T = T_base + T_grad * delta_h
+
+        if T_grad == 0:
+            p = p_base * math.exp( - C * delta_h / T_base)
+        else:
+            p = p_base * (T_base / T) ** (C / T_grad)
+        
+        rho = p / R / T
+
+        # TODO: thermosphere
+        z = alt
+        T_base = 0.0  # tabulated
+        h_base = 0.0  # tabulated
+        z_base = h_base * r / (r - h_base)
+        T_inf = 500 + 3.4 * f10p7
+        s = math.log((T_inf - T0) / (T_inf - T_base)) / (z_base - z0)
+        T = T_inf - (T_inf - T0) * math.exp(- s * (z - z0))
+
+        atmo.data.send((rho, p, T))
+        yield (bod.ctrl.send((True,)),)
         
 
 @Image("geo.sph2geo",

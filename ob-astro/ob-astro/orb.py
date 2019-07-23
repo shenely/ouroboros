@@ -35,7 +35,7 @@ class OrbitalElements(collections.namedtuple
 
 
 # ele <-> JSON
-ele = Type(".orb#ele", OrbitalElements,
+ele = Type(".orb#ele", "!orb/ele", OrbitalElements,
            OrbitalElements._asdict,
            lambda x: OrbitalElements(**x))
 
@@ -76,9 +76,10 @@ def sgp4tle(clk, sgp, orb):
     while True:        
         clk_t, = next(clk.data)
         four, = next(sgp.data)
-        r_bar, v_bar = four.propagate(clk_t.year, clk_t.month, clk_t.day,
-                                      clk_t.hour, clk_t.minute,
-                                      clk_t.second + clk_t.microsecond * MICRO)
+        r_bar, v_bar = map(numpy.array,
+                           four.propagate(clk_t.year, clk_t.month, clk_t.day,
+                                          clk_t.hour, clk_t.minute,
+                                          clk_t.second + clk_t.microsecond * MICRO))
         orb.data.send((r_bar, v_bar))
         yield (orb.ctrl.send((True,)),)
 

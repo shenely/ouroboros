@@ -17,7 +17,7 @@ __all__= ("quat2rec", "rec2quat",
 KILO = 1e3
 MICRO = 1e-6
 
-quat = Type(".rot#quat", libquat.quat,
+quat = Type(".rot#quat", "!rot/quat", libquat.quat,
             lambda x: [x.one, x.bar],
             lambda x: libquat.quat(*x))
 

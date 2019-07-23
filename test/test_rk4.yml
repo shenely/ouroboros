@@ -30,8 +30,10 @@
       ctrl:
         - true
         - 8601
+    ? !!python/tuple [orb, test]
+    : null
   procs:
-    - p: 100,
+    - p: 100
       tag: .clock@every
       keys:
         env: !!python/tuple [null, null]
@@ -55,53 +57,78 @@
       keys:
         sys: !!python/tuple [null, null]
         usr: !!python/tuple [false, time]
-
       maps:
         usr:
           data: {}
           ctrl:
             tock: true
-- name: iss
+- name: earth
+  items:
+    ? !!python/tuple [false, null]
+    : data:
+        m: 5.97237e+24
+        r_bar: !math/vector [0.0, 0.0, 0.0]
+      ctrl: []
+  procs: []
+- name: orb
   items:
     ? !!python/tuple [null, null]
     : null
-    ? !!python/tuple [clock, time]
+    ? !!python/tuple [earth, null]
     : null
-    ? !!python/tuple [false, 2]
+    ? !!python/tuple [false, test]
     : data:
-        2:
-          - ISS (ZARYA)
-          - 1 25544U 98067A   19095.80969102  .00001614  00000-0  31745-4 0  9993
-          - 2 25544  51.6414 295.8524 0003435 262.6267 204.2868 15.54005638121106
-      ctrl: []
-    ? !!python/tuple [true, 4]
-    : data:
-        4: null
+        h: 5.0
+        m: 1.0
       ctrl:
-        - 4
-    ? !!python/tuple [false, rec]
+        - false
+        - true
+    ? !!python/tuple [true, state]
     : data:
-        r_bar: null
-        v_bar: null
+        m: 1.0
+        y: !phys/kin { r_bar: !math/vector [7000.0, 0.0, 0.0], v_bar: !math/vector [0.0, 7.0, 0.0] }
       ctrl:
-        - rec
+        - true
+    ? !!python/tuple [true, accum]
+    : data:
+        t: null
+        y: null
+        y_dot: null
+      ctrl:
+        - false
+        - true
+    ? !!python/tuple [true, gee]
+    : data:
+        t: null
+        y: null
+        y_dot: null
+      ctrl:
+        - false
+        - true
   procs:
     - p: 100
-      tag: .orb@tle2sgp
+      tag: .ode@rk4
       keys:
         env: !!python/tuple [null, null]
-        tle: !!python/tuple [false, 2]
-        sgp: !!python/tuple [true, 4]
+        sys: !!python/tuple [true, state]
+        fun: !!python/tuple [true, accum]
+        usr: !!python/tuple [false, test]
+      maps:
+        fun:
+          data:
+            f: y_dot
+          ctrl: {}
+    - p: 100
+      tag: .kin@accum
+      keys:
+        fun: !!python/tuple [true, accum]
+        gee: !!python/tuple [true, gee]
       maps: {}
     - p: 100
-      tag: .orb@sgp4tle
+      tag: .phys@gee
       keys:
-        clk: !!python/tuple [clock, time]
-        sgp: !!python/tuple [true, 4]
-        orb: !!python/tuple [false, rec]
-      maps:
-        orb:
-          data: {}
-          ctrl:
-            true: rec
+        one: !!python/tuple [false, test]
+        two: !!python/tuple [earth, null]
+        fun: !!python/tuple [true, gee]
+      maps: {}
     

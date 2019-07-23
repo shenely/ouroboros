@@ -11,16 +11,16 @@ from ouroboros import Image, Node
 __all__= ("euler", "heun", "rk4")
 
 
-@Image("ode.euler",
+@Image(".ode@euler",
        env=Node(evs=(True,), args=("t",),
                 ins=(True,), reqs=("t",),
                 outs=(), pros=()),
        sys=Node(evs=(), args=(),
                 ins=(), reqs=("y",),
                 outs=(True,), pros=("y",)),
-       fun=Node(evs=("o",), args=(),
+       fun=Node(evs=(False,), args=(),
                 ins=(), reqs=("f",),
-                outs=("i",), pros=("t", "y")),
+                outs=(True,), pros=("t", "y")),
        usr=Node(evs=(True, False), args=("h",),
                 ins=(True,), reqs=(),
                 outs=(True,), pros=()))
@@ -46,7 +46,6 @@ def euler(env, sys, fun, usr):
 
         # y[n+1] = y[n] + h * k
         sys.data.send((sys_y + fun_k * env_h,))
-        
         yield (sys.ctrl.send((True,)),
                usr.ctrl.send((env_t + usr_h,)
                              if env_e in evs
@@ -54,16 +53,16 @@ def euler(env, sys, fun, usr):
                              else None))
 
 
-@Image("ode.heun",
+@Image(".ode@heun",
        env=Node(evs=(True,), args=("t",),
                 ins=(True,), reqs=("t",),
                 outs=(), pros=()),
        sys=Node(evs=(), args=(),
                 ins=(), reqs=("y",),
                 outs=(True,), pros=("y",)),
-       fun=Node(evs=("o",), args=(),
+       fun=Node(evs=(False,), args=(),
                 ins=(), reqs=("f",),
-                outs=("i",), pros=("t", "y")),
+                outs=(True,), pros=("t", "y")),
        usr=Node(evs=(True, False), args=("h",),
                 ins=(True,), reqs=(),
                 outs=(True,), pros=()))
@@ -95,7 +94,6 @@ def heun(env, sys, fun, usr):
 
         # y[n+1] = y[n] + (h / 2) * (k[1] + k[2])
         sys.data.send((sys_y + (fun_k1 + fun_k2) * env_h / 2,))
-        
         yield (sys.ctrl.send((True,)),
                usr.ctrl.send((env_t + usr_h,)
                              if env_e in evs
@@ -103,22 +101,23 @@ def heun(env, sys, fun, usr):
                              else None))
 
 
-@Image("ode.rk4",
+@Image(".ode@rk4",
        env=Node(evs=(True,), args=("t",),
                 ins=(True,), reqs=("t",),
                 outs=(), pros=()),
        sys=Node(evs=(), args=(),
                 ins=(), reqs=("y",),
                 outs=(True,), pros=("y",)),
-       fun=Node(evs=("o",), args=(),
+       fun=Node(evs=(False,), args=(),
                 ins=(), reqs=("f",),
-                outs=("i",), pros=("t", "y")),
+                outs=(True,), pros=("t", "y")),
        usr=Node(evs=(True, False), args=("h",),
                 ins=(True,), reqs=(),
                 outs=(True,), pros=()))
 def rk4(env, sys, fun, usr):
     """The Runge-Kutta method"""
     env_t0, = next(env.data)
+    next(fun.data)
     usr_h, = next(usr.data)
     
     evs = yield
@@ -138,13 +137,14 @@ def rk4(env, sys, fun, usr):
 
         # k[2] = f(t[n] + h / 2, y[n] + h * k[1] / 2)
         fun.data.send((env_t + env_h / 2,
-                       sys_y + fun_k1 * env_h / 2))
-        yield (fun.ctrl.send((True,)),)
+                       sys_y + fun_k1 * (env_h / 2)))
+        yield (fun.ctrl.send((False,)),)
         fun_k2, = next(fun.data)
 
         # k[3] = f(t[n] + h / 2, y[n] + h * k[2] / 2)
-        fun.data.send((env_t + env_h / 2,sys_y + fun_k2 * env_h / 2))
-        yield (fun.ctrl.send((True,)),)
+        fun.data.send((env_t + env_h / 2,
+                       sys_y + fun_k2 * (env_h / 2)))
+        yield (fun.ctrl.send((False,)),)
         fun_k3, = next(fun.data)
 
         # k[4] = f(t[n] + h, y[n] + h * k[3])
@@ -154,9 +154,9 @@ def rk4(env, sys, fun, usr):
         fun_k4, = next(fun.data)
 
         # y[n+1] = y[n] + (h / 6) * (k[1] + 2 * k[2] + 2 * k[3] + k[4])
-        sys.data.send((sys_y + env_j * (fun_k1
-                                        + 2 * (fun_k2 + fun_k3)
-                                        + fun_k4) / 6,)) 
+        sys.data.send((sys_y + (fun_k1
+                                + (fun_k2 + fun_k3) * 2
+                                + fun_k4) * (env_h / 6),)) 
         yield (sys.ctrl.send((True,)),
                usr.ctrl.send((env_t + usr_h,)
                              if env_e in evs

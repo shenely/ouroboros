@@ -17,7 +17,7 @@ __all__ = ("rot",
 # ...
 
 
-rot = Type(".att#rot", libquat.rot,
+rot = Type(".att#rot", "!att/rot", libquat.rot,
            libquat.rot._asdict,
            lambda x: libquat.rot(**x))
 
@@ -26,9 +26,9 @@ rot = Type(".att#rot", libquat.rot,
        bod=Node(evs=(), args=("eye",),
                 ins=(), reqs=(),
                 outs=(), pros=()),
-       fun=Node(evs=("i",), args=(),
+       fun=Node(evs=(True,), args=(),
                 ins=(), reqs=("t", "y"),
-                outs=("o",), pros=("y_dot",)))
+                outs=(False,), pros=("y_dot",)))
 def eulrot(bod, fun):
     """Euler"s rotation equations"""
     eye, = next(bod.data)
@@ -39,7 +39,7 @@ def eulrot(bod, fun):
         t, y = next(fun.data)
         
         (q, om) = y
-        q_dot = libquat.mul(q, om / 2)
+        q_dot = q, * (om / 2)
         om_dot = - numpy.dot(
             inv_eye,
             numpy.cross(

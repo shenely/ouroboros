@@ -31,8 +31,8 @@ class kin(collections.namedtuple
     def __add__(self, other):
         """Addition"""
         if isinstance(other, kin):
-            return kin(self.r_bar * other.r_bar,
-                       self.v_bar * other.v_bar)
+            return kin(self.r_bar + other.r_bar,
+                       self.v_bar + other.v_bar)
         else:
             raise TypeError
 

@@ -1,29 +1,28 @@
-#built-in libraries
+# built-in libraries
 import datetime
 
-#external libraries
+# external libraries
 import pytz
 
-#internal libraries
+# internal libraries
 from ouroboros import Type, Image, Node
+from ouroboros.conf import MILLI, UNIX_EPOCH
 
-#exports
+# exports
 __all__= ("dt", "td",
           "at", "after", "every",
           "relate", "iso8601")
 
-#constants
-MILLI = 1e-3  # seconds
-
-UNIX_EPOCH = datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)
+# constants
+# ...
 
 # datetime.datetime <-> JSON
-dt = Type(".clock#dt", datetime.datetime,
+dt = Type(".clock#dt", "!clock/dt", datetime.datetime,
           lambda x: int((x - UNIX_EPOCH).total_seconds() / MILLI),
           lambda x: UNIX_EPOCH + datetime.timedelta(seconds=x * MILLI))
 
 # datetime.timedelta <-> JSON
-td = Type(".clock#td", datetime.timedelta,
+td = Type(".clock#td", "!clock/td", datetime.timedelta,
           lambda x: int(x.total_seconds() / MILLI),
           lambda x: datetime.timedelta(seconds=x * MILLI))
 
@@ -89,8 +88,8 @@ def every(env, sys, usr):
                 ins=(), reqs=("t",),
                 outs=(), pros=()),
        usr=Node(evs=(), args=(),
-                ins=("<", "=", ">"), reqs=("t",),
-                outs=("<", "=", ">"), pros=()))
+                ins=(), reqs=("t",),
+                outs=("lt", "eq", "gt"), pros=()))
 def relate(sys, usr):
     """relate"""
     evs = yield
