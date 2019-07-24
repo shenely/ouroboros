@@ -16,32 +16,29 @@ GRAVITY_CONST = 6.67808e-20  # km3/kg/s2
 
 
 @Image(".phys@gee",
-       one=Node(evs=(), args=("m",),
+       usr=Node(evs=(), args=("m",),
                 ins=(), reqs=(),
                 outs=(), pros=()),
+       one=Node(evs=(True,), args=(),
+                ins=(True,), reqs=("r_bar"),
+                outs=(False,), pros=("F_bar",)),
        two=Node(evs=(), args=("m",),
                 ins=(), reqs=("r_bar",),
-                outs=(), pros=()),
-       fun=Node(evs=(True,), args=(),
-                ins=(True,), reqs=("t", "y"),
-                outs=(False,), pros=("y_dot",)))
-def point(one, two, fun):
+                outs=(), pros=()))
+def point(usr, one, two):
     """Point gravity"""
-    m1, = next(one.data)
+    m1, = next(usr.data)
     m2, = next(two.data)
     mu = GRAVITY_CONST * m1 * m2  # m3/kg/s2
 
     evs = yield
     while True:
-        r2, = next(two.data)
-        t, y = next(fun.data)
+        r1_bar, = next(one.data)
+        r2_bar, = next(two.data)
         e, = next(fun.ctrl)
         
-        (r1, v1) = y
-        r = r1 - r2
-        r1_dot = v1
-        v1_dot = - mu *r / scipy.linalg.norm(r) ** 3
-        y_dot = libkin.kin(r1_dot, v1_dot)
+        r_bar = r1_bar - r2_bar
+        F_bar = - mu * r_bar / scipy.linalg.norm(r_bar) ** 3
         
-        fun.data.send((y_dot,))
+        fun.data.send((F_bar,))
         yield (fun.ctrl.send((e in evs,)),)

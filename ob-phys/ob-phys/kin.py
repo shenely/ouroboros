@@ -18,14 +18,18 @@ kin = Type(".phys#kin", "!phys/kin", libkin.kin,
 
 
 @Image(".kin@accum",
+       usr=Node(evs=(), args=("m",),
+                ins=(), reqs=(),
+                outs=(), pros=()),
        fun=Node(evs=(True,), args=(),
                 ins=(True,), reqs=("t", "y"),
                 outs=(False,), pros=("y_dot",)),
        kw=Node(evs=(False,), args=(),
-               ins=(), reqs=("y_dot",),
-               outs=(True,), pros=("t", "y")))
-def accum(fun, **kw):
+               ins=(), reqs=("F_bar",),
+               outs=(True,), pros=("t", "r_bar", "v_bar")))
+def accum(usr, fun, **kw):
     """Kinematic accumulator"""
+    m, = next(usr)
     all(next(sub.data)
         for sub in kw.values())
         
@@ -33,18 +37,17 @@ def accum(fun, **kw):
     while True:
         t, y = next(fun.data)
         e, = next(fun.ctrl)
-        (r, v) = y
-        a = numpy.zeros_like(v)
+        (r_bar, v_bar) = y
+        a_bar = numpy.zeros_like(v_bar)
 
         for sub in kw.values():
-            sub.data.send((t, y))
+            sub.data.send((t, r_bar, v_bar))
             yield (sub.ctrl.send((e in evs,)),)
-            y_dot, = next(sub.data)
+            F_bar, = next(sub.data)
             
-            (r_dot, v_dot) = y_dot
-            a += v_dot
+            a_bar += F_bar / m
         else:
-            y_dot = libkin.kin(v, a)
+            y_dot = libkin.kin(v_bar, a_bar)
             fun.data.send((y_dot,))
             yield (fun.ctrl.send((e in evs,)),)
             
