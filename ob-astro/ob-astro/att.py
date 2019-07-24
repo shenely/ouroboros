@@ -6,50 +6,13 @@ import numpy
 import scipy.linalg
 
 # internal libraries
-from ouroboros import Type, Image, Node
-from ouroboros.lib import libquat
+from ouroboros import Image, Node
 
 # exports
-__all__ = ("rot",
-           "eulrot", "triad")
+__all__ = ("triad",)
 
 # constants
 # ...
-
-
-rot = Type(".att#rot", "!att/rot", libquat.rot,
-           libquat.rot._asdict,
-           lambda x: libquat.rot(**x))
-
-
-@Image(".att@eulrot",
-       bod=Node(evs=(), args=("eye",),
-                ins=(), reqs=(),
-                outs=(), pros=()),
-       fun=Node(evs=(True,), args=(),
-                ins=(), reqs=("t", "y"),
-                outs=(False,), pros=("y_dot",)))
-def eulrot(bod, fun):
-    """Euler"s rotation equations"""
-    eye, = next(bod.data)
-    inv_eye = scipy.linalg.inv(eye)
-
-    yield
-    while True:
-        t, y = next(fun.data)
-        
-        (q, om) = y
-        q_dot = q, * (om / 2)
-        om_dot = - numpy.dot(
-            inv_eye,
-            numpy.cross(
-                om, numpy.dot(eye, om)
-            )
-        )
-        y_dot = libquat.rot(q_dot, om_dot)
-        
-        fun.data.send((y_dot,))
-        yield (fun.ctrl.send((False,)),)
 
 
 @Image(".att@triad",

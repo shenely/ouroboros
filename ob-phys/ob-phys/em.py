@@ -9,7 +9,7 @@ import scipy.linalg
 from ouroboros import Type, Image, Node
 
 # exports
-__all__ = ("accum",
+__all__ = ("force", "torque",
            "point", "e2pol", "m2pol")
 
 # constants
@@ -18,7 +18,7 @@ MAGNETIC_CONST = 4 * math.pi * 10e-7  # H/m
 ELECTRIC_CONST = 1 / MAGNETIC_CONST / SPEED_OF_LIGHT ** 2  # F/m
 
 
-@Image(".phys@em",
+@Image(".phys.em@force",
        usr=Node(evs=(), args=("q"),
                 ins=(), reqs=(),
                 outs=(), pros=()),
@@ -26,25 +26,56 @@ ELECTRIC_CONST = 1 / MAGNETIC_CONST / SPEED_OF_LIGHT ** 2  # F/m
                 ins=(True,), reqs=("t", "r_bar", "v_bar"),
                 outs=(False,), pros=("F_bar",)),
        kw=Node(evs=(False,), args=(),
-               ins=(), reqs=("r_bar",),
+               ins=(), reqs=("t", "r_bar", "v_bar"),
                outs=(True,), pros=("E_bar", "B_bar")))
-def accum(fun, **kw):
+def force(usr, fun, **kw):
     """Lorentz force"""
-    q, = next(usr)
+    q, = next(usr.data)
     
     evs = yield
     while True:
-        r_bar, v_bar = next(fun.data)
         e, = next(fun.ctrl)
+        t, r_bar, v_bar = next(fun.data)
         F_bar = numpy.zeros_like(v_bar)
 
         for sub in kw.values():
-            sub.data.send((r_bar,))
+            sub.data.send((t, r_bar, v_bar))
             yield (sub.ctrl.send((e in evs,)),)
             E_bar, B_bar = next(sub.data)
             F_bar += q * (E_bar + numpy.cross(v_bar, B_bar))
         else:
             fun.data.send((F_bar,))
+            yield (fun.ctrl.send((e in evs,)),)
+
+
+@Image(".phys.em@torque",
+       usr=Node(evs=(), args=("p_bar", "m_bar"),
+                ins=(), reqs=(),
+                outs=(), pros=()),
+       fun=Node(evs=(True,), args=(),
+                ins=(True,), reqs=("t", "r_bar", "v_bar"),
+                outs=(False,), pros=("M_bar",)),
+       kw=Node(evs=(False,), args=(),
+               ins=(), reqs=("t", "r_bar", "v_bar"),
+               outs=(True,), pros=("E_bar", "B_bar")))
+def torque(usr, fun, **kw):
+    """Dipole torques"""
+    p_bar, m_bar = next(usr.data)
+    
+    evs = yield
+    while True:
+        e, = next(fun.ctrl)
+        t, r_bar, v_bar = next(fun.data)
+        M_bar = numpy.zeros_like(v_bar)
+
+        for sub in kw.values():
+            sub.data.send((t, r_bar, v_bar))
+            yield (sub.ctrl.send((e in evs,)),)
+            E_bar, B_bar = next(sub.data)
+            M_bar += (numpy.cross(p_bar, E_bar) +
+                      numpy.cross(m_bar, B_bar))
+        else:
+            fun.data.send((M_bar,))
             yield (fun.ctrl.send((e in evs,)),)
 
 
