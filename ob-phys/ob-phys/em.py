@@ -1,5 +1,5 @@
 # built-in libraries
-# ...
+import math
 
 # external libraries
 import numpy
@@ -26,11 +26,13 @@ ELECTRIC_CONST = 1 / MAGNETIC_CONST / SPEED_OF_LIGHT ** 2  # F/m
                 ins=(True,), reqs=("t", "r_bar", "v_bar"),
                 outs=(False,), pros=("F_bar",)),
        kw=Node(evs=(False,), args=(),
-               ins=(), reqs=("t", "r_bar", "v_bar"),
-               outs=(True,), pros=("E_bar", "B_bar")))
+               ins=(), reqs=("E_bar", "B_bar"),
+               outs=(True,), pros=("t", "r_bar", "v_bar")))
 def force(usr, fun, **kw):
     """Lorentz force"""
     q, = next(usr.data)
+    all(next(sub.data)
+        for sub in kw.values())
     
     evs = yield
     while True:
@@ -80,79 +82,79 @@ def torque(usr, fun, **kw):
 
 
 @Image(".phys@que",
-       one=Node(evs=(True,), args=(),
-                ins=(True,), reqs=("r_bar"),
-                outs=(False,), pros=("E_bar",)),
-       two=Node(evs=(), args=("q",),
+       nil=Node(evs=(), args=("q",),
                 ins=(), reqs=("r_bar",),
-                outs=(), pros=()))
-def point(one, two):
+                outs=(), pros=()),
+       one=Node(evs=(True,), args=(),
+                ins=(True,), reqs=("r_bar",),
+                outs=(False,), pros=("E_bar",)))
+def point(nil, one):
     """Point charge"""
-    q, = next(two.data)
-    C = q / (4 * math.pi / ELECTRIC_CONST)  # N*m2/C2
+    C = 1 / (4 * math.pi / ELECTRIC_CONST)  # N*m2/C2
+    q, = next(usr.data)
 
     evs = yield
     while True:
+        r0_bar, = next(nil.data)
         r1_bar, = next(one.data)
-        r2_bar, = next(two.data)
         e, = next(one.ctrl)
         
-        r_bar = r1_bar - r2_bar
-        E_bar = - C * r_bar / scipy.linalg.norm(r_bar) ** 3
+        r_bar = r1_bar - r0_bar
+        E_bar = - C * q * r_bar / scipy.linalg.norm(r_bar) ** 3
         
-        usr.data.send((E_bar,))
-        yield (usr.ctrl.send((e in evs,)),)
+        one.data.send((E_bar,))
+        yield (one.ctrl.send((e in evs,)),)
 
 
 @Image(".phys@e2pol",
-       one=Node(evs=(True,), args=(),
-                ins=(True,), reqs=("r_bar"),
-                outs=(False,), pros=("E_bar",)),
-       two=Node(evs=(), args=("p_bar",),
+       nil=Node(evs=(), args=("p_bar",),
                 ins=(), reqs=("r_bar",),
-                outs=(), pros=()))
-def e2pol(one, two):
+                outs=(), pros=()),
+       one=Node(evs=(True,), args=(),
+                ins=(True,), reqs=("r_bar",),
+                outs=(False,), pros=("E_bar",)))
+def e2pol(nil, one):
     """Electric dipole"""
     C = 1 / (4 * math.pi / ELECTRIC_CONST)  # m/F
-    p_bar, = next(two.data)
+    p_bar, = next(nil.data)
 
     evs = yield
     while True:
+        r0_bar, = next(nil.data)
         r1_bar, = next(one.data)
-        r2_bar, = next(two.data)
         e, = next(one.ctrl)
         
-        r_bar = r1_bar - r2_bar
+        r_bar = r1_bar - r0_bar
         r = scipy.linalg.norm(r_bar)
         r_hat = r_bar / r
         B_bar = C * (3 * numpy.dot(p_bar, r_hat) * r_hat - p_bar) / r ** 3
         
-        usr.data.send((E_bar,))
-        yield (usr.ctrl.send((e in evs,)),)
+        one.data.send((E_bar,))
+        yield (one.ctrl.send((e in evs,)),)
 
 
 @Image(".phys@m2pol",
-       one=Node(evs=(True,), args=(),
-                ins=(True,), reqs=("r_bar"),
-                outs=(False,), pros=("B_bar",)),
-       two=Node(evs=(), args=("m_bar",),
+       nil=Node(evs=(), args=("m_bar",),
                 ins=(), reqs=("r_bar",),
-                outs=(), pros=()))
-def m2pol(one, two):
+                outs=(), pros=()),
+       one=Node(evs=(True,), args=(),
+                ins=(True,), reqs=("r_bar",),
+                outs=(False,), pros=("B_bar",)))
+def m2pol(nil, one):
     """Magnetic dipole"""
     C = MAGNETIC_CONST / (4 * math.pi)  # m/H
-    m_bar, = next(two.data)
+    m_bar, = next(nil.data)
 
     evs = yield
     while True:
+        r0_bar, = next(nil.data)
         r1_bar, = next(one.data)
-        r2_bar, = next(two.data)
         e, = next(one.ctrl)
         
-        r_bar = r1_bar - r2_bar
+        r_bar = r1_bar - r0_bar
         r = scipy.linalg.norm(r_bar)
         r_hat = r_bar / r
         B_bar = C * (3 * numpy.dot(m_bar, r_hat) * r_hat - m_bar) / r ** 3
         
-        usr.data.send((B_bar,))
-        yield (usr.ctrl.send((e in evs,)),)
+        one.data.send((B_bar,))
+        yield (one.ctrl.send((e in evs,)),)

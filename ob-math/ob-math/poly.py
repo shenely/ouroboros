@@ -20,7 +20,7 @@ poly = Type(".math#poly", "!math/poly", numpy.poly1d,
 
 
 @Image(".poly@eval",
-       usr=Item(evs=(True,), args=("poly",),
+       usr=Node(evs=(True,), args=("poly",),
                 ins=(), reqs=("x",),
                 outs=(False,), pros=("y",)))
 def eval(usr):
@@ -36,7 +36,7 @@ def eval(usr):
 
 
 @Image(".poly@roots",
-       usr=Item(evs=(True,), args=("poly",),
+       usr=Node(evs=(True,), args=("poly",),
                 ins=(), reqs=(),
                 outs=(False,), pros=("roots",)))
 def roots(usr):

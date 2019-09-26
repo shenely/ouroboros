@@ -16,7 +16,7 @@ __all__ = ("inc", "dec", "rand",
 
 
 @Image(".func@inc",
-       usr=Item(evs=(True,), args=("value",),
+       usr=Node(evs=(True,), args=("value",),
                 ins=(), reqs=(),
                 outs=(False,), pros=("value",)))
 def inc(usr):
@@ -31,7 +31,7 @@ def inc(usr):
 
 
 @Image(".func@dec",
-       usr=Item(evs=(True,), args=("value",),
+       usr=Node(evs=(True,), args=("value",),
                 ins=(), reqs=(),
                 outs=(False,), pros=("value",)))
 def dec(usr):
@@ -46,7 +46,7 @@ def dec(usr):
 
 
 @Image(".func@rand",
-       usr=Item(evs=(True,), args=(),
+       usr=Node(evs=(True,), args=(),
                 ins=(), reqs=(),
                 outs=(False,), pros=("value",)))
 def rand(usr):
@@ -59,10 +59,10 @@ def rand(usr):
 
 
 @Image(".func@delta",
-       fun=Item(evs=(True,), args=(),
+       fun=Node(evs=(True,), args=(),
                 ins=(True,), reqs=("t", "y"),
-                outs=(False,), pros=("y_dot",)),
-       usr=Item(evs=(True,), args=("t", "a"),
+                outs=(False,), pros=("f",)),
+       usr=Node(evs=(True,), args=("t", "a"),
                 ins=(), reqs=(),
                 outs=(), pros=()))
 def delta(fun, usr):
@@ -74,17 +74,17 @@ def delta(fun, usr):
         t, y = next(fun.data)
         e, = next(fun.ctrl)
         
-        y_dot = a if (t == t0) else 0
+        f = a if (t == t0) else 0
         
-        fun.data.send((y_dot,))
+        fun.data.send((f,))
         yield (fun.ctrl.send((e in evs,)),)
 
 
 @Image(".func@step",
-       fun=Item(evs=(True,), args=(),
+       fun=Node(evs=(True,), args=(),
                 ins=(True,), reqs=("t", "y"),
-                outs=(False,), pros=("y_dot",)),
-       usr=Item(evs=(True,), args=("t", "a"),
+                outs=(False,), pros=("f",)),
+       usr=Node(evs=(True,), args=("t", "a"),
                 ins=(), reqs=(),
                 outs=(), pros=()))
 def step(fun, usr):
@@ -96,17 +96,17 @@ def step(fun, usr):
         t, y = next(fun.data)
         e, = next(fun.ctrl)
         
-        y_dot = a if (t >= t0) else 0
+        f = a if (t >= t0) else 0
         
-        fun.data.send((y_dot,))
+        fun.data.send((f,))
         yield (fun.ctrl.send((e in evs,)),)
 
 
 @Image(".func@ramp",
-       fun=Item(evs=(True,), args=(),
+       fun=Node(evs=(True,), args=(),
                 ins=(True,), reqs=("t", "y"),
-                outs=(False,), pros=("y_dot",)),
-       usr=Item(evs=(True,), args=("t", "a"),
+                outs=(False,), pros=("f",)),
+       usr=Node(evs=(True,), args=("t", "a"),
                 ins=(), reqs=(),
                 outs=(), pros=()))
 def ramp(fun, usr):
@@ -118,7 +118,7 @@ def ramp(fun, usr):
         t, y = next(fun.data)
         e, = next(fun.ctrl)
         
-        y_dot = a * (t - t0) if (t >= t0) else 0
+        f = a * (t - t0) if (t >= t0) else 0
         
-        fun.data.send((y_dot,))
+        fun.data.send((f,))
         yield (fun.ctrl.send((e in evs,)),)
