@@ -36,14 +36,14 @@ def abs2rel(src, trg, ref):
     """Absolute to relative origin"""
     yield
     while True:
-        ref_bar, ref_t_bar = next(ref.data)
-        src_bar, src_t_bar = next(src.data)
+        ref_bar, ref_t_bar = ref.reqs
+        src_bar, src_t_bar = src.reqs
         
         trg_bar = src_bar - ref_bar
         trg_t_bar = src_t_bar - ref_t_bar
 
-        trg.data.send((trg_bar, trg_t_bar))
-        yield (trg.ctrl.send((True,)),)
+        trg.pros = trg_bar, trg_t_bar
+        yield (trg.outs((True,)),)
 
 
 @Image(".vec@rel2abs",
@@ -60,14 +60,14 @@ def rel2abs(src, trg, ref):
     """Relative to absolute origin"""
     yield
     while True:
-        ref_bar, ref_t_bar = next(ref.data)
-        trg_bar, trg_t_bar = next(trg.data)
+        ref_bar, ref_t_bar = ref.reqs
+        trg_bar, trg_t_bar = trg.reqs
         
         src_bar = trg_bar + ref_bar
         src_t_bar = trg_t_bar + ref_t_bar
 
-        src.data.send((src_bar, src_t_bar))
-        yield (src.ctrl.send((True,)),)
+        src.pros = nsrc_bar, src_t_bar
+        yield (src.outs((True,)),)
 
    
 @Image(".vec@nrt2rot",
@@ -84,8 +84,8 @@ def nrt2rot(nrt, rot, ax):
     """Inertial to rotating frame"""
     yield
     while True:
-        ax_bar, ax_t_bar = next(ax.data)
-        nrt_bar, nrt_t_bar = next(nrt.data)
+        ax_bar, ax_t_bar = ax.reqs
+        nrt_bar, nrt_t_bar = nrt.reqs
         
         #sin and cos
         th = scipy.linalg.norm(_bar)
@@ -111,8 +111,8 @@ def nrt2rot(nrt, rot, ax):
                                                  numpy.dot(ax_hat, nrt_t_bar)) +
                                        dot_th * ax_t_hat))
 
-        rot.data.send((rot_bar, rot_t_bar))
-        yield (rot.ctrl.send((True,)),)
+        rot.pros = rot_bar, rot_t_bar
+        yield (rot.outs((True,)),)
 
 
 @Image(".vec@rot2nrt",
@@ -128,8 +128,8 @@ def rot2nrt(nrt, rot, ax):
     """Rotating to inertial frame"""
     yield
     while True:
-        ax_bar, ax_t_bar = next(ax.data)
-        rot_bar, rot_t_bar = next(rot.data)
+        ax_bar, ax_t_bar = ax.reqs
+        rot_bar, rot_t_bar = rot.reqs
         
         #sin and cos
         th = scipy.linalg.norm(_bar)
@@ -155,8 +155,8 @@ def rot2nrt(nrt, rot, ax):
                                                  numpy.dot(ax_hat, rot_t_bar)) +
                                        dot_th * ax_t_hat))
 
-        rot.data.send((rot_bar, rot_t_bar))
-        yield (rot.ctrl.send((True,)),)
+        rot.pros = rot_bar, rot_t_bar
+        yield (rot.outs((True,)),)
 
 
 @Image(".vec@fun2obl",
@@ -176,9 +176,9 @@ def fun2obl(fun, obl, node, pole):
     """Fundamental to oblique plane"""
     yield
     while True:
-        n_bar, n_t_bar = next(node.data)
-        p_bar, p_t_bar = next(pole.data)
-        fun_bar, fun_t_bar = next(fun.data)
+        n_bar, n_t_bar = node.reqs
+        p_bar, p_t_bar = pole.reqs
+        fun_bar, fun_t_bar = fun.reqs
         
         #vector triad
         t_bar = numpy.cross(p_bar, n_bar)
@@ -214,8 +214,8 @@ def fun2obl(fun, obl, node, pole):
                                  numpy.dot(fun_t_bar, k_hat) +
                                  numpy.dot(fun_bar, k_t_hat)])
 
-        obl.data.send((obl_bar, obl_t_bar))
-        yield (obl.ctrl.send((True,)),)
+        obl.pros = obl_bar, obl_t_bar
+        yield (obl.outs((True,)),)
 
     
 @Image(".vec@obl2fun",
@@ -235,9 +235,9 @@ def obl2fun(fun, obl, node, pole):
     """Oblique to fundamental plane"""
     yield
     while True:
-        n_bar, n_t_bar = next(node)
-        p_bar, p_t_bar = next(pole)
-        obl_bar, obl_t_bar = next(obl.data)
+        n_bar, n_t_bar = node.reqs
+        p_bar, p_t_bar = pole.reqs
+        obl_bar, obl_t_bar = obl.reqs
         
         #vector triad
         t_bar = numpy.cross(p_bar, n_bar)
@@ -270,8 +270,8 @@ def obl2fun(fun, obl, node, pole):
                      obl_t_bar[1] * j_hat + obl_bar[1] * j_t_hat +
                      obl_t_bar[2] * k_hat + obl_bar[2] * k_t_hat)
 
-        fun.data.send((fun_bar, fun_t_bar))
-        yield (fun.ctrl.send((True,)),)
+        fun.pros = fun_bar, fun_t_bar
+        yield (fun.outs((True,)),)
 
     
 @Image(".vec@rec2sph",
@@ -282,14 +282,14 @@ def rec2sph(vec):
     """Rectangular to spherical coordinates"""
     yield
     while True:
-        _bar, = next(vec.data)
+        _bar, = vec.reqs
         
         r = scipy.linalg.norm(_bar)
         az = math.atan2(_bar[1], _bar[0])
         el = math.asin(_bar[2] / r)
 
-        vec.data.send((r, az, el))
-        yield (vec.ctrl.send((True,)),)
+        vec.pros = r, az, el
+        yield (vec.outs((True,)),)
 
     
 @Image(".vec@sph2rec",
@@ -300,7 +300,7 @@ def sph2rec(vec):
     """Spherical to rectangular coordinates"""
     yield
     while True:
-        r, az, el = next(vec.data)
+        r, az, el = vec.reqs
         
         cos_az = math.cos(az)
         sin_az = math.sin(az)
@@ -311,5 +311,5 @@ def sph2rec(vec):
                             r * sin_az * cos_el,
                             r * sin_el])
 
-        vec.data.send((_bar,))
-        yield (vec.ctrl.send((True,)),)
+        vec.pros = _bar,
+        yield (vec.outs((True,)),)

@@ -18,21 +18,21 @@ __all__ = ("nop", "eye")
        param=Node(evs=(True,), args=(),
                   ins=(), reqs=(),
                   outs=(False,), pros=()))
-def nop(arg):
+def nop(param):
     """No-op"""
     yield
     while True:
-        yield (param.ctrl.send((True,)),)
+        yield (param.outs((True,)),)
 
 
 @Image(".base@eye",
        param=Node(evs=(True,), args=(),
-                ins=(), reqs=("arg",),
-                outs=(False,), pros=("ret",)))
-def eye(arg, ret):
+                  ins=(), reqs=("arg",),
+                  outs=(False,), pros=("ret",)))
+def eye(param):
     """Identity function"""
     yield
     while True:
-        value, = next(param.data)
-        param.data.send((value,))
-        yield (param.ctrl.send((True,)),)
+        value, = param.reqs
+        param.pros = value,
+        yield (param.outs((True,)),)

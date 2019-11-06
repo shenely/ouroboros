@@ -25,14 +25,14 @@ poly = Type(".math#poly", "!math/poly", numpy.poly1d,
                 outs=(False,), pros=("y",)))
 def eval(usr):
     """Evaluate polynomial"""
-    poly, = next(usr.data)
+    poly, = usr.data
 
     yield
     while True:
-        x, = next(usr.data)
+        x, = usr.reqs
         y = poly(x)
-        usr.data.send((y,))
-        yield (usr.ctrl.send((True,)),)
+        usr.pros = y,
+        yield (usr.outs((True,)),)
 
 
 @Image(".poly@roots",
@@ -41,9 +41,9 @@ def eval(usr):
                 outs=(False,), pros=("roots",)))
 def roots(usr):
     """Roots of polynomial"""
-    poly, = next(usr.data)
+    poly, = usr.args
 
     yield
     roots = poly.roots
-    usr.data.send((roots,))
-    yield (usr.ctrl.send((True,)),)
+    usr.pros = roots,
+    yield (usr.outs((True,)),)

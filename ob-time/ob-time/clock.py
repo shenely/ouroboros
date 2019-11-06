@@ -38,8 +38,8 @@ def at(sys, usr):
     """at"""    
     yield
     while True:
-        sys_t, = next(sys.data)
-        yield (usr.ctrl.send((sys_t,)),)
+        sys_t, = sys.reqs
+        yield (usr.outs((sys_t,)),)
 
 
 @Image(".clock@after",
@@ -56,9 +56,9 @@ def after(env, sys, usr):
     """after"""
     yield
     while True:
-        env_t, = next(env.data)
-        delta_t, = next(sys.data)
-        yield (usr.ctrl.send((env_t + delta_t,)),)
+        env_t, = env.reqs
+        delta_t, = sys.reqs
+        yield (usr.outs((env_t + delta_t,)),)
 
 
 @Image(".clock@every",
@@ -68,19 +68,20 @@ def after(env, sys, usr):
        sys=Node(evs=("tick",), args=("delta_t",),
                 ins=(), reqs=(),
                 outs=("tick",), pros=()),
-       usr=Node(evs=(), args=(),
-                ins=(), reqs=(),
-                outs=("tock",), pros=()))
-def every(env, sys, usr):
+       kw=Node(evs=(), args=(),
+               ins=(), reqs=(),
+               outs=("tock",), pros=()))
+def every(env, sys, **kw):
     """every"""
-    env_t, = next(env.data)
-    delta_t, = next(sys.data)
+    env_t, = env.args
+    delta_t, = sys.args
     
     yield
     while True:
         env_t += delta_t
-        yield (sys.ctrl.send((env_t,)),
-               usr.ctrl.send((True,)))
+        yield ((sys.outs((env_t,)),) +
+               tuple(usr.outs((True,))
+                     for usr in kw.values()))
 
 
 @Image(".clock@relate",
@@ -94,11 +95,11 @@ def relate(sys, usr):
     """relate"""
     evs = yield
     while True:
-        sys_t, = next(env.data)
-        usr_t, = next(usr.data)
-        yield (usr.ctrl.send((sys_t < usr_t,
-                              sys_t == usr_t,
-                              sys_t > usr_t)),)
+        sys_t, = env.reqs
+        usr_t, = usr.reqs
+        yield (usr.outs((sys_t < usr_t,
+                         sys_t == usr_t,
+                         sys_t > usr_t)),)
 
 
 @Image(".clock@iso8601",
@@ -111,10 +112,10 @@ def relate(sys, usr):
 def iso8601(sys, usr):
     evs = yield
     while True:
-        sys_t, = next(sys.data)
-        clk_e, usr_e = next(usr.ctrl)
+        sys_t, = sys.reqs
+        clk_e, usr_e = usr.ins()
         flag = usr_e not in evs
-        usr.data.send((datetime.datetime.fromtimestamp
-                       (sys_t, tz=pytz.utc)
-                       if flag else None,))
-        yield (usr.ctrl.send((flag or None,)),)
+        if flag:
+            usr.pros = (datetime.datetime.fromtimestamp
+                        (sys_t, tz=pytz.utc),)
+        yield (usr.outs((flag or None,)),)

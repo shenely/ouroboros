@@ -15,7 +15,7 @@
       ctrl:
         - false
         - true
-        - 1
+        - tick
         - 8601
   procs: []
 - name: clock
@@ -53,7 +53,7 @@
         usr:
           data: {}
           ctrl:
-            tock: 1
+            tock: tick
     - p: 100,
       tag: .clock@iso8601
       keys:
@@ -63,7 +63,7 @@
         usr:
           data: {}
           ctrl:
-            tock: 1
+            tock: tick
 - name: earth
   items:
     ? !!python/tuple [false, null]
@@ -150,7 +150,7 @@
         env:
           data: {}
           ctrl:
-            true: 1
+            true: tick
     - p: 100
       tag: .ode@rk4
       keys:

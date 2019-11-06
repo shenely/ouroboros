@@ -29,8 +29,8 @@ def triad(src, trg, rot):
     """Triad method"""
     yield
     while True:
-        r1_bar, r2_bar = next(src.data)
-        R1_bar, R2_bar = next(trg.data)
+        r1_bar, r2_bar = src.reqs
+        R1_bar, R2_bar = trg.reqs
         
         r3_bar = numpy.cross(r1_bar, r2_bar)
         R3_bar = numpy.cross(R1_bar, R2_bar)
@@ -46,6 +46,6 @@ def triad(src, trg, rot):
         R_mat = numpy.column_stack((S_bar, M_bar, S_cross_M))
         A_mat = numpy.dot(R_mat, numpy.transpose(r_mat))
         
-        rot.data.send((A_mat,))
-        yield (rot.ctrl.send((True,)),)
+        rot.pros = A_mat,
+        yield (rot.outs((True,)),)
     

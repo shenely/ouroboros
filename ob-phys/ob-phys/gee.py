@@ -27,18 +27,18 @@ GRAVITY_CONST = 6.67808e-11  # m3/kg/s2
                 outs=(False,), pros=("F_bar",)))
 def point(usr, nil, one):
     """Point gravity"""
-    m1, = next(usr.data)
-    m0, = next(nil.data)
+    m1, = usr.args
+    m0, = nil.args
     mu = GRAVITY_CONST * m0 * m1  # m3/kg/s2
 
     evs = yield
     while True:
-        r0_bar, = next(nil.data)
-        r1_bar, = next(one.data)
-        e, = next(one.ctrl)
+        r0_bar, = nil.reqs
+        r1_bar, = one.reqs
+        e, = one.ins()
         
         r_bar = r1_bar - r0_bar
         F_bar = - mu * r_bar / scipy.linalg.norm(r_bar) ** 3
         
-        one.data.send((F_bar,))
-        yield (one.ctrl.send((e in evs,)),)
+        one.pros = F_bar,
+        yield (one.outs((e in evs,)),)

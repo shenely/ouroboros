@@ -36,27 +36,25 @@ rot = Type(".phys#rot", "!phys/rot", libquat.rot,
                outs=(True,), pros=("t", "r_bar", "v_bar")))
 def force(usr, fun, **kw):
     """Force accumulator"""
-    m, = next(usr.data)
-    all(next(sub.data)
-        for sub in kw.values())
+    m, = usr.args
         
     evs = yield
     while True:
-        t, y = next(fun.data)
-        e, = next(fun.ctrl)
+        t, y = fun.reqs
+        e, = fun.ins()
         (r, v) = y
         F = numpy.zeros_like(v)
 
         for sub in kw.values():
-            sub.data.send((t, r, v))
-            yield (sub.ctrl.send((e in evs,)),)
-            F += next(next(sub.data))
+            sub.pros = t, r, v
+            yield (sub.outs((e in evs,)),)
+            F += next(sub.reqs)
         else:
             a = F / m
             y_dot = libkin.kin(v, a)
             
-            fun.data.send((y_dot,))
-            yield (fun.ctrl.send((e in evs,)),)
+            fun.pros = y_dot,
+            yield (fun.outs((e in evs,)),)
 
 
 @Image(".phys@torque",
@@ -71,29 +69,27 @@ def force(usr, fun, **kw):
                outs=(True,), pros=("t", "q", "om")))
 def torque(usr, fun, **kw):
     """Torque accumulator"""
-    eye, = next(usr.data)
+    eye, = usr.args
     inv_eye = scipy.linalg.inv(eye)
-    all(next(sub.data)
-        for sub in kw.values())
         
     evs = yield
     while True:
-        t, y = next(fun.data)
-        e, = next(fun.ctrl)
+        t, y = fun.reqs
+        e, = fun.ins()
         (q, om) = y
         M = - numpy.cross(om, numpy.dot(eye, om))
 
         for sub in kw.values():
-            sub.data.send((t, q, om))
-            yield (sub.ctrl.send((e in evs,)),)
-            M += next(next(sub.data))
+            sub.pros = t, q, om
+            yield (sub.outs((e in evs,)),)
+            M += next(sub.reqs)
         else:
             q_dot = q * (om / 2)
             om_dot = numpy.dot(inv_eye, M)
             y_dot = libquat.rot(q_dot, om_dot)
             
-            fun.data.send((y_dot,))
-            yield (fun.ctrl.send((e in evs,)),)
+            fun.pros = y_dot,
+            yield (fun.outs((e in evs,)),)
 
 
 @Image(".phys@lerp",
@@ -111,23 +107,22 @@ def torque(usr, fun, **kw):
                 outs=(True,), pros=("t",)))
 def lerp(env, sys, fun, clk):
     """Cubic Hermite spline"""
-    sys_t, sys_y1 = next(sys.data)
-    next(fun.data)
-    clk_h, = next(clk.data)
+    sys_t, sys_y1 = sys.args
+    clk_h, = clk.args
     
     evs = yield
     while True:
-        env_t, = next(env.data)
-        sys_data = next(sys.data)
-        sys_e, = next(sys.ctrl)
+        env_t, = env.reqs
+        sys_data = sys.reqs
+        sys_e, = sys.ins()
         if env_t >= sys_t or sys_e in evs:
             if sys_e in evs:
                 sys_t, sys_y1 = sys_data
-            fun.data.send((env_t, sys_y1))
-            clk.data.send((env_t + clk_h,))
-            yield (clk.ctrl.send((True,)),)
+            fun.pros = env_t, sys_y1
+            clk.pros = env_t + clk_h,
+            yield (clk.outs((True,)),)
             sys_y0 = sys_y1
-            sys_t, sys_y1 = next(fun.data)
+            sys_t, sys_y1 = fun.reqs
         
         p0, m0 = sys_y0
         p1, m1 = sys_y1
@@ -152,8 +147,8 @@ def lerp(env, sys, fun, clk):
              g11 * m1)
         
         sys_y = libkin.kin(p, m)
-        sys.data.send((env_t, sys_y))
-        yield (sys.ctrl.send((True,)),)
+        sys.pros = env_t, sys_y
+        yield (sys.outs((True,)),)
 
 
 @Image(".phys@slerp",
@@ -171,23 +166,22 @@ def lerp(env, sys, fun, clk):
                 outs=(True,), pros=("t",)))
 def slerp(env, sys, fun, clk):
     """Spherical cubic interpolation"""
-    sys_t, sys_y1 = next(sys.data)
-    next(fun.data)
-    clk_h, = next(clk.data)
+    sys_t, sys_y1 = sys.args
+    clk_h, = clk.args
     
     evs = yield
     while True:
-        env_t, = next(env.data)
-        sys_data = next(sys.data)
-        sys_e, = next(sys.ctrl)
+        env_t, = env.reqs
+        sys_data = sys.reqs
+        sys_e, = sys.ins()
         if env_t >= sys_t or sys_e in evs:
             if sys_e in evs:
                 sys_t, sys_y1 = sys_data
-            fun.data.send((env_t, sys_y1))
-            clk.data.send((env_t + clk_h,))
-            yield (clk.ctrl.send((True,)),)
+            fun.pros = env_t, sys_y1
+            clk.pros = env_t + clk_h,
+            yield (clk.outs((True,)),)
             sys_y0 = sys_y1
-            sys_t, sys_y1 = next(fun.data)
+            sys_t, sys_y1 = fun.reqs
             
         q0, om0 = sys_y0
         q1, om1 = sys_y1
@@ -217,5 +211,5 @@ def slerp(env, sys, fun, clk):
         om = 2 * (~q) * q_dot
         
         sys_y = libquat.rot(q, om)
-        sys.data.send((env_t, sys_y))
-        yield (sys.ctrl.send((True,)),)
+        sys.pros = env_t, sys_y
+        yield (sys.outs((True,)),)

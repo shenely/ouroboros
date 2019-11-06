@@ -25,8 +25,6 @@ I_HAT = numpy.array([1,0,0])
 J_HAT = numpy.array([0,1,0])
 K_HAT = numpy.array([0,0,1])
 
-GAS_CONSTANT = 8.314462618  # J/K/mol
-
 
 def dms2deg(d=0.0, m=0.0, s=0.0):
     return d + (m + s / 60.0) / 60.0
@@ -62,7 +60,7 @@ def jd(clk, bod):
     """Julian date"""
     yield
     while True:
-        t_dt, = next(clk.data)
+        t_dt, = clk.reqs
         
         s = (t_td - JD_EPOCH).total_seconds()
         rjd, ut = divmod(s / 3600, 24)
@@ -70,8 +68,8 @@ def jd(clk, bod):
         jd = jdn + ut / 24
         jc = (jdn - J2000_OFFSET) / 36525
 
-        bod.data.send((jdn, ut, jd, jc))
-        yield (bod.ctrl.send((True,)),)
+        bod.pros = jdn, ut, jd, jc
+        yield (bod.outs((True,)),)
 
 @Image("geo.st",
        bod=Node(evs=(), args=(),
@@ -84,7 +82,7 @@ def st(bod, usr):
     """Sidereal time"""
     yield
     while True:
-        jc, ut = next(bod.data)
+        jc, ut = bod.reqs
         
         gst0 = (100.4606184 +
                 (36000.77004 +
@@ -92,10 +90,10 @@ def st(bod, usr):
                   2.583e-8 * jc) * jc) * jc)
         gst = gst0 + 360.98564724 * ut / 24
 
-        bod.data.send((math.radians(gst % 360),))
-        usr.data.send((math.radians((gst + lon) % 360),))
-        yield (bod.ctrl.send((True,)),
-               usr.ctrl.send((True,)))
+        bod.pros = math.radians(gst % 360),
+        usr.pros = math.radians((gst + lon) % 360),
+        yield (bod.outs((True,)),
+               usr.outs((True,)))
 
 
 @Image("geo.axis",
@@ -106,7 +104,7 @@ def ax(bod):
     """Rotation axis"""
     yield
     while True:
-        jc, gst = next(bod.data)
+        jc, gst = bod.reqs
         
         obl = (dms2deg(23, 26, 21.45) -
                (dms2deg(s=46.815) +
@@ -117,8 +115,8 @@ def ax(bod):
         th_bar = gst * k_hat
         om_bar = 360.98564724 / (24 * 60 * 60) * k_hat
 
-        bod.data.send((math.radians(obl % 360), th_bar, om_bar))
-        yield (bod.ctrl.send((True,)),)
+        bod.pros = math.radians(obl % 360), th_bar, om_bar
+        yield (bod.outs((True,)),)
 
 @Image("geo.rose",
        usr=Node(evs=("geo",), args=(),
@@ -128,7 +126,7 @@ def rose(usr):
     """Compass rose"""
     yield
     while True:
-        lat, lon = next(usr.data)
+        lat, lon = usr.reqs
         clon = math.cos(lon)
         slon = math.sin(lon)
         clat = math.cos(lat)
@@ -139,8 +137,8 @@ def rose(usr):
         Z = (I_HAT * clon + J_HAT * slon) * clat + K_HAT * slat
 
 
-        usr.data.send((E, N, Z))
-        yield usr.ctrl.send((True,))
+        usr.pros = E, N, Z
+        yield usr.outs((True,))
 
 
 @Image("geo.std_atmo",
@@ -162,15 +160,15 @@ def rose(usr):
                 outs=(), pros=()))
 def std_atmo(clk, sun, geo, atmo, usr):
     """Standard atmosphere"""
-    r, mu = next(geo.data)
-    M, = next(atmo.data)
+    r, mu = geo.args
+    M, = atmo.args
     R = GAS_CONSTANT / M
     g0 = mu / r ** 2
     C = g0 / R
     
     yield
     while True:
-        alt, = next(usr.data)
+        alt, = usr.reqs
         h = alt * r / (alt + r)
 
         h_base = 0.0  # tabulated
@@ -197,8 +195,8 @@ def std_atmo(clk, sun, geo, atmo, usr):
         s = math.log((T_inf - T0) / (T_inf - T_base)) / (z_base - z0)
         T = T_inf - (T_inf - T0) * math.exp(- s * (z - z0))
 
-        atmo.data.send((rho, p, T))
-        yield (bod.ctrl.send((True,)),)
+        atmo.pros = rho, p, T
+        yield (bod.outs((True,)),)
         
 
 @Image("geo.sph2geo",
@@ -213,16 +211,16 @@ def std_atmo(clk, sun, geo, atmo, usr):
                 outs=("geo",), pros=("lat", "lon", "alt")))
 def sph2geo(bod, sph, geo):
     """Geocentric to geodetic coordinates"""
-    R, f = next(bod.data)
+    R, f = bod.args
     
     yield
     while True:
         libgeoid.setshape(R, f)
 
-        lat_c, lon_c, rad_c = next(sph.data)
+        lat_c, lon_c, rad_c = sph.reqs
         lat_d, lon_d, alt_d = libgeoid.center2datum(lat_c, lon_c, rad_c)
-        geo.data.send((lat_d, lon_d, alt_d))
-        yield (geo.ctrl.send((True,)),)
+        geo.pros = lat_d, lon_d, alt_d
+        yield (geo.outs((True,)),)
 
 
 @Image("geo.geo2sph",
@@ -237,13 +235,13 @@ def sph2geo(bod, sph, geo):
                 outs=(), pros=()))
 def geo2sph(bod, sph, geo):
     """Geodetic to geocentric coordinates"""
-    R, f = next(bod.data)
+    R, f = bod.args
     
     yield
     while True:
         libgeoid.setshape(R, f)
 
-        lat_d, lon_d, alt_d = next(geo.data)
+        lat_d, lon_d, alt_d = geo.reqs
         lat_c, lon_c, rad_c = libgeoid.datum2center(lat_d, lon_d, alt_d)
-        sph.data.send((lat_c, lon_c, rad_c))
-        yield (sph.ctrl.send((True,)),)
+        sph.pros = lat_c, lon_c, rad_c
+        yield (sph.outs((True,)),)

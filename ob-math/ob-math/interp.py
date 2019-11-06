@@ -40,17 +40,17 @@ def near(sys, usr):
 
     yield
     while True:
-        e, = next(sys.ctrl)
+        e, = sys.ins()
         if e:
-            x, y = next(sys.data)
+            x, y = sys.reqs
             q.append((x, y))
 
-        e, = next(usr.ctrl)
+        e, = usr.ins()
         if e:
-            x, = next(usr.data)
+            x, = usr.reqs
             x, y = min(q, key=lambda a, b: abs(x - a))
-            usr.data.send((y,))
-            yield (usr.ctrl.send((True,)),)
+            usr.pros = y,
+            yield (usr.outs((True,)),)
 
 
 @Image(".interp@lin",
@@ -66,17 +66,17 @@ def lin(sys, usr):
 
     yield
     while True:
-        e, = next(sys.ctrl)
+        e, = sys.ins()
         if e:
-            x, y = next(sys.data)
+            x, y = sys.reqs
             q.append((x, y))
 
-        e, = next(usr.ctrl)
+        e, = usr.ins()()
         if e:
-            x, = next(usr.data)
+            x, = usr.reqs
             (x0, y0), (x1, y1) = (heapq.nsmallest
                                   (2, q, key=lambda a, b: abs(x - a)))
             t = (x - x0) / (x1 - x0)
             y = (1 - t) * y0 + t * y
-            usr.data.send((y,))
-            yield (usr.ctrl.send((True,)),)
+            usr.pros = y,
+            yield (usr.outs((True,)),)

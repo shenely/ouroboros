@@ -21,13 +21,13 @@ __all__ = ("inc", "dec", "rand",
                 outs=(False,), pros=("value",)))
 def inc(usr):
     """Increment"""
-    value, = next(usr.data)
+    value, = usr.args
 
     yield
     while True:
         value += 1
-        usr.data.send((value,))
-        yield (usr.ctrl.send((True,)),)
+        usr.pros = value,
+        yield (usr.outs((True,)),)
 
 
 @Image(".func@dec",
@@ -36,13 +36,13 @@ def inc(usr):
                 outs=(False,), pros=("value",)))
 def dec(usr):
     """Decrement"""
-    value, = next(usr.data)
+    value, = usr.args
 
     yield
     while True:
         value -= 1
-        usr.data.send((value,))
-        yield (usr.ctrl.send((True,)),)
+        usr.pros = value,
+        yield (usr.outs((True,)),)
 
 
 @Image(".func@rand",
@@ -50,12 +50,12 @@ def dec(usr):
                 ins=(), reqs=(),
                 outs=(False,), pros=("value",)))
 def rand(usr):
-    """Random"""    
+    """Random"""
     yield
     while True:
         value = random.random()
-        usr.data.send((value,))
-        yield (usr.ctrl.send((True,)),)
+        usr.pros = value,
+        yield (usr.outs((True,)),)
 
 
 @Image(".func@delta",
@@ -67,17 +67,17 @@ def rand(usr):
                 outs=(), pros=()))
 def delta(fun, usr):
     """Delta function"""
-    t0, a = next(usr)
-        
+    t0, a = usr.args
+    
     evs = yield
     while True:
-        t, y = next(fun.data)
-        e, = next(fun.ctrl)
+        t, y = fun.reqs
+        e, = fun.ins()
         
         f = a if (t == t0) else 0
         
-        fun.data.send((f,))
-        yield (fun.ctrl.send((e in evs,)),)
+        fun.pros = f,
+        yield (fun.outs((e in evs,)),)
 
 
 @Image(".func@step",
@@ -89,17 +89,17 @@ def delta(fun, usr):
                 outs=(), pros=()))
 def step(fun, usr):
     """Step function"""
-    t0, a = next(usr)
-        
+    t0, a = usr.args
+    
     evs = yield
     while True:
-        t, y = next(fun.data)
-        e, = next(fun.ctrl)
+        t, y = fun.reqs
+        e, = fun.ins()
         
         f = a if (t >= t0) else 0
         
-        fun.data.send((f,))
-        yield (fun.ctrl.send((e in evs,)),)
+        fun.pros = f,
+        yield (fun.outs((e in evs,)),)
 
 
 @Image(".func@ramp",
@@ -111,14 +111,14 @@ def step(fun, usr):
                 outs=(), pros=()))
 def ramp(fun, usr):
     """Ramp function"""
-    t0, a = next(usr)
-        
+    t0, a = usr.data
+    
     evs = yield
     while True:
-        t, y = next(fun.data)
-        e, = next(fun.ctrl)
+        t, y = fun.reqs
+        e, = fun.ins()
         
         f = a * (t - t0) if (t >= t0) else 0
         
-        fun.data.send((f,))
-        yield (fun.ctrl.send((e in evs,)),)
+        fun.pros = f,
+        yield (fun.outs((e in evs,)),)

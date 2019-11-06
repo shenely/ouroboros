@@ -17,6 +17,8 @@ __all__ = ("init",)
 def init():
     parser = argparse.ArgumentParser(prog="ouroboros")
 
+    parser.add_argument("-v", "--verbose", action="count",
+                        help="verbose output")
     parser.add_argument("-a", "--auto", action="store_true",
                         help="auto start")
     parser.add_argument("-t", "--time", type=parse_time, default=0.0,

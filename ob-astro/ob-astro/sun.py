@@ -27,7 +27,7 @@ def f10p7(clk, sun):
     libsolar.getdata()
     yield
     while True:
-        t_dt, = next(clk.data)
+        t_dt, = clk.reqs
         f10p7 = libsolar.f10p7(t_dt)
-        sun.data.send((f10p7,))
-        yield (sun.ctrl.send((True,)),)
+        sun.pros = f10p7,
+        yield (sun.outs((True,)),)

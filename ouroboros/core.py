@@ -93,81 +93,65 @@ class Edge(collections.namedtuple
 
 
 class Face(collections.namedtuple
-           ("Face", ("data", "ctrl"))):
+           ("Face", ("node", "edge", "item"))):
 
-    def __new__(cls, node, edge, item):
-        data = iterdata(node, edge, item)
-        ctrl = iterctrl(node, edge, item)
-        return super(Face, cls).__new__(cls, data, ctrl)
-
-
-@coroutine
-def iterdata(node, edge, item):
-    """iterates over `init` and `main` data"""
-    pros = yield
-
-    # XXX takes advantage of there currently being no `data` provided
-    # ... while in `init` mode
-    mode = node.init
-    if len(mode.data.gets) > 0:
-        reqs = (logger.debug("get data: %s", key)
+    @property
+    def args(self):
+        node, edge, item = self
+        mode = node.init
+        return (logger.debug("get data: %s", key)
                 or item.data.get(edge.data.get(key, key))
                 for key in mode.data.gets)
-        pros = yield reqs
 
-    mode = node.main
-    while True:
-        if len(mode.data.gets) > 0:
-            reqs = (logger.debug("get data: %s", key)
-                    or item.data.get(edge.data.get(key, key))
-                    for key in mode.data.gets)
-            pros = yield reqs
+    @property
+    def reqs(self):
+        node, edge, item = self
+        mode = node.main
+        return (logger.debug("get data: %s", key)
+                or item.data.get(edge.data.get(key, key))
+                for key in mode.data.gets)
 
-        if len(mode.data.sets) > 0:
-            item.data.update({edge.data.get(key, key):
-                              logger.debug("set data: %s=%s", key, pro)
-                              or pro
-                              for key, pro
-                              in zip(mode.data.sets, pros)
-                              if pro is not None}
-                             if pros is not None
-                             else {})
-            pros = yield
+    @property
+    def pros(self, pros):
+        return NotImplemented
+    
+    @pros.setter
+    def pros(self, pros):
+        node, edge, item = self
+        mode = node.main
+        item.data.update({edge.data.get(key, key):
+                          logger.debug("set data: %s=%s", key, pro)
+                          or pro
+                          for key, pro
+                          in zip(mode.data.sets, pros)
+                          if pro is not None})
 
+    def evs(self):
+        node, edge, item = self
+        mode = node.init
+        return (logger.debug("get ctrl: %s", key)
+                or item.ctrl.get(edge.ctrl.get(key, key))
+                for key in mode.ctrl.gets)
 
-@coroutine
-def iterctrl(node, edge, item):
-    """iterates over `init` and `main` ctrl"""
-    yield
+    def ins(self):
+        node, edge, item = self
+        mode = node.main
+        return (logger.debug("get ctrl: %s", key)
+                or item.ctrl.get(edge.ctrl.get(key, key))
+                for key in mode.ctrl.gets)
+        
 
-    # XXX takes advantage of there currently being no `ctrl` output
-    # ... while in `init` mode
-    mode = node.init
-    ins = (logger.debug("get ctrl: %s", key)
-           or item.ctrl.get(edge.ctrl.get(key, key))
-           for key in mode.ctrl.gets)
-    outs = yield ins  # always called
-
-    mode = node.main
-    while True:
-        if len(mode.ctrl.gets) > 0:
-            ins = (logger.debug("get ctrl: %s", key)
-                   or item.ctrl.get(edge.ctrl.get(key, key))
-                   for key in mode.ctrl.gets)
-            outs = yield ins
-
-        if len(mode.ctrl.sets) > 0:
-            evs = (((logger.debug("set ctrl: %s=%s", key, out)
-                     or item.ctrl.get(edge.ctrl.get(key, key)), out)
-                    for key, out in zip(mode.ctrl.sets, outs)
-                    if out is not None)
-                   if outs is not None
-                   else ())
-            outs = yield evs
+    def outs(self, outs):
+        node, edge, item = self
+        mode = node.main
+        return ((logger.debug("set ctrl: %s=%s", key, out)
+                 or item.ctrl.get(edge.ctrl.get(key, key)), out)
+                for key, out in zip(mode.ctrl.sets, outs)
+                if out is not None)
 
 
 class Task(collections.namedtuple
-           ("Task", ("p", "gen"))):
+           ("Task", ("p", "tag", "gen"))):
     pass
 
 
@@ -179,27 +163,10 @@ class Image(object):
         self.nodes = nodes
 
     def __call__(self, func):
-        func = coroutine(func)
-
-        @coroutine
-        @functools.wraps(func)
-        def wrapper(**args):
-            yield
-            try:
-                logger.debug("exec %s init", self.tag)
-                gen = func(**args)  # create generator
-                evs = yield
-                while True:
-                    logger.debug("exec %s main", self.tag)
-                    yield gen.send(evs)
-            except StopIteration:
-                return
-            finally:
-                pass
-
-        self.proc = wrapper
+        coro = coroutine(func)
+        self.proc = coro
         CLOUD[self.tag] = self
-        return wrapper
+        return coro
 
 
 def run(task, model):
@@ -212,8 +179,7 @@ def run(task, model):
              for (arg, key)
              in task["keys"].items()}
     gen = img.proc(**faces)
-    obj = Task(task["p"], gen)
+    obj = Task(task["p"], img.tag, gen)
     any(ev.cbs.append(obj)
         for face in faces.values()
-        for ev in next(face.ctrl) or ())
-    return obj
+        for ev in face.evs())
