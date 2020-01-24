@@ -14,7 +14,7 @@ __all__ = ("poly", "eval", "roots")
 #...
 
 # numpy.poly1d <-> JSON
-poly = Type(".math#poly", "!math/poly", numpy.poly1d,
+poly = Type("!math/poly", numpy.poly1d,
             lambda x: x.coeffs,
             numpy.poly1d)
 

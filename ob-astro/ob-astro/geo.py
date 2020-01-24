@@ -8,7 +8,7 @@ import numpy
 
 # internal libraries
 from ouroboros import Image, Node
-from ouroboros.lib import libgeoid
+from ouroboros.lib import libgeoid, libatmo
 
 # exports
 __all__ = ("jd", "st", "ax", "rose",
@@ -142,61 +142,26 @@ def rose(usr):
 
 
 @Image("geo.std_atmo",
-       clk=Node(evs=(8601,), args=(),
-                ins=(), reqs=("t_dt",),
-                outs=(), pros=()),
        sun=Node(evs=(), args=(),
                 ins=(), reqs=("f10p7",),
                 outs=(), pros=()),
-       geo=Node(evs=(), args=("R", "mu"),
+       geo=Node(evs=(), args=("R",),
                 ins=(), reqs=(),
-                outs=(), pros=("jdn", "ut",
-                               "jd", "jc")),
-       atmo=Node(evs=(), args=("M",),
-                ins=(), reqs=("f10p7",),
                 outs=(), pros=()),
-       usr=Node(evs=(), args=(),
+       usr=Node(evs=(False,), args=(),
                 ins=(), reqs=("alt",),
-                outs=(), pros=()))
-def std_atmo(clk, sun, geo, atmo, usr):
+                outs=(True,), pros=("rho", "p", "T")))
+def std_atmo(sun, geo, usr):
     """Standard atmosphere"""
-    r, mu = geo.args
-    M, = atmo.args
-    R = GAS_CONSTANT / M
-    g0 = mu / r ** 2
-    C = g0 / R
+    R, = geo.args
     
     yield
     while True:
-        alt, = usr.reqs
-        h = alt * r / (alt + r)
-
-        h_base = 0.0  # tabulated
-        T_base = 0.0  # tabulated
-        T_grad = 0.0  # tabulated
-        p_base = 0.0  # tabulated
-        
-        delta_h = h - h_base
-        T = T_base + T_grad * delta_h
-
-        if T_grad == 0:
-            p = p_base * math.exp( - C * delta_h / T_base)
-        else:
-            p = p_base * (T_base / T) ** (C / T_grad)
-        
-        rho = p / R / T
-
-        # TODO: thermosphere
-        z = alt
-        T_base = 0.0  # tabulated
-        h_base = 0.0  # tabulated
-        z_base = h_base * r / (r - h_base)
-        T_inf = 500 + 3.4 * f10p7
-        s = math.log((T_inf - T0) / (T_inf - T_base)) / (z_base - z0)
-        T = T_inf - (T_inf - T0) * math.exp(- s * (z - z0))
-
-        atmo.pros = rho, p, T
-        yield (bod.outs((True,)),)
+        z, = atmo.reqs
+        f10p7, = sun.reqs
+        h = R * z / (R + z)
+        usr.pros = libatmo.std_atmo(h, f10p7)
+        yield (usr.outs((True,)),)
         
 
 @Image("geo.sph2geo",

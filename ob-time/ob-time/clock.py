@@ -6,7 +6,7 @@ import pytz
 
 # internal libraries
 from ouroboros import Type, Image, Node
-from ouroboros.conf import MILLI, UNIX_EPOCH
+from ouroboros.config import MILLI, UNIX_EPOCH
 
 # exports
 __all__= ("dt", "td",
@@ -17,12 +17,12 @@ __all__= ("dt", "td",
 # ...
 
 # datetime.datetime <-> JSON
-dt = Type(".clock#dt", "!clock/dt", datetime.datetime,
+dt = Type("!clock/dt", datetime.datetime,
           lambda x: int((x - UNIX_EPOCH).total_seconds() / MILLI),
           lambda x: UNIX_EPOCH + datetime.timedelta(seconds=x * MILLI))
 
 # datetime.timedelta <-> JSON
-td = Type(".clock#td", "!clock/td", datetime.timedelta,
+td = Type("!clock/td", datetime.timedelta,
           lambda x: int(x.total_seconds() / MILLI),
           lambda x: datetime.timedelta(seconds=x * MILLI))
 

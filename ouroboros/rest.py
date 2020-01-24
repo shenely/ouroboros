@@ -1,5 +1,6 @@
 # built-in libraries
 import os
+import sys
 import time
 import json
 import asyncio
@@ -10,7 +11,7 @@ import tornado.web
 import tornado.websocket
 
 # internal libraries
-from ouroboros.conf import VIRTUAL_ENV, PORT
+from ouroboros.config import PORT
 from ouroboros.util import default, object_hook
 
 # exports
@@ -81,7 +82,7 @@ class DataHandler(ObRequestHandler):
             _id = int(_id)
         if name.isdigit():
             name = int(name)
-        logger.debug("PUT data (%s,%s)", _id, name)
+        logger.debug("PUT data (%s.%s)", _id, name)
         s = self.request.body
         obj = json.loads(s, object_hook=object_hook)
         item = self.lake[_id][False, name]
@@ -97,7 +98,7 @@ class CtrlHandler(ObRequestHandler):
             _id = int(_id)
         if name.isdigit():
             name = int(name)
-        logger.debug("POST ctrl (%s,%s)", _id, name)
+        logger.debug("POST ctrl (%s.%s)", _id, name)
         s = self.request.body
         obj = json.loads(s, object_hook=object_hook)
         e = self.lake[None][True, None].data["e"]
@@ -132,7 +133,7 @@ class StreamHandler(tornado.websocket.WebSocketHandler,
 
 
 def init(lake):
-    web = os.path.join(VIRTUAL_ENV, "var", "www", "ouroboros")
+    web = os.path.join(sys.prefix, "var", "www", "ouroboros")
 
     app = tornado.web.Application([
         (r"/static/(.*)", tornado.web.StaticFileHandler, {"path": web}),

@@ -8,7 +8,7 @@ import logging
 # ...
 
 # internal libraries
-from ouroboros.conf import ISO_8601, UNIX_EPOCH, STONE
+from ouroboros.config import ISO_8601, UNIX_EPOCH, STONE
 
 # exports
 __all__ = ("coroutine",

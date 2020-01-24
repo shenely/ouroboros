@@ -11,11 +11,11 @@ import logging
 import yaml
 
 # internal libraries
-from ouroboros.conf import INFINITY
-from ouroboros.core import Item, run
+from ouroboros.config import INFINITY
+from ouroboros import Item, run
 import ouroboros.cli as cli
 import ouroboros.rest as rest
-import ouroboros.ext as _  # noqa
+import ouroboros.extra as _  # noqa
 
 # constants
 # ...

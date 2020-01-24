@@ -16,3 +16,13 @@ angular.module('ob.time', ['ob.core'])
     }
   };
 });
+
+Vue.component("ob-clock-dt", {
+    template: "#ob-clock-dt",
+    props: ["data"],
+    data: function () {
+        return { };
+    }
+});
+
+

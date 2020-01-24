@@ -9,16 +9,14 @@ import datetime
 # ...
 
 # exports
-__all__ = ("VIRTUAL_ENV",
-           "PORT",
+__all__ = ("PORT",
            "MILLI",
            "INFINITY",
            "ISO_8601", "UNIX_EPOCH",
            "CLOUD", "STONE")
 
 # constants
-VIRTUAL_ENV = os.getenv("VIRTUAL_ENV", os.sep)
-PORT = os.getenv("OB_PORT", 8888)
+PORT = os.getenv("OB_PORT", 5000)
 
 MILLI = 1e-3
 

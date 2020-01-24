@@ -1,0 +1,14 @@
+FROM python:3 AS build
+
+VOLUME ["/repo"]
+COPY . /code
+
+ENV VIRTUAL_ENV=/opt/venv
+RUN python -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+RUN pip install --upgrade pip
+run pip install wheel
+
+WORKDIR /code
+CMD cd $BUILD_DIR && python setup.py bdist_wheel -d /repo

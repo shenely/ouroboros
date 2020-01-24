@@ -17,7 +17,7 @@ __all__= ("vector",
           "rec2sph", "sph2rec")  # rectangular to spherical coordinates
 
 # numpy.ndarray <-> JSON
-vector = Type(".math#vector", "!math/vector", numpy.ndarray,
+vector = Type("!math/vector", numpy.ndarray,
               numpy.ndarray.tolist,
               numpy.array)
 

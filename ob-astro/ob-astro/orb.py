@@ -12,7 +12,7 @@ import sgp4.io
 
 # internal libraries
 from ouroboros import Type, Image, Node
-from ouroboros.lib import libunikep, liborbele
+from ouroboros.lib import liborbele
 
 # exports
 __all__ = ("ele",
@@ -35,7 +35,7 @@ class OrbitalElements(collections.namedtuple
 
 
 # ele <-> JSON
-ele = Type(".orb#ele", "!orb/ele", OrbitalElements,
+ele = Type("!orb/ele", OrbitalElements,
            OrbitalElements._asdict,
            lambda x: OrbitalElements(**x))
 
@@ -103,17 +103,6 @@ def ephem(bod, orb):
             v1_bar = numpy.array(map(float, data[4:7]))
 
             t0_dt, r0_bar, v0_bar = t1_dt, r1_bar, v1_bar
-            
-    mu, = bod.args
-
-    yield
-    while True:
-        liborbele.setmu(mu)
-
-        r_bar, v_bar = orb.reqs
-        eps, h_bar, e_bar = liborbele.inv2law(r_bar, v_bar)
-        orb.pros = eps, h_bar, e_bar
-        yield (orb.outs((True,)),)
 
         
 @Image(".orb@inv2law",

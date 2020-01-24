@@ -28,7 +28,7 @@
       ctrl:
         - true
     ? !!python/tuple [false, time]
-    : data:
+    : data: {}
       ctrl:
         - true
         - 8601

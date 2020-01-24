@@ -15,11 +15,11 @@ __all__ = ("kin", "rot",
            "force", "torque",
            "lerp", "slerp")
 
-kin = Type(".phys#kin", "!phys/kin", libkin.kin,
+kin = Type("!phys/kin", libkin.kin,
            libkin.kin._asdict,
            lambda x: libkin.kin(**x))
 
-rot = Type(".phys#rot", "!phys/rot", libquat.rot,
+rot = Type("!phys/rot", libquat.rot,
            libquat.rot._asdict,
            lambda x: libquat.rot(**x))
 
@@ -65,8 +65,8 @@ def force(usr, fun, **kw):
                 ins=(True,), reqs=("t", "y"),
                 outs=(False,), pros=("y_dot",)),
        kw=Node(evs=(False,), args=(),
-               ins=(), reqs=("M",),
-               outs=(True,), pros=("t", "q", "om")))
+               ins=(), reqs=("M_bar",),
+               outs=(True,), pros=("t", "q", "om_bar")))
 def torque(usr, fun, **kw):
     """Torque accumulator"""
     eye, = usr.args

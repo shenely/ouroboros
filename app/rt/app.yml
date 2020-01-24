@@ -1,0 +1,42 @@
+- name: null
+  items:
+    ? !!python/tuple [null, null]
+    : data: {}
+      ctrl: {}
+    ? !!python/tuple [true, null]
+    : data:
+        t: null
+      ctrl: []
+    ? !!python/tuple [false, null]
+    : data:
+        t: null
+        x: null
+      ctrl:
+        - false
+        - true
+  procs: []
+- name: clock
+  items:
+    ? !!python/tuple [null, null]
+    : null
+    ? !!python/tuple [false, 1]
+    : data:
+        delta_t: 1.0
+      ctrl:
+        - tick
+    ? !!python/tuple [false, time]
+    : data: {}
+      ctrl:
+        - tock
+  procs:
+    - p: 100
+      tag: .clock@every
+      keys:
+        env: !!python/tuple [null, null]
+        sys: !!python/tuple [false, 1]
+        usr: !!python/tuple [false, time]
+      maps:
+        env:
+          data: {}
+          ctrl:
+            tick: true
